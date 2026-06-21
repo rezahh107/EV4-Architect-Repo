@@ -27,10 +27,12 @@ Current confirmed stages:
 
 - Stage 1 — `/intake`: Project Defaults + Exception Check
 - Stage 2 — `/decompose`: Controlled Visual Role Decomposition
+- Stage 2.1 — `/decomposition-example-bank`: 12 synthetic pattern-based examples plus authoring standard
+- Stage 3 — `/architectures`: Architecture Enumeration
 
 Current next stage to define:
 
-- Stage 3 — `/architectures`: Architecture Enumeration
+- Stage 4 — `/score-evidence`: Evidence-bound architecture scoring
 
 See:
 
@@ -38,3 +40,5 @@ See:
 - `01_PROJECT_INSTRUCTIONS.md`
 - `stages/01_INTAKE.md`
 - `stages/02_DECOMPOSE.md`
+- `stages/03_ARCHITECTURES.md`
+- `examples/decomposition/README.md`
