@@ -1,19 +1,20 @@
 # Stage 4 — /score-evidence: Evidence-Bound Architecture Scoring
 
-Status: confirmed_hardened_v1.1.1  
-Version: 1.1.1  
+Status: confirmed_hardened_v1.2.0  
+Version: 1.2.0  
 Depends on: Stage 3 — `/architectures`  
-Next stage: Stage 5 — `/score-audit`
+Next stage: Stage 5 — `/score-audit`  
+Payload schema: `ev4-score-evidence-payload@1.2.0`
 
 ---
 
 ## Purpose
 
-The `/score-evidence` phase evaluates each architecture candidate from Stage 3 using the architecture scoring rubric.
+The `/score-evidence` phase evaluates each Stage 3 architecture candidate against the fixed Elementor V4 architecture rubric.
 
-This stage is the scoring spine of the whole system. It must be strict, evidence-bound, conservative, reproducible, and auditable.
+This stage is the scoring spine of the entire pipeline. It must be strict, evidence-bound, conservative, reproducible, arithmetically safe, and auditable.
 
-It must not recommend a winner yet.
+It must not recommend a winner.
 
 ---
 
@@ -25,7 +26,7 @@ Use the scoring criteria and decision rules from:
 rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
 ```
 
-The current rubric has 10 criteria with weighted scoring:
+The rubric has 10 weighted criteria:
 
 | Criterion | Weight | Raw weighted max |
 |---|---:|---:|
@@ -51,30 +52,23 @@ Important:
 
 - Never treat the raw weighted total as `/100`.
 - Decision bands apply to `normalized_total` only.
-- If any criterion is `?`, do not calculate a final normalized score.
+- If any criterion is `?`, final total is `incomplete`.
+- If arithmetic tooling is unavailable, output formulas and hand arithmetic verification to `/score-audit`; do not claim arithmetic certainty.
 
 ---
 
-## Critical Review Findings Applied in v1.1.1
+## Critical Hardening Applied in v1.2.0
 
-Stage 4 v1.0.0 was structurally usable, but not strict enough for production-grade scoring.
+Stage 4 v1.2.0 adds these production controls:
 
-v1.1.0 added evidence, unknown, and fairness hardening.
-
-v1.1.1 fixes the most critical arithmetic issue:
-
-```text
-The weighted criteria add up to 125 raw points, not 100.
-```
-
-Therefore Stage 4 must calculate both:
-
-```text
-raw_weighted_total: /125
-normalized_total: /100
-```
-
-v1.1.1 prevents false totals, false thresholds, and fake precision.
+1. **Tool-first arithmetic** — avoid confident mental totals; use Python/calculator/runtime when available.
+2. **Provisional known-score formula** — if any criterion is `?`, final score remains incomplete, but a clearly labeled provisional known-score may be shown.
+3. **Hidden recommendation enforcement** — direct recommendation terms auto-fail; non-mechanical subjective language is flagged.
+4. **Elementor inheritance nuance** — absent mobile evidence is not automatically `?`, but responsive score is capped by evidence quality and risk.
+5. **Absent vs contradicted evidence separation** — missing evidence is not the same as evidence conflict.
+6. **Audit_Trail_Payload** — Stage 4 must hand Stage 5 a structured audit index.
+7. **Schema versioning** — the handoff payload must declare its schema version.
+8. **Stage 5 spot-check authority** — Stage 5 uses the payload as primary index but may inspect Stage 2, Stage 3, and the rubric.
 
 ---
 
@@ -89,15 +83,17 @@ Stage 2 evidence
 + Stage 3 candidate claim
 + Rubric criterion definition
 + Evidence source hierarchy
++ Evidence label
++ Confidence label
 + Explicit uncertainty handling
-+ Correct arithmetic normalization
++ Correct arithmetic policy
 ```
 
-If the required evidence is missing, do not invent it. Use `?` and explain the missing evidence.
+If the required evidence is missing, do not invent it. Use `?`, explain the missing evidence, and record it in the Uncertainty Register and Audit_Trail_Payload.
 
 ---
 
-## Required Inputs
+## Required Inputs Gate
 
 Stage 4 requires all of the following:
 
@@ -108,13 +104,13 @@ Stage 4 requires all of the following:
 5. Current scoring rubric from `rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md`.
 6. Current Project Defaults from `STATUS.md` or Project Instructions.
 
-If any required input is missing, stop and request the missing stage/input.
+If any required input is missing, stop and request the missing input.
 
 ---
 
 ## Evidence Source Hierarchy
 
-When assigning scores, use this hierarchy.
+When assigning scores, use this hierarchy:
 
 | Level | Evidence source | Allowed use |
 |---|---|---|
@@ -122,120 +118,43 @@ When assigning scores, use this hierarchy.
 | 2 | Direct Stage 3 candidate claim | Strong source for proposed structure, flow strategy, overlay strategy, CSS strategy, and dynamic strategy |
 | 3 | Rubric criterion definition | Controls score meaning and weighting |
 | 4 | Project Defaults | Controls allowed tools, CSS policy, Elementor Pro availability, and default constraints |
-| 5 | Official docs / verified external source | May support general platform capability, not proof that a candidate actually uses it |
-| 6 | Reasonable inference | Allowed only with `inferred` evidence label and confidence not above `medium` |
-| 7 | Missing evidence | Must become `?`, not a guessed numeric score |
+| 5 | Official docs / verified external source | Supports platform capability only; not proof that a candidate actually uses it |
+| 6 | Reasonable inference | Allowed only with `INFERRED_EVIDENCE` and confidence not above `medium` |
+| 7 | Missing evidence | Must become `ABSENT_EVIDENCE` and usually `?`, not a guessed score |
 
-Important:
+Critical distinction:
 
 - Official Elementor documentation proves platform capability, not the candidate's actual behavior.
-- A screenshot proves appearance, not actual DOM, CSS, plugin use, query source, or responsive behavior.
-- A Stage 3 candidate claim proves what the candidate proposes, not that the proposal will score high.
-
----
-
-## Mandatory Execution Order
-
-Always score in this order:
-
-```text
-1. Validate required inputs
-2. Extract candidates from Stage 3
-3. Extract Stage 3 Unknown Propagation Ledger
-4. Build a Stage 4 Evidence Map
-5. Exclude rejected-risk and approval-required candidates from primary scoring unless explicitly requested
-6. Score each viable/risky candidate criterion-by-criterion
-7. Attach evidence source, evidence label, and confidence to every criterion score
-8. Apply criterion-specific score anchors
-9. Apply immediate rejection gates
-10. Calculate raw_weighted_total only for complete candidates
-11. Normalize raw_weighted_total to normalized_total /100 only for complete candidates
-12. Produce uncertainty register
-13. Produce scoring table
-14. Run fairness and consistency check
-15. Run Stage 4 self-audit
-16. Hand off to /score-audit
-```
-
----
-
-## Allowed Work
-
-Allowed:
-
-- Score each architecture candidate against the rubric.
-- Use integer raw scores from `1` to `5` only.
-- Use `?` when evidence is insufficient.
-- Calculate raw weighted totals only when all criteria have numeric scores.
-- Calculate normalized total only from a complete raw weighted total.
-- Mark candidates with hard-gate failures.
-- Explain why each criterion received its score.
-- Explain what evidence would be needed to replace a `?` score.
-- Compare scores mechanically in the scoring table.
-- Preserve candidate order from Stage 3.
-- Hand off to `/score-audit`.
-
----
-
-## Forbidden Work
-
-Forbidden:
-
-- Do not recommend a final architecture.
-- Do not write `best`, `winner`, `recommended`, `preferred`, `optimal`, `cleanest`, `safest`, or their Persian equivalents.
-- Do not use visual taste to override weighted criteria.
-- Do not hide unknowns inside a numeric score.
-- Do not give fractional raw criterion scores.
-- Do not score an omitted architecture family as if it were a full candidate.
-- Do not score a third-party plugin candidate as normal unless user approval exists.
-- Do not let Visual Precision decide the outcome.
-- Do not produce a final Elementor tree.
-- Do not write CSS or implementation code.
-- Do not use totals from incomplete candidates for comparison.
-- Do not treat a high normalized total as primary-ready when a gate is unresolved or failed.
-- Do not compare raw `/125` totals against `/100` decision bands.
-
-Forbidden Persian winner-implying words before `/recommend`:
-
-```text
-بهترین
-برنده
-پیشنهادی
-گزینه اصلی
-امن‌ترین
-تمیزترین
-بهینه‌ترین
-انتخاب نهایی
-```
-
-Neutral alternatives allowed:
-
-```text
-highest normalized total among complete candidates
-lowest unresolved-risk count
-requires audit
-mechanical score only
-```
+- A screenshot proves appearance, not DOM, CSS, plugin use, query source, alt semantics, or responsive behavior.
+- A Stage 3 candidate claim proves what the candidate proposes, not whether the proposal is high-scoring.
 
 ---
 
 ## Evidence Labels
 
-Every criterion score must use one evidence label:
+Every criterion score must use one label from this closed set:
 
-| Label | Meaning |
-|---|---|
-| `confirmed` | Directly supported by Stage 2 or Stage 3 evidence |
-| `partially_supported` | Some evidence exists, but one or more assumptions remain |
-| `inferred` | Reasonable inference from candidate structure, not directly proven |
-| `unknown` | Evidence is insufficient; score must be `?` |
-| `conflict` | Evidence contradicts the candidate claim; explain and score conservatively |
+| Label | Meaning | Default scoring effect |
+|---|---|---|
+| `SUPPORTED_EVIDENCE` | Direct Stage 2/3 evidence supports the criterion claim | Numeric score allowed; may be high if anchor supports it |
+| `PARTIALLY_SUPPORTED_EVIDENCE` | Some support exists but important assumptions remain | Numeric score allowed, usually capped at 4 |
+| `INFERRED_EVIDENCE` | Reasonable inference; not directly proven | Numeric score allowed only if non-critical, capped at 3 |
+| `ABSENT_EVIDENCE` | Source material does not say enough | Use `?` unless clearly non-blocking; never treat as contradiction |
+| `CONTRADICTED_EVIDENCE` | Stage 2/3 evidence conflicts with the candidate claim | Low score or gate failure; do not use `?` to hide the contradiction |
+| `UNRESOLVED_CONFLICT` | Conflicting evidence exists but cannot yet be resolved | `?` if criterion-critical; otherwise capped at 2 |
+
+Rules:
+
+- `ABSENT_EVIDENCE` means “we do not know.”
+- `CONTRADICTED_EVIDENCE` means “the evidence pushes against the claim.”
+- Do not punish a candidate as if contradicted merely because evidence is absent.
+- Do not hide a contradiction by marking it as unknown.
 
 ---
 
 ## Scoring Confidence
 
-Every criterion score must include confidence:
+Every criterion score must include:
 
 ```text
 confidence: high | medium | low | unknown
@@ -243,11 +162,12 @@ confidence: high | medium | low | unknown
 
 Rules:
 
-- `confirmed` usually allows `high`.
-- `partially_supported` usually allows `medium`.
-- `inferred` must not exceed `medium`.
-- `unknown` must use `unknown` confidence.
-- `conflict` must use `low` unless resolved by explicit evidence.
+- `SUPPORTED_EVIDENCE` may allow `high`.
+- `PARTIALLY_SUPPORTED_EVIDENCE` usually allows `medium`.
+- `INFERRED_EVIDENCE` must not exceed `medium`.
+- `ABSENT_EVIDENCE` must use `unknown` when score is `?`.
+- `CONTRADICTED_EVIDENCE` must use `low` unless resolved by explicit evidence.
+- `UNRESOLVED_CONFLICT` must use `low` or `unknown`.
 
 ---
 
@@ -258,7 +178,7 @@ Use this common anchor scale before applying criterion-specific guidance:
 | Score | Meaning |
 |---:|---|
 | 5 | Strongly supported; low material risk; no blocking unknowns for this criterion |
-| 4 | Supported; minor unresolved risk; likely acceptable |
+| 4 | Supported; minor unresolved risk; likely acceptable after audit |
 | 3 | Acceptable but meaningfully uncertain or partially constrained |
 | 2 | Material risk, weak fit, or likely repair required |
 | 1 | Fails the criterion or conflicts with core project defaults |
@@ -270,6 +190,38 @@ Important:
 - `4` cannot be based on weak inference alone.
 - `3` is not a dumping ground for unknowns; use `?` when evidence is truly missing.
 - `1` or `2` may be used when evidence shows a real risk, not merely because details are absent.
+
+---
+
+## Elementor Responsive Inheritance Rule
+
+Absence of a mobile screenshot does not automatically force `Responsiveness = ?`.
+
+Elementor responsive behavior can inherit from larger breakpoints, so Stage 4 may score the candidate based on desktop normal-flow inheritance potential when mobile-specific evidence is absent.
+
+However, absent mobile evidence limits certainty.
+
+| Situation | Max Responsiveness score |
+|---|---:|
+| Explicit desktop/tablet/mobile behavior is provided and credible | 5 |
+| No mobile view, but candidate uses native normal-flow containers/grid, no fixed-width or coordinate-driven meaningful content, and Stage 2 has no mobile-risk signals | 4 |
+| No mobile view, normal-flow potential is plausible, but section has complex cards, visual core, connector, overlay, or dense content | 3 |
+| No mobile view and candidate relies on absolute/fixed coordinates, connector lines, floating cards, duplicate hidden sections, or unresolved collision risk | 2 |
+| Candidate does not state enough structure to infer flow or breakpoint behavior | ? |
+
+Rationale:
+
+- `5` means responsive behavior is materially resolved.
+- `4` means responsive behavior is not fully shown but low-risk inheritance is plausible.
+- `3` means plausible but meaningfully uncertain.
+- `2` means material risk is visible or structurally implied.
+- `?` means scoring would require inventing the structure.
+
+Evidence note required when mobile evidence is absent:
+
+```text
+evidence_note: Scored based on desktop normal-flow inheritance potential; mobile evidence absent.
+```
 
 ---
 
@@ -307,32 +259,33 @@ Use `?` when the candidate does not state where meaningful content lives.
 
 ### 3. Responsiveness ×4
 
-Score higher when the candidate states a credible desktop/tablet/mobile behavior with minimal duplicate DOM and no brittle coordinate dependency.
+Apply the Elementor Responsive Inheritance Rule above.
 
 Score lower or use `?` when:
 
-- mobile behavior is not specified,
+- mobile behavior is not specified and desktop flow is not inferable,
 - connectors/floating cards depend on fixed coordinates,
 - hidden/duplicate sections are required but not justified,
-- tablet behavior is ignored.
+- tablet behavior is ignored and layout complexity is high.
 
 Guardrail:
 
 ```text
 A desktop screenshot does not prove mobile behavior.
+A desktop normal-flow candidate may still have responsive inheritance potential.
 ```
 
 ### 4. Editability ×3
 
 Score higher when text, icons, images, cards, links, and repeated items remain editable in Elementor or a clear content source.
 
-Score lower when normal content updates require:
+Score lower when routine updates require:
 
 - editing SVG path text,
 - editing custom HTML,
 - editing CSS,
 - replacing a full-section image,
-- changing hardcoded coordinates for routine content edits.
+- changing hardcoded coordinates.
 
 ### 5. Structural Clarity ×2
 
@@ -425,33 +378,15 @@ question_to_resolve:
 blocking_level: blocking | non_blocking | audit_needed
 ```
 
-Do not convert `?` to a numeric score merely to complete the table.
-
-If a candidate has one or more `?` values, its total must be:
+If a candidate has one or more `?` values, its final total must be:
 
 ```text
 raw_weighted_total: incomplete
 normalized_total: incomplete
+final_score_status: incomplete
 ```
 
-and it must be excluded from mechanical total comparison until resolved.
-
----
-
-## Shared Unknown Consistency Rule
-
-If the same unknown affects multiple candidates, handle it consistently.
-
-Example:
-
-```text
-Unknown: mobile behavior of connector lines
-Affected candidates: A03, A04, A07
-```
-
-The scorer must not mark this unknown as numeric `4` for one candidate and `?` for another unless the candidates provide different explicit mitigation evidence.
-
-Every shared unknown must appear in the Uncertainty Register.
+It must be excluded from mechanical total comparison until resolved.
 
 ---
 
@@ -461,14 +396,25 @@ If a criterion materially depends on unresolved evidence, numeric scores are cap
 
 | Evidence state | Max numeric score if not `?` |
 |---|---:|
-| Mostly confirmed | 5 |
-| Partially supported | 4 |
-| Inferred only | 3 |
-| Unknown but non-blocking | 3 |
-| Unknown and criterion-critical | `?` |
-| Conflict | 2 unless resolved |
+| Supported evidence | 5 |
+| Partially supported evidence | 4 |
+| Inferred evidence only | 3 |
+| Absent evidence but clearly non-blocking | 3 |
+| Absent evidence and criterion-critical | `?` |
+| Contradicted evidence | 2 unless resolved |
+| Unresolved conflict | `?` or 2 depending on criterion criticality |
 
 This rule prevents hidden optimism.
+
+---
+
+## Shared Unknown Consistency Rule
+
+If the same unknown affects multiple candidates, handle it consistently.
+
+The scorer must not mark a shared unknown as numeric `4` for one candidate and `?` for another unless the candidates provide different explicit mitigation evidence.
+
+Every shared unknown must appear in the Uncertainty Register.
 
 ---
 
@@ -507,20 +453,140 @@ Do not call any classification `best`, `winner`, or `recommended`.
 
 ---
 
-## Conservative Scoring Rules
+## Hidden Recommendation Ban v1.2
 
-Use conservative scoring when evidence is weak:
+Stage 4 may report mechanical scores. It must not recommend.
 
-1. If a candidate relies on an unstated custom interaction, lower Elementor-Native or mark `?`.
-2. If meaningful content appears outside normal flow, lower Normal-Flow Safety.
-3. If mobile behavior depends on unverified hidden/duplicate sections, lower Responsiveness or mark `?`.
-4. If editing requires CSS/HTML changes for normal content updates, lower Editability.
-5. If overlays are not contained inside a named relative Stage, lower Overlay Containment.
-6. If the candidate increases DOM depth or uses large raster assets without optimization strategy, lower Performance.
-7. If reading order, alt decision, or focus behavior is unresolved, lower Accessibility or mark `?`.
-8. If classes, variables, or reusable component candidates are not clear, lower Design-System Fit.
-9. Visual Precision may improve the score only inside its own criterion.
-10. Do not punish a candidate for simplifying decoration when content, responsiveness, and editability improve.
+### Auto-fail terms
+
+If any of these appear in Stage 4 reasoning, the Self-Audit must fail:
+
+```text
+best
+winner
+recommended
+preferred
+optimal
+safest
+cleanest
+final choice
+primary choice
+obviously better
+clearly superior
+بهترین
+برنده
+پیشنهادی
+گزینه اصلی
+انتخاب نهایی
+امن‌ترین
+تمیزترین
+بهینه‌ترین
+واضحاً بهتر
+```
+
+### Flag-only subjective terms
+
+Non-mechanical adjectives/adverbs are flagged, not automatically failed, unless they imply a recommendation.
+
+Examples:
+
+```text
+elegant
+beautifully
+simple
+strong
+weak
+nice
+polished
+high-quality
+تمیز
+زیبا
+قوی
+ضعیف
+حرفه‌ای
+```
+
+Rule:
+
+```text
+Default: non-mechanical term → flag for audit.
+Auto-fail: direct recommendation, dismissal, or winner language.
+```
+
+### Mechanical vocabulary preference
+
+Use structural language such as:
+
+```text
+maps_to
+violates
+requires
+depends_on
+conflicts_with
+preserves
+omits
+contradicts
+inherits_from
+caps_at
+```
+
+Do not produce a full word dump. Output only:
+
+```text
+banned_terms_found:
+subjective_phrases_flagged:
+hidden_recommendation_scan: pass | fail
+```
+
+---
+
+## Arithmetic Policy v1.2
+
+LLMs are not trusted arithmetic engines.
+
+### Complete candidates
+
+For complete candidates with no `?`:
+
+```text
+raw_weighted_total = Σ(score × weight)
+normalized_total = (raw_weighted_total / 125) × 100
+```
+
+If Python, calculator, spreadsheet, or runtime arithmetic is available, use it.
+
+If arithmetic tooling is not available:
+
+- show the formula,
+- show row-level weighted values,
+- mark `arithmetic_confidence: needs_audit`,
+- do not claim final arithmetic certainty.
+
+### Incomplete candidates
+
+If any criterion is `?`:
+
+```text
+final_score_status: incomplete
+raw_weighted_total: incomplete
+normalized_total: incomplete
+```
+
+A provisional known-score may be shown only with this formula:
+
+```text
+known_weighted_average_1_to_5 = Σ(known score × weight) / Σ(known weights)
+provisional_known_percent = known_weighted_average_1_to_5 × 20
+known_weight_coverage = Σ(known weights) / 25
+```
+
+Required warning:
+
+```text
+This is not a final score. It excludes unresolved criteria and cannot be used for decision bands.
+```
+
+Never compare incomplete candidates by provisional known percent.
 
 ---
 
@@ -551,7 +617,7 @@ Missing evidence before scoring:
 - ...
 ```
 
-A score without evidence map support is invalid.
+A score without Evidence Map support is invalid.
 
 ---
 
@@ -578,20 +644,23 @@ Criterion scores:
 - weight: ×4
 - weighted_result: raw_score × weight | incomplete
 - evidence_source: Stage 2 | Stage 3 | Rubric | Project Defaults | official docs | inference | missing
-- evidence_label: confirmed | partially_supported | inferred | unknown | conflict
+- evidence_label: SUPPORTED_EVIDENCE | PARTIALLY_SUPPORTED_EVIDENCE | INFERRED_EVIDENCE | ABSENT_EVIDENCE | CONTRADICTED_EVIDENCE | UNRESOLVED_CONFLICT
 - confidence: high | medium | low | unknown
 - evidence:
 - reasoning:
 - score_anchor_used:
 - missing_evidence: only if score is ?
 - blocking_level: only if score is ?
+- evidence_note: optional, required for Responsiveness when mobile evidence is absent
 
 [Repeat this exact structure for all 10 criteria.]
 
 TOTAL:
 - raw_weighted_total: /125 | incomplete
 - normalized_total: /100 | incomplete
-- normalization_formula: raw_weighted_total / 125 × 100
+- provisional_known_percent: optional, incomplete candidates only
+- known_weight_coverage: optional, incomplete candidates only
+- arithmetic_confidence: verified_by_tool | needs_audit
 - completeness: complete | incomplete
 - gate_status: pass | immediate_reject | unresolved
 - uncertainty_count:
@@ -610,7 +679,6 @@ SCORING SUMMARY TABLE
 
 | Candidate | Status | Gate | Elementor-Native ×4 | Normal-Flow ×4 | Responsiveness ×4 | Editability ×3 | Structural ×2 | Overlay ×2 | Performance ×2 | Accessibility ×2 | Design-System ×1 | Visual ×1 | Raw /125 | Normalized /100 | Completeness |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| A01 | viable | pass | 20 | 20 | 16 | 12 | 8 | 10 | 8 | 8 | 4 | 3 | 109 | 87.2 | complete |
 ```
 
 Important:
@@ -643,13 +711,23 @@ RAW WEIGHTED TOTAL max = 125
 NORMALIZED TOTAL max = 100
 ```
 
-Arithmetic must be shown as:
+If using arithmetic tooling, show:
 
 ```text
 ARITHMETIC CHECK
 Candidate A01:
 20 + 20 + 16 + 12 + 8 + 10 + 8 + 8 + 4 + 3 = 109 / 125
 109 / 125 × 100 = 87.2 / 100
+arithmetic_confidence: verified_by_tool
+```
+
+If tooling is unavailable, show:
+
+```text
+ARITHMETIC CHECK
+Candidate A01:
+formula: [row weighted results] / 125 × 100
+arithmetic_confidence: needs_audit
 ```
 
 If raw total exceeds `/125`, stop and recalculate.
@@ -683,8 +761,8 @@ After the scoring table, output:
 ```text
 UNCERTAINTY REGISTER
 
-| Unknown | Source Stage | Affected Candidate(s) | Affected Criterion | Current Handling | Blocking Level | Evidence Needed |
-|---|---|---|---|---|---|---|
+| Unknown | Source Stage | Affected Candidate(s) | Affected Criterion | Evidence Label | Current Handling | Blocking Level | Evidence Needed |
+|---|---|---|---|---|---|---|---|
 ```
 
 Every `?` score must appear in the Uncertainty Register.
@@ -693,6 +771,68 @@ Every Stage 3 Unknown Propagation Ledger item must either:
 
 - appear in the Uncertainty Register, or
 - be marked `not scoring-relevant` with reason.
+
+---
+
+## Audit_Trail_Payload
+
+Stage 4 must produce a structured payload for Stage 5.
+
+Stage 5 uses this payload as the primary audit index, but Stage 5 may inspect Stage 2, Stage 3, and the rubric when a spot-check trigger exists.
+
+Required schema:
+
+```text
+Audit_Trail_Payload:
+  schema_version: ev4-score-evidence-payload@1.2.0
+  stage4_version: 1.2.0
+  rubric_version: 1.2
+  candidates:
+    - candidate_id:
+      classification:
+      gate_status:
+      final_score_status: complete | incomplete
+      raw_weighted_total:
+      normalized_total:
+      provisional_known_percent:
+      known_weight_coverage:
+      arithmetic_confidence: verified_by_tool | needs_audit
+      gates_checked:
+        - gate:
+          result: pass | fail | unresolved
+          evidence_label:
+      unknown_scores:
+        - criterion:
+          evidence_label:
+          missing_evidence:
+          blocking_level:
+      contradictions:
+        - criterion:
+          contradicted_claim:
+          evidence:
+          scoring_effect:
+      banned_terms_found:
+        - term:
+          location:
+          severity: auto_fail | flag
+      subjective_phrases_flagged:
+        - phrase:
+          location:
+      spot_check_triggers:
+        - trigger:
+          source_to_check: Stage 2 | Stage 3 | Rubric | Project Defaults
+```
+
+Spot-check triggers include:
+
+- any gate fail or unresolved gate,
+- any `?` on a ×4 criterion,
+- any `CONTRADICTED_EVIDENCE`,
+- any `UNRESOLVED_CONFLICT`,
+- arithmetic confidence `needs_audit`,
+- hidden recommendation scan failure,
+- unusually high score from weak evidence,
+- random audit sample requested by `/score-audit`.
 
 ---
 
@@ -708,8 +848,10 @@ FAIRNESS AND CONSISTENCY CHECK
 - No candidate received optimism from weaker evidence than another: yes/no
 - No candidate penalized for simplifying decoration while preserving content: yes/no
 - No Visual Precision leakage into high-weight criteria: yes/no
-- No hidden recommendation wording: yes/no
+- Hidden recommendation scan passed: yes/no
 - Raw and normalized totals separated correctly: yes/no
+- Arithmetic confidence declared: yes/no
+- Audit_Trail_Payload generated with schema version: yes/no
 ```
 
 If any answer is `no`, revise Stage 4 output before proceeding.
@@ -727,26 +869,55 @@ STAGE 4 SELF-AUDIT
 - Evidence Map produced for every scored candidate: yes/no
 - Every viable/risky candidate scored: yes/no
 - Every score has evidence_source: yes/no
-- Every score has evidence label: yes/no
+- Every score has evidence label from the v1.2 closed set: yes/no
 - Every score has confidence: yes/no
 - Score anchors used: yes/no
 - Every ? has missing evidence: yes/no
 - Every ? has blocking level: yes/no
+- ABSENT_EVIDENCE not treated as contradiction: yes/no
+- CONTRADICTED_EVIDENCE not hidden as unknown: yes/no
+- Elementor inheritance rule applied to Responsiveness when mobile evidence is absent: yes/no
 - Shared unknowns handled consistently: yes/no
 - Gate rules applied: yes/no
-- No hidden recommendation language: yes/no
+- Hidden recommendation scan completed: yes/no
+- No auto-fail recommendation term appears: yes/no
+- Subjective phrase flags recorded: yes/no
 - No Visual Precision override: yes/no
-- Raw total calculated out of /125: yes/no
-- Normalized total calculated out of /100: yes/no
+- Complete candidates use /125 raw and /100 normalized totals: yes/no
+- Incomplete candidates do not have final totals: yes/no
+- Provisional known-score, if used, is marked non-final: yes/no
+- Arithmetic confidence declared: yes/no
 - No raw total exceeds /125: yes/no
 - No normalized total exceeds /100: yes/no
 - Summary table complete: yes/no
 - Uncertainty Register complete: yes/no
+- Audit_Trail_Payload present and schema-versioned: yes/no
 - Candidate classification assigned: yes/no
 - Allowed next step is /score-audit: yes/no
 ```
 
 If any answer is `no`, revise Stage 4 output before proceeding.
+
+---
+
+## Scientific & Architectural Basis
+
+This stage is based on five design principles:
+
+1. **Program-aided arithmetic** — use tools or formulas for numeric work; do not trust mental arithmetic for weighted scoring.
+2. **Constrained evaluation language** — reduce hidden recommendation bias by banning winner language and flagging subjective phrasing.
+3. **Domain-specific rule injection** — Elementor responsive inheritance must be handled as a rule, not guessed from generic web-design intuition.
+4. **Epistemic separation** — absent evidence, contradicted evidence, and unresolved conflict are separate states.
+5. **Structured judge handoff** — Stage 5 receives a schema-versioned audit payload and retains spot-check authority.
+
+Reference basis to keep in project research notes:
+
+- Program-Aided Language Models (PAL), Gao et al., 2022.
+- Lost in the Middle, Liu et al., 2023.
+- Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena, Zheng et al., 2023.
+- Elementor Responsive Editing and inherited responsive values.
+- W3C WAI Image Alt Decision Tree.
+- OpenAI Evals guidance for structured evaluation workflows.
 
 ---
 
@@ -756,6 +927,11 @@ Stage 4 passes only if:
 
 - It uses the rubric weights correctly.
 - It treats `/125` raw total and `/100` normalized total separately.
+- It uses the v1.2 evidence label closed set.
+- It separates `ABSENT_EVIDENCE` from `CONTRADICTED_EVIDENCE`.
+- It applies Elementor Responsive Inheritance scoring caps.
+- It does not calculate final totals for incomplete candidates.
+- It uses tool-first arithmetic or marks arithmetic as `needs_audit`.
 - It scores only actual Stage 3 candidates.
 - It produces an Evidence Map for each scored candidate.
 - It attaches evidence source, evidence label, and confidence to every criterion score.
@@ -767,7 +943,8 @@ Stage 4 passes only if:
 - It does not let Visual Precision override higher-weight criteria.
 - It includes a complete Uncertainty Register.
 - It treats shared unknowns consistently across candidates.
-- It validates arithmetic with no raw total above `/125` and no normalized total above `/100`.
+- It includes `Audit_Trail_Payload` with `schema_version: ev4-score-evidence-payload@1.2.0`.
+- It gives Stage 5 spot-check authority.
 - It classifies candidates mechanically without winner language.
 - It hands off to `/score-audit`.
 
