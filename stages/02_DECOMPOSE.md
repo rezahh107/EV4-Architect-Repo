@@ -1,7 +1,7 @@
 # Stage 2 — /decompose: Controlled Visual Role Decomposition
 
 Status: confirmed  
-Version: 1.0.0  
+Version: 1.0.1  
 
 ---
 
@@ -23,15 +23,41 @@ Stage 2 uses a combined basis:
 2. Elementor Container / Flexbox logic: containers are the main layout grouping mechanism, so decomposition must identify visual groups before choosing Flow, Flex, Grid, or Stage patterns.
 3. Atomic Design: UI can be understood as smaller pieces combined into larger patterns, such as atoms, molecules, organisms, templates, and pages.
 4. UI grouping research: UI text, widgets, images, and visual fragments often need to be grouped into semantic units to improve code structure, accessibility, and UI-to-code workflows.
+5. Accessibility practice: meaningful, informative, functional, decorative, and unknown images must be separated before alt decisions are made.
 
 Reference URLs:
 
 - https://elementor.com/help/navigator/
 - https://elementor.com/help/container-element/
 - https://atomicdesign.bradfrost.com/chapter-2/
+- https://www.w3.org/WAI/tutorials/images/decorative/
 - https://arxiv.org/abs/2109.08763
 - https://arxiv.org/abs/2212.03440
 - https://arxiv.org/abs/2403.04984
+
+---
+
+## Example Bank
+
+Stage 2 uses an active few-shot and calibration bank:
+
+- `examples/decomposition/README.md`
+- `examples/decomposition/EXAMPLE_AUTHORING_STANDARD.md`
+- `examples/decomposition/EX-DCP-001` through `EX-DCP-012`
+
+The model must use the examples to copy the decomposition method, not the content.
+
+The authoring standard requires examples to include, where practical:
+
+- metadata;
+- pattern type;
+- complexity;
+- teaching goal;
+- source pattern;
+- synthetic example description;
+- expected decomposition;
+- forbidden assumptions;
+- negative decomposition examples.
 
 ---
 
@@ -147,6 +173,11 @@ Examples:
 - central device mockup
 - dashboard preview
 
+Important:
+
+- Visual core is not automatically decorative.
+- If the visual explains the product, service, state, or proof, mark accessibility/meaning as `unknown` unless the user provides context.
+
 ### 5. Decoration Layers
 
 Visual elements that improve mood, direction, depth, or polish but are not meaningful standalone content.
@@ -199,6 +230,10 @@ Examples:
 - breakpoint requirements
 - whether a decoration must remain visible on mobile
 - whether a group is interactive
+- whether a carousel auto-plays
+- whether an accordion is exclusive or multi-open
+- whether a filter is AJAX, client-side, URL-based, or static
+- whether content is static, CMS-driven, ACF-driven, CPT-driven, or WooCommerce-driven
 
 ### 9. Implementation Assumptions Not Allowed Yet
 
@@ -212,6 +247,9 @@ Examples:
 - “This must be absolute positioned.”
 - “This is definitely one container.”
 - “This is definitely the DOM order.”
+- “This should use ACF Repeater.”
+- “This should use Elementor Loop Grid.”
+- “This should be hardcoded because the screenshot shows a fixed number of cards.”
 
 ---
 
@@ -283,9 +321,11 @@ Stage 2 is successful when:
 - It separates content from decoration.
 - It identifies repeated patterns as component candidates.
 - It classifies the main visual focal point.
+- It does not automatically treat visual core as decorative.
 - It marks possible overlays/connectors without choosing implementation.
 - It identifies responsive risks.
 - It lists unknowns instead of inventing facts.
+- It treats interactive state and dynamic data behavior as unknown unless explicitly provided.
 - It does not recommend a final architecture.
 - It does not score anything.
 - It does not generate an Elementor tree.
