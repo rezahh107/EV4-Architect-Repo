@@ -1,0 +1,169 @@
+# Stage Anchor Contract
+
+Status: active
+Version: 1.0.0
+Applies to: all EV4 Architect stages after `/intake`
+
+---
+
+## Purpose
+
+A `STAGE ANCHOR` is a compact, user-visible context block carried from one stage into the next stage.
+
+It is designed to reduce long-context drift and prevent important unknowns, blockers, gates, payload schemas, and repair routes from being buried in the middle of a long conversation.
+
+Core rule:
+
+```text
+Anchor the next stage with the minimum facts required to continue safely.
+```
+
+The anchor is not hidden chain-of-thought. It is an external, auditable handoff summary.
+
+---
+
+## Required Use
+
+Before starting any stage after `/intake`, the assistant must check for a valid `STAGE ANCHOR` from the previous stage.
+
+If the anchor is missing, outdated, schema-mismatched, or clearly inconsistent with the previous stage output, the assistant must stop and request the correct anchor or regenerate it from the prior stage output.
+
+Do not rely on conversational memory alone.
+
+---
+
+## Canonical Format
+
+```text
+STAGE ANCHOR — [Stage ID]
+anchor_schema: ev4-stage-anchor@1.0.0
+source_stage: [previous stage]
+target_stage: [next stage]
+project_status_version: [STATUS.md version if known]
+payload_schema_in: [expected input payload schema]
+payload_schema_out: [expected output payload schema]
+
+Carry-forward facts:
+- key_decisions:
+- selected_or_active_candidates:
+- rejected_or_blocked_candidates:
+- critical_unknowns:
+- blocking_items:
+- gate_results:
+- audit_flags:
+- tie_or_ambiguity_flags:
+- required_user_confirmations:
+- repair_routes:
+
+Stage input package:
+- required_inputs_present:
+- required_inputs_missing:
+- files_or_sections_to_reference:
+
+Stage boundary:
+- allowed_work:
+- forbidden_work:
+- stop_conditions:
+
+Debug trace:
+- debug_trace_required: yes | no
+- previous_debug_trace_id: optional
+- expected_debug_trace_schema:
+```
+
+---
+
+## Minimal Anchor Requirements
+
+Every anchor must include at least:
+
+- `anchor_schema`
+- `source_stage`
+- `target_stage`
+- `critical_unknowns`
+- `blocking_items`
+- `gate_results`
+- `audit_flags`
+- `required_user_confirmations`
+- `allowed_work`
+- `forbidden_work`
+- `stop_conditions`
+
+If a field is not applicable, write `None`. Do not omit the field.
+
+---
+
+## Anchor Placement Rule
+
+The anchor must appear at the beginning of the user prompt or assistant-generated stage handoff before the next stage starts.
+
+Recommended next-stage prompt shape:
+
+```text
+[PASTE STAGE ANCHOR HERE]
+
+Run /target-stage using this anchor and the referenced stage files.
+```
+
+---
+
+## Anchor Generation Rule
+
+At the end of every stage, the assistant must emit a `NEXT STAGE ANCHOR` unless the stage fails and requires repair.
+
+If the stage fails, emit a `REPAIR ANCHOR` instead.
+
+---
+
+## NEXT STAGE ANCHOR
+
+Use this when the current stage passes.
+
+```text
+NEXT STAGE ANCHOR — [target stage]
+anchor_schema: ev4-stage-anchor@1.0.0
+source_stage: [current stage]
+target_stage: [next stage]
+...
+```
+
+---
+
+## REPAIR ANCHOR
+
+Use this when the current stage fails.
+
+```text
+REPAIR ANCHOR — [repair target]
+anchor_schema: ev4-stage-anchor@1.0.0
+source_stage: [failed stage]
+repair_target_stage: [/decompose | /architectures | /score-evidence | /score-audit | /recommend | /build-tree | /implementation | /final-audit]
+failure_type:
+failure_evidence:
+minimal_repair_instruction:
+forbidden_shortcut:
+```
+
+---
+
+## Relationship to Debug Trace
+
+`STAGE ANCHOR` is the compact handoff block.
+
+`EV4_DEBUG_TRACE` is the detailed diagnostic record.
+
+The anchor should not include full reasoning. It should include only the facts needed to safely start the next stage.
+
+---
+
+## Pass Criteria
+
+A valid anchor passes if:
+
+- It is compact enough to paste into the next prompt.
+- It preserves critical unknowns and blockers.
+- It names gate/audit outcomes.
+- It names required confirmations.
+- It defines allowed and forbidden work for the next stage.
+- It does not expose hidden chain-of-thought.
+- It does not introduce new claims not present in prior stage outputs.
