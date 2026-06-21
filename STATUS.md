@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.4.1  
+Version: 0.4.2  
 Status: in_progress  
 Last confirmed stage: Stage 4 — `/score-evidence`  
 Current next stage: Stage 5 — `/score-audit`  
@@ -48,7 +48,7 @@ Current planned stages:
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
 | `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
 | `/architectures` | confirmed_hardened_v1.1.0 | Architecture Enumeration with coverage matrix, unknown propagation, hidden recommendation ban, dynamic guardrails, and tradeoff requirements |
-| `/score-evidence` | confirmed_hardened_v1.1.0 | Evidence-bound scoring with evidence hierarchy, score anchors, unknown ceilings, shared-unknown consistency, candidate classification, fairness check, and arithmetic hard-stop |
+| `/score-evidence` | confirmed_hardened_v1.1.1 | Evidence-bound scoring with evidence hierarchy, score anchors, `/125` raw weighting, `/100` normalization, unknown ceilings, shared-unknown consistency, candidate classification, fairness check, and arithmetic hard-stop |
 | `/score-audit` | current_next | Needs independent audit rules for Stage 4 scoring quality |
 | `/recommend` | not_started | Depends on score audit |
 | `/build-tree` | not_started | Needs naming convention |
@@ -172,7 +172,7 @@ It evaluates Stage 3 architecture candidates using the scoring rubric without re
 
 ### Scoring Rubric
 
-The rubric has been added to:
+The rubric has been hardened at:
 
 ```text
 rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
@@ -180,18 +180,30 @@ rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
 
 Current weighted criteria:
 
-| Criterion | Weight |
-|---|---:|
-| Elementor-Native Feasibility | ×4 |
-| Normal-Flow Safety | ×4 |
-| Responsiveness | ×4 |
-| Editability | ×3 |
-| Structural Clarity | ×2 |
-| Overlay Containment | ×2 |
-| Performance | ×2 |
-| Accessibility | ×2 |
-| Design-System Fit | ×1 |
-| Visual Precision | ×1 |
+| Criterion | Weight | Raw weighted max |
+|---|---:|---:|
+| Elementor-Native Feasibility | ×4 | 20 |
+| Normal-Flow Safety | ×4 | 20 |
+| Responsiveness | ×4 | 20 |
+| Editability | ×3 | 15 |
+| Structural Clarity | ×2 | 10 |
+| Overlay Containment | ×2 | 10 |
+| Performance | ×2 | 10 |
+| Accessibility | ×2 | 10 |
+| Design-System Fit | ×1 | 5 |
+| Visual Precision | ×1 | 5 |
+
+Raw weighted max:
+
+```text
+125
+```
+
+Normalized total:
+
+```text
+normalized_total = (raw_weighted_total / 125) × 100
+```
 
 Immediate rejection gates:
 
@@ -201,7 +213,7 @@ Normal-Flow Safety < 2 → immediate_reject
 Responsiveness < 2 → immediate_reject
 ```
 
-### Stage 4 v1.1.0 Hardening
+### Stage 4 v1.1.1 Hardening
 
 Stage 4 has been hardened because it is the scoring spine of the system. It now requires:
 
@@ -213,10 +225,11 @@ Stage 4 has been hardened because it is the scoring spine of the system. It now 
 6. Shared Unknown Consistency Rule — the same unknown must be treated consistently across affected candidates.
 7. Candidate Classification — each candidate becomes `complete_gate_pass`, `complete_but_immediate_reject`, `incomplete_unresolved`, `approval_required_excluded`, or `rejected_risk_documented`.
 8. Fairness and Consistency Check — verifies consistent criterion interpretation and no optimism from weaker evidence.
-9. Arithmetic Hard-Stop — totals over `/100` are invalid and must be recalculated before handoff.
-10. Expanded Self-Audit — verifies evidence maps, evidence sources, score anchors, shared unknowns, classification, and no hidden recommendation language.
+9. Arithmetic Hard-Stop — raw totals above `/125` or normalized totals above `/100` are invalid and must be recalculated before handoff.
+10. Raw/Normalized Separation — decision bands use normalized `/100`, never raw `/125`.
+11. Expanded Self-Audit — verifies evidence maps, evidence sources, score anchors, shared unknowns, classification, and no hidden recommendation language.
 
-Stage 4 is now `confirmed_hardened_v1.1.0`.
+Stage 4 is now `confirmed_hardened_v1.1.1`.
 
 ---
 
@@ -225,4 +238,4 @@ Stage 4 is now `confirmed_hardened_v1.1.0`.
 Define Stage 5 — `/score-audit`.
 
 Goal:
-Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, applied gates correctly, treated shared unknowns consistently, avoided hidden recommendation bias, and produced valid arithmetic.
+Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, applied gates correctly, treated shared unknowns consistently, avoided hidden recommendation bias, and produced valid raw/normalized arithmetic.
