@@ -1,7 +1,7 @@
 # Stage 4 — /score-evidence: Evidence-Bound Architecture Scoring
 
-Status: confirmed_hardened_v1.1.0  
-Version: 1.1.0  
+Status: confirmed_hardened_v1.1.1  
+Version: 1.1.1  
 Depends on: Stage 3 — `/architectures`  
 Next stage: Stage 5 — `/score-audit`
 
@@ -27,7 +27,7 @@ rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
 
 The current rubric has 10 criteria with weighted scoring:
 
-| Criterion | Weight | Max weighted score |
+| Criterion | Weight | Raw weighted max |
 |---|---:|---:|
 | Elementor-Native Feasibility | ×4 | 20 |
 | Normal-Flow Safety | ×4 | 20 |
@@ -40,24 +40,41 @@ The current rubric has 10 criteria with weighted scoring:
 | Design-System Fit | ×1 | 5 |
 | Visual Precision | ×1 | 5 |
 
-Total: `/100`.
+Raw weighted maximum: `/125`  
+Normalized total: `/100`
+
+```text
+normalized_total = (raw_weighted_total / 125) × 100
+```
+
+Important:
+
+- Never treat the raw weighted total as `/100`.
+- Decision bands apply to `normalized_total` only.
+- If any criterion is `?`, do not calculate a final normalized score.
 
 ---
 
-## Critical Review Findings Applied in v1.1.0
+## Critical Review Findings Applied in v1.1.1
 
 Stage 4 v1.0.0 was structurally usable, but not strict enough for production-grade scoring.
 
-v1.1.0 adds hardening for these failure modes:
+v1.1.0 added evidence, unknown, and fairness hardening.
 
-1. Numeric scores based on vague reasoning instead of traceable evidence.
-2. `?` values being avoided so the table looks complete.
-3. Shared unknowns being applied inconsistently across candidates.
-4. Visual polish leaking into high-weight criteria.
-5. Dynamic/widget/CSS assumptions being scored as if they were confirmed.
-6. Totals being compared before gate and completeness status are resolved.
-7. Accessibility and responsive behavior being treated as obvious from a static image.
-8. Hidden recommendation language appearing inside scoring notes.
+v1.1.1 fixes the most critical arithmetic issue:
+
+```text
+The weighted criteria add up to 125 raw points, not 100.
+```
+
+Therefore Stage 4 must calculate both:
+
+```text
+raw_weighted_total: /125
+normalized_total: /100
+```
+
+v1.1.1 prevents false totals, false thresholds, and fake precision.
 
 ---
 
@@ -73,6 +90,7 @@ Stage 2 evidence
 + Rubric criterion definition
 + Evidence source hierarchy
 + Explicit uncertainty handling
++ Correct arithmetic normalization
 ```
 
 If the required evidence is missing, do not invent it. Use `?` and explain the missing evidence.
@@ -130,11 +148,13 @@ Always score in this order:
 7. Attach evidence source, evidence label, and confidence to every criterion score
 8. Apply criterion-specific score anchors
 9. Apply immediate rejection gates
-10. Calculate weighted totals only for complete candidates
-11. Produce uncertainty register
-12. Produce scoring table
-13. Run Stage 4 self-audit
-14. Hand off to /score-audit
+10. Calculate raw_weighted_total only for complete candidates
+11. Normalize raw_weighted_total to normalized_total /100 only for complete candidates
+12. Produce uncertainty register
+13. Produce scoring table
+14. Run fairness and consistency check
+15. Run Stage 4 self-audit
+16. Hand off to /score-audit
 ```
 
 ---
@@ -144,9 +164,10 @@ Always score in this order:
 Allowed:
 
 - Score each architecture candidate against the rubric.
-- Use integer scores from `1` to `5` only.
+- Use integer raw scores from `1` to `5` only.
 - Use `?` when evidence is insufficient.
-- Calculate weighted totals only when all criteria have numeric scores.
+- Calculate raw weighted totals only when all criteria have numeric scores.
+- Calculate normalized total only from a complete raw weighted total.
 - Mark candidates with hard-gate failures.
 - Explain why each criterion received its score.
 - Explain what evidence would be needed to replace a `?` score.
@@ -164,14 +185,15 @@ Forbidden:
 - Do not write `best`, `winner`, `recommended`, `preferred`, `optimal`, `cleanest`, `safest`, or their Persian equivalents.
 - Do not use visual taste to override weighted criteria.
 - Do not hide unknowns inside a numeric score.
-- Do not give fractional scores.
+- Do not give fractional raw criterion scores.
 - Do not score an omitted architecture family as if it were a full candidate.
 - Do not score a third-party plugin candidate as normal unless user approval exists.
 - Do not let Visual Precision decide the outcome.
 - Do not produce a final Elementor tree.
 - Do not write CSS or implementation code.
 - Do not use totals from incomplete candidates for comparison.
-- Do not treat a high total as primary-ready when a gate is unresolved or failed.
+- Do not treat a high normalized total as primary-ready when a gate is unresolved or failed.
+- Do not compare raw `/125` totals against `/100` decision bands.
 
 Forbidden Persian winner-implying words before `/recommend`:
 
@@ -189,7 +211,7 @@ Forbidden Persian winner-implying words before `/recommend`:
 Neutral alternatives allowed:
 
 ```text
-highest numeric total among complete candidates
+highest normalized total among complete candidates
 lowest unresolved-risk count
 requires audit
 mechanical score only
@@ -408,7 +430,8 @@ Do not convert `?` to a numeric score merely to complete the table.
 If a candidate has one or more `?` values, its total must be:
 
 ```text
-TOTAL: incomplete
+raw_weighted_total: incomplete
+normalized_total: incomplete
 ```
 
 and it must be excluded from mechanical total comparison until resolved.
@@ -462,7 +485,7 @@ Responsiveness < 2 → immediate_reject
 Gate handling rules:
 
 - A gate failure must be displayed separately from total score.
-- A high total score cannot override a gate failure.
+- A high normalized score cannot override a gate failure.
 - A gate score of `?` means `gate_status: unresolved`, not pass.
 - If gate status is unresolved, the candidate cannot be treated as primary-ready.
 
@@ -551,9 +574,9 @@ Gate status:
 Criterion scores:
 
 1. Elementor-Native Feasibility
-- score: 1 | 2 | 3 | 4 | 5 | ?
+- raw_score: 1 | 2 | 3 | 4 | 5 | ?
 - weight: ×4
-- weighted_result: score × weight | incomplete
+- weighted_result: raw_score × weight | incomplete
 - evidence_source: Stage 2 | Stage 3 | Rubric | Project Defaults | official docs | inference | missing
 - evidence_label: confirmed | partially_supported | inferred | unknown | conflict
 - confidence: high | medium | low | unknown
@@ -563,125 +586,12 @@ Criterion scores:
 - missing_evidence: only if score is ?
 - blocking_level: only if score is ?
 
-2. Normal-Flow Safety
-- score:
-- weight: ×4
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-3. Responsiveness
-- score:
-- weight: ×4
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-4. Editability
-- score:
-- weight: ×3
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-5. Structural Clarity
-- score:
-- weight: ×2
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-6. Overlay Containment
-- score:
-- weight: ×2
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-7. Performance
-- score:
-- weight: ×2
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-8. Accessibility
-- score:
-- weight: ×2
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-9. Design-System Fit
-- score:
-- weight: ×1
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
-
-10. Visual Precision
-- score:
-- weight: ×1
-- weighted_result:
-- evidence_source:
-- evidence_label:
-- confidence:
-- evidence:
-- reasoning:
-- score_anchor_used:
-- missing_evidence:
-- blocking_level:
+[Repeat this exact structure for all 10 criteria.]
 
 TOTAL:
-- numeric_total: /100 | incomplete
+- raw_weighted_total: /125 | incomplete
+- normalized_total: /100 | incomplete
+- normalization_formula: raw_weighted_total / 125 × 100
 - completeness: complete | incomplete
 - gate_status: pass | immediate_reject | unresolved
 - uncertainty_count:
@@ -698,19 +608,19 @@ After individual scoring blocks, output:
 ```text
 SCORING SUMMARY TABLE
 
-| Candidate | Status | Gate | Elementor-Native ×4 | Normal-Flow ×4 | Responsiveness ×4 | Editability ×3 | Structural ×2 | Overlay ×2 | Performance ×2 | Accessibility ×2 | Design-System ×1 | Visual ×1 | Total | Completeness |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| A01 | viable | pass | 20 | 20 | 16 | 12 | 8 | 10 | 8 | 8 | 4 | 3 | 109 INVALID — recalc | complete |
+| Candidate | Status | Gate | Elementor-Native ×4 | Normal-Flow ×4 | Responsiveness ×4 | Editability ×3 | Structural ×2 | Overlay ×2 | Performance ×2 | Accessibility ×2 | Design-System ×1 | Visual ×1 | Raw /125 | Normalized /100 | Completeness |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| A01 | viable | pass | 20 | 20 | 16 | 12 | 8 | 10 | 8 | 8 | 4 | 3 | 109 | 87.2 | complete |
 ```
 
 Important:
 
-- Do not allow totals over `/100`.
-- Use weighted results in the table, not raw scores.
+- Use weighted results in the table, not raw criterion scores.
+- Raw totals must be `/125`.
+- Normalized totals must be `/100`.
 - Use `?` or `incomplete` where evidence is missing.
 - Do not sort the table by preference.
 - Preserve Stage 3 candidate order unless `/score-audit` later requests reordering.
-- If an example row accidentally exceeds `/100`, label it invalid and recalculate; never normalize silently.
 
 ---
 
@@ -729,21 +639,40 @@ Performance max = 10
 Accessibility max = 10
 Design-System Fit max = 5
 Visual Precision max = 5
-TOTAL max = 100
+RAW WEIGHTED TOTAL max = 125
+NORMALIZED TOTAL max = 100
 ```
-
-If total exceeds `/100`, stop and recalculate.
 
 Arithmetic must be shown as:
 
 ```text
 ARITHMETIC CHECK
 Candidate A01:
-20 + 16 + 20 + 12 + 8 + 8 + 6 + 8 + 4 + 4 = 106 INVALID
-Action: recalculate before handoff
+20 + 20 + 16 + 12 + 8 + 10 + 8 + 8 + 4 + 3 = 109 / 125
+109 / 125 × 100 = 87.2 / 100
 ```
 
+If raw total exceeds `/125`, stop and recalculate.
+
+If normalized total exceeds `/100`, stop and recalculate.
+
 No candidate may be handed off with invalid arithmetic.
+
+---
+
+## Decision Bands
+
+Decision bands use `normalized_total`, not `raw_weighted_total`.
+
+```text
+85–100 normalized → primary candidate after /score-audit
+70–84 normalized  → acceptable with repair after /score-audit
+below 70 normalized → reject or keep only as documented risk
+```
+
+Do not apply decision bands to incomplete candidates.
+
+Do not apply decision bands before `/score-audit` as a recommendation.
 
 ---
 
@@ -780,6 +709,7 @@ FAIRNESS AND CONSISTENCY CHECK
 - No candidate penalized for simplifying decoration while preserving content: yes/no
 - No Visual Precision leakage into high-weight criteria: yes/no
 - No hidden recommendation wording: yes/no
+- Raw and normalized totals separated correctly: yes/no
 ```
 
 If any answer is `no`, revise Stage 4 output before proceeding.
@@ -806,8 +736,10 @@ STAGE 4 SELF-AUDIT
 - Gate rules applied: yes/no
 - No hidden recommendation language: yes/no
 - No Visual Precision override: yes/no
-- Arithmetic verified: yes/no
-- No total exceeds /100: yes/no
+- Raw total calculated out of /125: yes/no
+- Normalized total calculated out of /100: yes/no
+- No raw total exceeds /125: yes/no
+- No normalized total exceeds /100: yes/no
 - Summary table complete: yes/no
 - Uncertainty Register complete: yes/no
 - Candidate classification assigned: yes/no
@@ -823,6 +755,7 @@ If any answer is `no`, revise Stage 4 output before proceeding.
 Stage 4 passes only if:
 
 - It uses the rubric weights correctly.
+- It treats `/125` raw total and `/100` normalized total separately.
 - It scores only actual Stage 3 candidates.
 - It produces an Evidence Map for each scored candidate.
 - It attaches evidence source, evidence label, and confidence to every criterion score.
@@ -834,7 +767,7 @@ Stage 4 passes only if:
 - It does not let Visual Precision override higher-weight criteria.
 - It includes a complete Uncertainty Register.
 - It treats shared unknowns consistently across candidates.
-- It validates arithmetic with no total above `/100`.
+- It validates arithmetic with no raw total above `/125` and no normalized total above `/100`.
 - It classifies candidates mechanically without winner language.
 - It hands off to `/score-audit`.
 
