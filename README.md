@@ -23,12 +23,18 @@ Planned pipeline:
 
 ## Current Status
 
-Current confirmed stage:
+Current confirmed stages:
 
 - Stage 1 — `/intake`: Project Defaults + Exception Check
+- Stage 2 — `/decompose`: Controlled Visual Role Decomposition
+
+Current next stage to define:
+
+- Stage 3 — `/architectures`: Architecture Enumeration
 
 See:
 
 - `STATUS.md`
 - `01_PROJECT_INSTRUCTIONS.md`
 - `stages/01_INTAKE.md`
+- `stages/02_DECOMPOSE.md`
