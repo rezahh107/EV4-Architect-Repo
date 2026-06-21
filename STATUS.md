@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.4.0  
+Version: 0.4.1  
 Status: in_progress  
 Last confirmed stage: Stage 4 — `/score-evidence`  
 Current next stage: Stage 5 — `/score-audit`  
@@ -48,7 +48,7 @@ Current planned stages:
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
 | `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
 | `/architectures` | confirmed_hardened_v1.1.0 | Architecture Enumeration with coverage matrix, unknown propagation, hidden recommendation ban, dynamic guardrails, and tradeoff requirements |
-| `/score-evidence` | confirmed_v1.0.0 | Evidence-bound scoring using rubric weights, gates, evidence labels, confidence, unknown handling, arithmetic check, and uncertainty register |
+| `/score-evidence` | confirmed_hardened_v1.1.0 | Evidence-bound scoring with evidence hierarchy, score anchors, unknown ceilings, shared-unknown consistency, candidate classification, fairness check, and arithmetic hard-stop |
 | `/score-audit` | current_next | Needs independent audit rules for Stage 4 scoring quality |
 | `/recommend` | not_started | Depends on score audit |
 | `/build-tree` | not_started | Needs naming convention |
@@ -201,20 +201,22 @@ Normal-Flow Safety < 2 → immediate_reject
 Responsiveness < 2 → immediate_reject
 ```
 
-### Stage 4 v1.0.0 Controls
+### Stage 4 v1.1.0 Hardening
 
-Stage 4 has been confirmed with these mandatory controls:
+Stage 4 has been hardened because it is the scoring spine of the system. It now requires:
 
-1. Required Inputs Gate — Stage 2 decomposition, Stage 3 candidates, Coverage Matrix, Unknown Propagation Ledger, and rubric must exist.
-2. Evidence Labels — every criterion score must be labeled `confirmed`, `partially_supported`, `inferred`, `unknown`, or `conflict`.
-3. Confidence Labels — every criterion score must include `high`, `medium`, `low`, or `unknown` confidence.
-4. Unknown Handling — insufficient evidence must use `?`; incomplete candidates cannot receive a fake total.
-5. Immediate Rejection Gates — rubric gate failures override total score.
-6. Conservative Scoring — weak evidence lowers score or becomes `?` instead of being invented.
-7. Arithmetic Check — totals must never exceed `/100`.
-8. Uncertainty Register — every `?` score must be listed with evidence needed.
-9. Hidden Recommendation Ban — scoring must not imply a winner before `/score-audit` and `/recommend`.
-10. Self-Audit — Stage 4 must verify evidence, arithmetic, gates, unknowns, and handoff before completion.
+1. Evidence Source Hierarchy — Stage 2/3/rubric/project defaults outrank inference; official docs prove platform capability, not candidate behavior.
+2. Score Anchor Scale — every numeric score must map to a defined 1–5 meaning.
+3. Criterion-Specific Anchors — each rubric criterion has stricter score guidance.
+4. Evidence Map Requirement — every scored candidate must first map Stage 2 evidence, Stage 3 claims, gates, and missing evidence.
+5. Unknown-to-Score Ceiling — inferred or unresolved evidence caps numeric optimism; criterion-critical unknowns must become `?`.
+6. Shared Unknown Consistency Rule — the same unknown must be treated consistently across affected candidates.
+7. Candidate Classification — each candidate becomes `complete_gate_pass`, `complete_but_immediate_reject`, `incomplete_unresolved`, `approval_required_excluded`, or `rejected_risk_documented`.
+8. Fairness and Consistency Check — verifies consistent criterion interpretation and no optimism from weaker evidence.
+9. Arithmetic Hard-Stop — totals over `/100` are invalid and must be recalculated before handoff.
+10. Expanded Self-Audit — verifies evidence maps, evidence sources, score anchors, shared unknowns, classification, and no hidden recommendation language.
+
+Stage 4 is now `confirmed_hardened_v1.1.0`.
 
 ---
 
@@ -223,4 +225,4 @@ Stage 4 has been confirmed with these mandatory controls:
 Define Stage 5 — `/score-audit`.
 
 Goal:
-Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, applied gates correctly, and avoided hidden recommendation bias.
+Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, applied gates correctly, treated shared unknowns consistently, avoided hidden recommendation bias, and produced valid arithmetic.
