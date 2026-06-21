@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.2.1  
+Version: 0.2.2  
 Status: in_progress  
 Last confirmed stage: Stage 2 — `/decompose`  
 Current next stage: Stage 3 — `/architectures`  
@@ -46,7 +46,7 @@ Current planned stages:
 | `/intake` | confirmed | Lightweight default-based intake |
 | `/research` | draft | Documentation source policy remains useful, but Stage 2 embeds initial research grounding |
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
-| `/decomposition-example-bank` | active | 12 synthetic pattern-based examples under `examples/decomposition/` |
+| `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
 | `/architectures` | current_next | Needs architecture enumeration rules |
 | `/score-evidence` | not_started | Needs Rubric v2 and evidence schema |
 | `/score-audit` | not_started | Needs audit rules |
@@ -97,6 +97,8 @@ It converts a screenshot, reference image, or section description into a role-ba
 Stage 2 must not recommend an architecture, score options, produce an Elementor tree, assign exact CSS values, infer actual DOM, or choose widgets/plugins.
 
 Stage 2 now includes an active Example Bank with 12 synthetic, pattern-based decomposition examples. These examples act as few-shot guidance and calibration material for the GPT Project.
+
+A new example authoring standard has been added at `examples/decomposition/EXAMPLE_AUTHORING_STANDARD.md`. It requires metadata, pattern type, complexity, teaching goal, negative examples, stricter unknown handling, accessibility caution, and interactive state uncertainty for future example revisions.
 
 ---
 
