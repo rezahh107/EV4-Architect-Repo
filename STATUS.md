@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.8.0
+Version: 0.9.0
 Status: in_progress
-Last confirmed stage: Stage 8 — /implementation
-Current next step: Continue to Stage 9 — /final-audit hardening. Release blocker: run one E2E pipeline test before marking Stage 9 production-confirmed.
+Last confirmed stage: Stage 9 — /final-audit contract hardening
+Current next step: Continue to Stage 10 — /handoff-export hardening. Release blocker: run one E2E pipeline test before marking the prompt pack release-ready.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-06-22
 
@@ -39,11 +39,11 @@ Last automation update: 2026-06-22
 | /debug-trace-contract | active | External trace contract for pipeline debugging |
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
 | /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, exact payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
-| /final-audit | draft_scaffolded | Stage 9 scaffold created; needs hardening |
+| /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, scoped CSS/responsive/editability/accessibility/design-system audits, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
 | /handoff-export | draft_scaffolded | Stage 10 scaffold created; needs hardening |
 | /elementor-knowledge-base-strategy | draft_active_v0.3.0 | Adds mandatory Stage Source Access Matrix to prevent RAG/source leakage into scoring and recommendation |
 | /tuya-concept-reference | active_v0.2.0 | Adds provisional-to-contradicted transition rule and evidence reclassification behavior |
-| /e2e-test-plan | draft_active | First real pipeline run remains a release blocker before Stage 9 production confirmation |
+| /e2e-test-plan | draft_active | First real pipeline run remains a release blocker before release-level confirmation |
 
 ## Active Hardening / Contract Files
 
@@ -62,6 +62,7 @@ Last automation update: 2026-06-22
 - stages/06_RECOMMEND_v1.1_HARDENING_PATCH.md
 - stages/07_BUILD_TREE.md
 - stages/08_IMPLEMENTATION.md
+- stages/09_FINAL_AUDIT.md
 - examples/scoring/README.md
 - examples/scoring/SCORING-CAL-001-contradicted-evidence.md
 - examples/scoring/SCORING-CAL-002-absent-vs-contradicted.md
@@ -71,10 +72,10 @@ Last automation update: 2026-06-22
 ## Hardened Stage Files
 
 - stages/08_IMPLEMENTATION.md
+- stages/09_FINAL_AUDIT.md
 
 ## Scaffolded Stage Files
 
-- stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
 
 ## Stage Anchor v1.1 Notes
@@ -114,7 +115,7 @@ It must first produce a `PARTIAL RERUN PLAN` that identifies:
 
 ## Knowledge Base / RAG Notes
 
-A structured Elementor knowledge base may support `/research`, `/architectures`, `/build-tree`, and `/implementation`.
+A structured Elementor knowledge base may support `/research`, `/architectures`, `/build-tree`, `/implementation`, and `/final-audit`.
 
 It must not replace the pipeline or skip `/decompose`, `/score-evidence`, `/score-audit`, or `/recommend`.
 
@@ -126,7 +127,7 @@ platform capability ≠ project-specific behavior
 
 Official documentation can prove Elementor can do something; it cannot by itself prove that the current section should use that thing.
 
-Future export evidence / EDIS may strengthen implementation grounding but must still pass through the pipeline.
+Future export evidence / EDIS may strengthen implementation grounding and final audit checks but must still pass through the pipeline.
 
 ### Stage Source Access Matrix
 
@@ -139,6 +140,7 @@ Key gates:
 - Stage 4 must score from Rubric + Stage 2/3 evidence; TUYA/RAG cannot boost scores by themselves.
 - Stage 6 must recommend only from audited Stage 4/5 outputs; no new RAG preference signals.
 - Stage 7/8 may use TUYA + official docs to map approved architecture/tree decisions to structure and implementation.
+- Stage 9 may use Stage 8, Stage 7, Stage 6, Stage 5, Stage 4 constraints, TUYA audit concepts, official docs, and export evidence only to audit preservation and capability claims; it must not generate new architecture or implementation.
 
 ## TUYA Internal Concept Reference Notes
 
@@ -177,7 +179,7 @@ This prevents the pipeline from preserving a weak provisional heuristic after la
 
 ## Stage 8 — /implementation Hardening Notes
 
-Stage 8 is now confirmed as a hardened contract, not a scaffold.
+Stage 8 is confirmed as a hardened contract, not a scaffold.
 
 Added controls:
 
@@ -205,26 +207,67 @@ Important limitation:
 Stage 8 hardening confirms the prompt contract. It does not replace the first real E2E pipeline run.
 ```
 
-## E2E Test Notes
+## Stage 9 — /final-audit Hardening Notes
 
-Before marking Stage 9 as production-confirmed, run at least one realistic section through:
+Stage 9 is confirmed as a hardened contract, not a scaffold.
+
+Added controls:
+
+- strict input authorization against `ev4-stage-anchor@1.1.0` and `ev4-implementation-payload@1.0.0`;
+- mandatory Source Access Matrix binding for final audit;
+- source/payload classification for audit claims;
+- authoritative source order and conflict rules;
+- ordered Stage 9 output format;
+- severity taxonomy: blocker, high, medium, low, info;
+- final audit statuses and status rules;
+- architecture preservation audit;
+- build tree preservation audit;
+- Elementor-native and dependency audit;
+- editability audit;
+- normal-flow / position / layering audit;
+- responsive audit;
+- accessibility audit;
+- performance / DOM audit;
+- design-system audit;
+- scoped CSS audit;
+- asset / media audit;
+- dynamic data / interaction audit;
+- unknown / confirmation survival audit;
+- blocker/high repair route schema;
+- repair examples;
+- regression examples;
+- Stage 9 self-audit;
+- `Final_Audit_Payload` schema;
+- debug trace addendum;
+- NEXT STAGE ANCHOR template for `/handoff-export`;
+- REPAIR ANCHOR template for failed audit statuses.
+
+Important limitation:
 
 ```text
-/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation
+Stage 9 hardening confirms the final-audit prompt contract. It does not mean a real implementation has passed final audit, and it does not remove the E2E release blocker.
 ```
 
-The test should measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, and whether implementation preserves the approved tree.
+## E2E Test Notes
+
+Before marking the prompt pack release-ready, run at least one realistic section through:
+
+```text
+/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation → /final-audit
+```
+
+The test should measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, implementation preservation of the approved tree, and whether final audit correctly blocks handoff when blocker/high defects exist.
 
 ## Current Next Step
 
 Preferred next action:
 
 ```text
-Continue to Stage 9 — /final-audit hardening in hardening mode.
+Continue to Stage 10 — /handoff-export hardening in hardening mode.
 ```
 
-Release blocker before production confirmation:
+Release blocker before final release confirmation:
 
 ```text
-Run one E2E test before marking Stage 9 confirmed for production pipeline use.
+Run one E2E test before marking the prompt pack release-ready.
 ```
