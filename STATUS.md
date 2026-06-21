@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.7.3
+Version: 0.7.4
 Status: in_progress
 Last confirmed stage: Stage 7 — /build-tree
 Current next step: Run first E2E pipeline test or continue to Stage 8 — /implementation hardening
@@ -40,8 +40,8 @@ Language: Persian reports, English technical labels allowed
 | /implementation | draft_scaffolded | Stage 8 scaffold created; needs hardening |
 | /final-audit | draft_scaffolded | Stage 9 scaffold created; needs hardening |
 | /handoff-export | draft_scaffolded | Stage 10 scaffold created; needs hardening |
-| /elementor-knowledge-base-strategy | draft_active_v0.2.0 | RAG/docs strategy now includes TUYA internal concept reference layer |
-| /tuya-concept-reference | active_v0.1.0 | Internal conceptual reference extracted from TUYA workbook for Stage 3/7/8/9 support |
+| /elementor-knowledge-base-strategy | draft_active_v0.3.0 | Adds mandatory Stage Source Access Matrix to prevent RAG/source leakage into scoring and recommendation |
+| /tuya-concept-reference | active_v0.2.0 | Adds provisional-to-contradicted transition rule and evidence reclassification behavior |
 | /e2e-test-plan | draft_active | First real pipeline run recommended before finalizing later stages |
 
 ## Active Hardening / Contract Files
@@ -123,6 +123,18 @@ Official documentation can prove Elementor can do something; it cannot by itself
 
 Future export evidence / EDIS may strengthen implementation grounding but must still pass through the pipeline.
 
+### Stage Source Access Matrix
+
+The RAG Strategy now defines which sources each stage may use.
+
+Key gates:
+
+- Stage 2 uses only image/user-provided evidence and must not use RAG to invent visual groups.
+- Stage 3 may use TUYA concepts and official docs to verify architecture feasibility.
+- Stage 4 must score from Rubric + Stage 2/3 evidence; TUYA/RAG cannot boost scores by themselves.
+- Stage 6 must recommend only from audited Stage 4/5 outputs; no new RAG preference signals.
+- Stage 7/8 may use TUYA + official docs to map approved architecture/tree decisions to structure and implementation.
+
 ## TUYA Internal Concept Reference Notes
 
 The TUYA workbook is now treated as an internal conceptual reference, not as official Elementor documentation.
@@ -144,6 +156,19 @@ fact_class: project_conceptual_model
 ```
 
 It may guide reasoning but must not prove platform capability or bypass the EV4 pipeline.
+
+### TUYA Evidence Transition Rule
+
+A TUYA-derived `provisional` item may be reclassified later.
+
+```text
+provisional + stronger supporting evidence → supported / partially supported
+provisional + still incomplete evidence → stays provisional
+provisional + direct conflicting evidence → CONTRADICTED_EVIDENCE
+unknown by itself ≠ contradiction
+```
+
+This prevents the pipeline from preserving a weak provisional heuristic after later Stage evidence disproves it.
 
 ## E2E Test Notes
 
