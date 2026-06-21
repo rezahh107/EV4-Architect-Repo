@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.7.2
+Version: 0.7.3
 Status: in_progress
 Last confirmed stage: Stage 7 — /build-tree
 Current next step: Run first E2E pipeline test or continue to Stage 8 — /implementation hardening
@@ -35,12 +35,13 @@ Language: Persian reports, English technical labels allowed
 | /recommend | confirmed_hardened_v1.1.0_patch | Recommendation matrix, provenance ledger, tie handling, build-tree readiness gate, debug record |
 | /stage-anchor-contract | active_v1.1.0 | Adds confidence_delta, target_stage_hardening_status, and partial_rerun_state |
 | /partial-rerun-contract | active_v1.0.0 | Defines safe partial reruns and invalidation rules |
-| /debug-trace-contract | active | External trace contract; no hidden chain-of-thought dependency |
+| /debug-trace-contract | active | External trace contract for pipeline debugging |
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
 | /implementation | draft_scaffolded | Stage 8 scaffold created; needs hardening |
 | /final-audit | draft_scaffolded | Stage 9 scaffold created; needs hardening |
 | /handoff-export | draft_scaffolded | Stage 10 scaffold created; needs hardening |
-| /elementor-knowledge-base-strategy | draft_active | RAG/docs strategy added; supports stages but does not replace pipeline |
+| /elementor-knowledge-base-strategy | draft_active_v0.2.0 | RAG/docs strategy now includes TUYA internal concept reference layer |
+| /tuya-concept-reference | active_v0.1.0 | Internal conceptual reference extracted from TUYA workbook for Stage 3/7/8/9 support |
 | /e2e-test-plan | draft_active | First real pipeline run recommended before finalizing later stages |
 
 ## Active Hardening / Contract Files
@@ -51,6 +52,7 @@ Language: Persian reports, English technical labels allowed
 - contracts/BUILD_TREE_NAMING_AND_STRUCTURE_CONTRACT.md
 - diagnostics/LLM_DEBUG_TRACE_CONTRACT.md
 - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
+- knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
 - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
 - stages/04_SCORE_EVIDENCE_v1.3_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.1_HARDENING_PATCH.md
@@ -90,7 +92,7 @@ Purpose:
 - prevent long-context drift;
 - keep handoffs compact and auditable.
 
-The anchor is not hidden chain-of-thought. It is an external structured handoff.
+The anchor is an external structured handoff.
 
 ## Partial Rerun Notes
 
@@ -120,6 +122,28 @@ platform capability ≠ project-specific behavior
 Official documentation can prove Elementor can do something; it cannot by itself prove that the current section should use that thing.
 
 Future export evidence / EDIS may strengthen implementation grounding but must still pass through the pipeline.
+
+## TUYA Internal Concept Reference Notes
+
+The TUYA workbook is now treated as an internal conceptual reference, not as official Elementor documentation.
+
+Use `knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md` to preserve:
+
+- Global Thinking Order: `Context → Structure → Flow/Display → Size/Units → Position/Layering → Responsive → Design System → DOM/Audit`;
+- the `confirmed | provisional | unknown` thinking labels;
+- normal-flow content plus relative visual stage discipline;
+- responsive inheritance caution;
+- design-system class/variable/component logic;
+- performance and DOM/audit mindset.
+
+Any TUYA-derived fact must be classified as:
+
+```text
+source_type: internal_concept_reference
+fact_class: project_conceptual_model
+```
+
+It may guide reasoning but must not prove platform capability or bypass the EV4 pipeline.
 
 ## E2E Test Notes
 
