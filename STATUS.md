@@ -1,8 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.1.0  
+Version: 0.2.0  
 Status: in_progress  
-Last confirmed stage: Stage 1 — `/intake`  
+Last confirmed stage: Stage 2 — `/decompose`  
+Current next stage: Stage 3 — `/architectures`  
 Language: Persian reports, English technical labels allowed  
 
 ---
@@ -43,9 +44,9 @@ Current planned stages:
 | Stage | Status | Notes |
 |---|---|---|
 | `/intake` | confirmed | Lightweight default-based intake |
-| `/research` | draft | Needs documentation source policy |
-| `/decompose` | not_started | Needs output schema |
-| `/architectures` | not_started | Needs architecture enumeration rules |
+| `/research` | draft | Documentation source policy remains useful, but Stage 2 embeds initial research grounding |
+| `/decompose` | confirmed | Controlled Visual Role Decomposition; no architecture recommendation allowed |
+| `/architectures` | current_next | Needs architecture enumeration rules |
 | `/score-evidence` | not_started | Needs Rubric v2 and evidence schema |
 | `/score-audit` | not_started | Needs audit rules |
 | `/recommend` | not_started | Depends on score audit |
@@ -86,9 +87,19 @@ Current planned stages:
 
 ---
 
+## Confirmed Stage 2 Summary
+
+Stage 2 is `/decompose`: Controlled Visual Role Decomposition.
+
+It converts a screenshot, reference image, or section description into a role-based visual inventory. It must classify visible groups, meaningful content, repeated component candidates, visual core, decoration layers, overlay or connector candidates, responsive risks, unknowns, and forbidden implementation assumptions.
+
+Stage 2 must not recommend an architecture, score options, produce an Elementor tree, assign exact CSS values, infer actual DOM, or choose widgets/plugins.
+
+---
+
 ## Current Next Step
 
-Define Stage 2 — `/decompose`.
+Define Stage 3 — `/architectures`.
 
 Goal:
-Create a fixed visual decomposition schema for Elementor V4 section analysis.
+Create rules for enumerating all viable Elementor V4 implementation architectures before scoring or recommendation.
