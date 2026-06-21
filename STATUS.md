@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.3.0  
+Version: 0.3.1  
 Status: in_progress  
 Last confirmed stage: Stage 3 — `/architectures`  
 Current next stage: Stage 4 — `/score-evidence`  
@@ -47,7 +47,7 @@ Current planned stages:
 | `/research` | draft | Documentation source policy remains useful, but Stage 2 and Stage 3 embed initial research grounding |
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
 | `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
-| `/architectures` | confirmed | Architecture Enumeration; generates candidates only, no scoring or recommendation |
+| `/architectures` | confirmed_hardened_v1.1.0 | Architecture Enumeration with coverage matrix, unknown propagation, hidden recommendation ban, dynamic guardrails, and tradeoff requirements |
 | `/score-evidence` | current_next | Needs Rubric v2 and evidence schema |
 | `/score-audit` | not_started | Needs audit rules |
 | `/recommend` | not_started | Depends on score audit |
@@ -149,6 +149,18 @@ Required architecture families include:
 - R02 — Third-Party Plugin Architecture requiring user approval
 
 Stage 3 usually requires at least 3 viable candidates plus any relevant rejected-risk candidates. Complex overlay, connector, dynamic, carousel, FAQ, pricing, or portfolio sections usually require at least 4 viable candidates.
+
+### Stage 3 v1.1.0 Hardening
+
+Stage 3 has been hardened with these mandatory controls:
+
+1. Architecture Coverage Matrix — every architecture family must be considered, included, omitted, rejected, or approval-gated with a reason.
+2. Unknown Propagation Ledger — every architecture-relevant Stage 2 unknown must be carried into the affected candidates or marked not applicable with reason.
+3. Hidden Recommendation Ban — no ranking or winner-implying words before `/score-evidence` and `/recommend`.
+4. Dynamic/Loop Guardrail — repeated visual groups do not automatically justify Loop Grid, CPT, ACF, WooCommerce, or dynamic architecture.
+5. Widget-State Guardrail — visible carousel, FAQ, counter, toggle, filter, or hover states do not prove interaction behavior.
+6. Scoped CSS Guardrail — custom CSS candidates must stay scoped; global unscoped CSS is invalid.
+7. Tradeoff Requirement — every candidate must state what it preserves, what it sacrifices, and what must be verified later.
 
 ---
 
