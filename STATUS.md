@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.4.2  
+Version: 0.4.3  
 Status: in_progress  
 Last confirmed stage: Stage 4 — `/score-evidence`  
 Current next stage: Stage 5 — `/score-audit`  
@@ -48,7 +48,7 @@ Current planned stages:
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
 | `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
 | `/architectures` | confirmed_hardened_v1.1.0 | Architecture Enumeration with coverage matrix, unknown propagation, hidden recommendation ban, dynamic guardrails, and tradeoff requirements |
-| `/score-evidence` | confirmed_hardened_v1.1.1 | Evidence-bound scoring with evidence hierarchy, score anchors, `/125` raw weighting, `/100` normalization, unknown ceilings, shared-unknown consistency, candidate classification, fairness check, and arithmetic hard-stop |
+| `/score-evidence` | confirmed_hardened_v1.2.0 | Scoring spine hardened with tool-first arithmetic policy, provisional known-score formula, closed evidence labels, absent-vs-contradicted separation, Elementor inheritance caps, hidden recommendation scan, schema-versioned Audit_Trail_Payload, and Stage 5 spot-check authority |
 | `/score-audit` | current_next | Needs independent audit rules for Stage 4 scoring quality |
 | `/recommend` | not_started | Depends on score audit |
 | `/build-tree` | not_started | Needs naming convention |
@@ -178,6 +178,8 @@ The rubric has been hardened at:
 rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
 ```
 
+Current rubric version: `1.2`
+
 Current weighted criteria:
 
 | Criterion | Weight | Raw weighted max |
@@ -213,23 +215,25 @@ Normal-Flow Safety < 2 → immediate_reject
 Responsiveness < 2 → immediate_reject
 ```
 
-### Stage 4 v1.1.1 Hardening
+### Stage 4 v1.2.0 Hardening
 
 Stage 4 has been hardened because it is the scoring spine of the system. It now requires:
 
-1. Evidence Source Hierarchy — Stage 2/3/rubric/project defaults outrank inference; official docs prove platform capability, not candidate behavior.
-2. Score Anchor Scale — every numeric score must map to a defined 1–5 meaning.
-3. Criterion-Specific Anchors — each rubric criterion has stricter score guidance.
-4. Evidence Map Requirement — every scored candidate must first map Stage 2 evidence, Stage 3 claims, gates, and missing evidence.
-5. Unknown-to-Score Ceiling — inferred or unresolved evidence caps numeric optimism; criterion-critical unknowns must become `?`.
-6. Shared Unknown Consistency Rule — the same unknown must be treated consistently across affected candidates.
-7. Candidate Classification — each candidate becomes `complete_gate_pass`, `complete_but_immediate_reject`, `incomplete_unresolved`, `approval_required_excluded`, or `rejected_risk_documented`.
-8. Fairness and Consistency Check — verifies consistent criterion interpretation and no optimism from weaker evidence.
-9. Arithmetic Hard-Stop — raw totals above `/125` or normalized totals above `/100` are invalid and must be recalculated before handoff.
-10. Raw/Normalized Separation — decision bands use normalized `/100`, never raw `/125`.
-11. Expanded Self-Audit — verifies evidence maps, evidence sources, score anchors, shared unknowns, classification, and no hidden recommendation language.
+1. Tool-first arithmetic policy — use Python/calculator/runtime when available; otherwise mark arithmetic as `needs_audit`.
+2. Provisional known-score formula — incomplete candidates may show a non-final `provisional_known_percent`, but final totals remain `incomplete`.
+3. Closed evidence-label set — `SUPPORTED_EVIDENCE`, `PARTIALLY_SUPPORTED_EVIDENCE`, `INFERRED_EVIDENCE`, `ABSENT_EVIDENCE`, `CONTRADICTED_EVIDENCE`, `UNRESOLVED_CONFLICT`.
+4. Absent-vs-contradicted separation — missing evidence is not a contradiction; contradiction is not an unknown.
+5. Elementor Responsive Inheritance Rule — absent mobile evidence does not automatically force `?`, but score ceilings apply based on flow quality and mobile-risk signals.
+6. Hidden Recommendation Scan — direct recommendation terms auto-fail; subjective non-mechanical phrasing is flagged for Stage 5.
+7. Evidence Map Requirement — every scored candidate must first map Stage 2 evidence, Stage 3 claims, gates, and missing evidence.
+8. Unknown-to-Score Ceiling — inferred or unresolved evidence caps numeric optimism; criterion-critical unknowns must become `?`.
+9. Shared Unknown Consistency Rule — the same unknown must be treated consistently across affected candidates.
+10. Candidate Classification — each candidate becomes `complete_gate_pass`, `complete_but_immediate_reject`, `incomplete_unresolved`, `approval_required_excluded`, or `rejected_risk_documented`.
+11. Fairness and Consistency Check — verifies consistent criterion interpretation and no optimism from weaker evidence.
+12. Schema-versioned `Audit_Trail_Payload` — Stage 4 hands off `ev4-score-evidence-payload@1.2.0` to Stage 5.
+13. Stage 5 Spot-Check Authority — Stage 5 uses the payload as primary audit index but may inspect Stage 2, Stage 3, rubric, and defaults when triggered.
 
-Stage 4 is now `confirmed_hardened_v1.1.1`.
+Stage 4 is now `confirmed_hardened_v1.2.0`.
 
 ---
 
@@ -238,4 +242,4 @@ Stage 4 is now `confirmed_hardened_v1.1.1`.
 Define Stage 5 — `/score-audit`.
 
 Goal:
-Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, applied gates correctly, treated shared unknowns consistently, avoided hidden recommendation bias, and produced valid raw/normalized arithmetic.
+Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, separated absent evidence from contradicted evidence, applied Elementor inheritance caps correctly, applied gates correctly, treated shared unknowns consistently, avoided hidden recommendation bias, produced valid raw/normalized arithmetic, and emitted a schema-versioned audit payload.
