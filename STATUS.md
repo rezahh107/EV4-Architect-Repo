@@ -1,61 +1,39 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.4.3  
-Status: in_progress  
-Last confirmed stage: Stage 4 — `/score-evidence`  
-Current next stage: Stage 5 — `/score-audit`  
-Language: Persian reports, English technical labels allowed  
+Version: 0.5.0
+Status: in_progress
+Last confirmed stage: Stage 5 — /score-audit
+Current next stage: Stage 6 — /recommend
+Language: Persian reports, English technical labels allowed
 
----
+## Pipeline
 
-## Confirmed Decisions
-
-### System Architecture
-
-- This project uses GPT Projects.
-- The system is a prompt pipeline, not a single giant prompt.
-- The GPT Project will contain:
-  - Project Instructions / Master Prompt
-  - Elementor V4 documentation files
-  - Workbook methodology notes
-  - Architecture scoring rubric
-  - Few-shot examples
-  - Calibration cases
-
-### Pipeline
-
-Current planned stages:
-
-1. `/intake`
-2. `/research`
-3. `/decompose`
-4. `/architectures`
-5. `/score-evidence`
-6. `/score-audit`
-7. `/recommend`
-8. `/build-tree`
-9. `/implementation`
-10. `/final-audit`
-
----
+1. /intake
+2. /research
+3. /decompose
+4. /architectures
+5. /score-evidence
+6. /score-audit
+7. /recommend
+8. /build-tree
+9. /implementation
+10. /final-audit
 
 ## Stage Status
 
 | Stage | Status | Notes |
 |---|---|---|
-| `/intake` | confirmed | Lightweight default-based intake |
-| `/research` | draft | Documentation source policy remains useful, but Stage 2, Stage 3, and Stage 4 embed initial research grounding |
-| `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
-| `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
-| `/architectures` | confirmed_hardened_v1.1.0 | Architecture Enumeration with coverage matrix, unknown propagation, hidden recommendation ban, dynamic guardrails, and tradeoff requirements |
-| `/score-evidence` | confirmed_hardened_v1.2.0 | Scoring spine hardened with tool-first arithmetic policy, provisional known-score formula, closed evidence labels, absent-vs-contradicted separation, Elementor inheritance caps, hidden recommendation scan, schema-versioned Audit_Trail_Payload, and Stage 5 spot-check authority |
-| `/score-audit` | current_next | Needs independent audit rules for Stage 4 scoring quality |
-| `/recommend` | not_started | Depends on score audit |
-| `/build-tree` | not_started | Needs naming convention |
-| `/implementation` | not_started | Needs Elementor settings schema |
-| `/final-audit` | not_started | Needs checklist |
-
----
+| /intake | confirmed | Lightweight default-based intake |
+| /research | draft | Documentation source policy remains useful |
+| /decompose | confirmed_with_example_bank | Controlled Visual Role Decomposition with 12 examples |
+| /decomposition-example-bank | active_enhanced | Synthetic pattern-based examples plus authoring standard |
+| /architectures | confirmed_hardened_v1.1.0 | Coverage matrix, unknown propagation, recommendation ban, dynamic guardrails, tradeoff requirements |
+| /score-evidence | confirmed_hardened_v1.2.0 | Evidence-bound scoring spine with arithmetic policy, evidence labels, unknown discipline, inheritance caps, payload handoff |
+| /score-audit | confirmed_v1.0.0 | Independent audit of Stage 4 scoring quality before recommendation |
+| /recommend | current_next | Depends on Stage 5 pass or pass_with_minor_flags |
+| /build-tree | not_started | Needs naming convention |
+| /implementation | not_started | Needs Elementor settings schema |
+| /final-audit | not_started | Needs checklist |
 
 ## Confirmed Project Defaults
 
@@ -74,172 +52,72 @@ Current planned stages:
 - Decorative connector lines may use SVG and may be hidden or simplified on mobile
 - Prefer one DOM across desktop, tablet, and mobile
 - Avoid duplicate mobile-only sections unless strongly justified
-- Use reusable classes for repeated visual patterns
-- Use variables for repeated colors, spacing, radius, typography, and shadows when useful
+- Use reusable classes and variables for repeated visual patterns
 - Do not create global classes for one-off coordinates
 - Meaningful text must remain real text
 - Images must be classified as meaningful or decorative
 - DOM reading order should remain logical
-- Avoid heavy full-image sections
-- Avoid excessive wrappers
+- Avoid heavy full-image sections and excessive wrappers
 - Optimize large visual assets
 - Reports and reasoning must be in Persian
-- Elementor labels, class names, and technical terms may remain English
 
----
+## Stage 2 Summary
 
-## Confirmed Stage 2 Summary
+/decompose converts a screenshot, reference image, or section description into a role-based visual inventory. It classifies visible groups, meaningful content, repeated component candidates, visual core, decoration layers, overlay or connector candidates, responsive risks, unknowns, and forbidden implementation assumptions. It must not recommend architecture, score options, produce an Elementor tree, infer actual DOM, or choose widgets/plugins.
 
-Stage 2 is `/decompose`: Controlled Visual Role Decomposition.
+The decomposition example bank lives in examples/decomposition/ and currently contains 12 synthetic pattern-based examples plus an authoring standard.
 
-It converts a screenshot, reference image, or section description into a role-based visual inventory. It must classify visible groups, meaningful content, repeated component candidates, visual core, decoration layers, overlay or connector candidates, responsive risks, unknowns, and forbidden implementation assumptions.
+## Stage 3 Summary
 
-Stage 2 must not recommend an architecture, score options, produce an Elementor tree, assign exact CSS values, infer actual DOM, or choose widgets/plugins.
+/architectures enumerates multiple Elementor V4 architecture candidates from the completed Stage 2 decomposition. It must not score, rank, recommend, produce a final Elementor tree, or write implementation code.
 
-Stage 2 now includes an active Example Bank with 12 synthetic, pattern-based decomposition examples. These examples act as few-shot guidance and calibration material for the GPT Project.
+Stage 3 v1.1.0 requires: Architecture Coverage Matrix, Unknown Propagation Ledger, Hidden Recommendation Ban, Dynamic/Loop Guardrail, Widget-State Guardrail, Scoped CSS Guardrail, and Tradeoff Requirement.
 
-A new example authoring standard has been added at `examples/decomposition/EXAMPLE_AUTHORING_STANDARD.md`. It requires metadata, pattern type, complexity, teaching goal, negative examples, stricter unknown handling, accessibility caution, and interactive state uncertainty for future example revisions.
+## Stage 4 Summary
 
----
+/score-evidence evaluates Stage 3 candidates using rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md.
 
-## Decomposition Example Bank
-
-Location: `examples/decomposition/`
-
-| ID | Pattern | Purpose |
-|---|---|---|
-| EX-DCP-001 | Smart Home Connector Section | Connector decoration vs editable feature cards |
-| EX-DCP-002 | Split Hero with Dashboard Mockup | Copy area vs visual mockup vs decoration |
-| EX-DCP-003 | Services / Feature Cards Grid | Repeated card components and flow groups |
-| EX-DCP-004 | Pricing Cards | Repeated plan cards, CTA content, feature lists |
-| EX-DCP-005 | Testimonial Cards / Carousel | Quote/avatar/name grouping and carousel unknowns |
-| EX-DCP-006 | Logo Strip / Partner Grid | Repeated logos and accessibility unknowns |
-| EX-DCP-007 | CTA Band | Primary message, CTA, and background decoration |
-| EX-DCP-008 | FAQ Accordion | Interactive content groups and state unknowns |
-| EX-DCP-009 | Stats / Metrics | Repeated metric blocks and long-number risks |
-| EX-DCP-010 | Product / Portfolio Grid | Repeated item cards with image/title/meta/CTA |
-| EX-DCP-011 | Process Timeline | Step sequence, connector lines, order semantics |
-| EX-DCP-012 | Overlapping Floating Cards | Overlay risks and responsive collision |
-
----
-
-## Confirmed Stage 3 Summary
-
-Stage 3 is `/architectures`: Architecture Enumeration.
-
-It uses the completed Stage 2 decomposition to generate multiple viable Elementor V4 implementation architecture candidates. It must not score, rank, recommend, produce a final Elementor tree, or write implementation code.
-
-Stage 3 uses a hybrid strategy:
-
-```text
-Baseline Patterns + Section-Specific Variants
-```
-
-Required architecture families include:
-
-- A01 — Native Flow Flexbox Architecture
-- A02 — Native Grid / Repeated Card Architecture
-- A03 — Relative Stage + Absolute Overlay Architecture
-- A04 — SVG Connector Layer Architecture
-- A05 — Dynamic Loop / Repeater Architecture
-- A06 — Widget-Native Architecture
-- A07 — Hybrid Native + Scoped Custom CSS Architecture
-- A08 — HTML/SVG Widget Isolated Decoration Architecture
-- R01 — Rejected Single Static Image Architecture
-- R02 — Third-Party Plugin Architecture requiring user approval
-
-Stage 3 usually requires at least 3 viable candidates plus any relevant rejected-risk candidates. Complex overlay, connector, dynamic, carousel, FAQ, pricing, or portfolio sections usually require at least 4 viable candidates.
-
-### Stage 3 v1.1.0 Hardening
-
-Stage 3 has been hardened with these mandatory controls:
-
-1. Architecture Coverage Matrix — every architecture family must be considered, included, omitted, rejected, or approval-gated with a reason.
-2. Unknown Propagation Ledger — every architecture-relevant Stage 2 unknown must be carried into the affected candidates or marked not applicable with reason.
-3. Hidden Recommendation Ban — no ranking or winner-implying words before `/score-evidence` and `/recommend`.
-4. Dynamic/Loop Guardrail — repeated visual groups do not automatically justify Loop Grid, CPT, ACF, WooCommerce, or dynamic architecture.
-5. Widget-State Guardrail — visible carousel, FAQ, counter, toggle, filter, or hover states do not prove interaction behavior.
-6. Scoped CSS Guardrail — custom CSS candidates must stay scoped; global unscoped CSS is invalid.
-7. Tradeoff Requirement — every candidate must state what it preserves, what it sacrifices, and what must be verified later.
-
----
-
-## Confirmed Stage 4 Summary
-
-Stage 4 is `/score-evidence`: Evidence-Bound Architecture Scoring.
-
-It evaluates Stage 3 architecture candidates using the scoring rubric without recommending, ranking by taste, hiding unknowns, or letting visual precision override higher-weight criteria.
-
-### Scoring Rubric
-
-The rubric has been hardened at:
-
-```text
-rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
-```
-
-Current rubric version: `1.2`
-
-Current weighted criteria:
-
-| Criterion | Weight | Raw weighted max |
-|---|---:|---:|
-| Elementor-Native Feasibility | ×4 | 20 |
-| Normal-Flow Safety | ×4 | 20 |
-| Responsiveness | ×4 | 20 |
-| Editability | ×3 | 15 |
-| Structural Clarity | ×2 | 10 |
-| Overlay Containment | ×2 | 10 |
-| Performance | ×2 | 10 |
-| Accessibility | ×2 | 10 |
-| Design-System Fit | ×1 | 5 |
-| Visual Precision | ×1 | 5 |
-
-Raw weighted max:
-
-```text
-125
-```
-
-Normalized total:
-
-```text
-normalized_total = (raw_weighted_total / 125) × 100
-```
+Rubric version: 1.2
+Raw weighted max: 125
+Normalized total formula: normalized_total = (raw_weighted_total / 125) * 100
 
 Immediate rejection gates:
+- Elementor-Native Feasibility < 3
+- Normal-Flow Safety < 2
+- Responsiveness < 2
 
-```text
-Elementor-Native Feasibility < 3 → immediate_reject
-Normal-Flow Safety < 2 → immediate_reject
-Responsiveness < 2 → immediate_reject
-```
+Stage 4 v1.2.0 requires: tool-first arithmetic policy, provisional known-score formula, closed evidence-label set, absent-vs-contradicted separation, Elementor Responsive Inheritance Rule, Hidden Recommendation Scan, Evidence Map Requirement, Unknown-to-Score Ceiling, Shared Unknown Consistency Rule, Candidate Classification, Fairness and Consistency Check, schema-versioned Audit_Trail_Payload, and Stage 5 Spot-Check Authority.
 
-### Stage 4 v1.2.0 Hardening
+## Stage 5 Summary
 
-Stage 4 has been hardened because it is the scoring spine of the system. It now requires:
+/score-audit independently audits Stage 4 scoring quality. It does not choose a winner, rank candidates, or repair scores silently.
 
-1. Tool-first arithmetic policy — use Python/calculator/runtime when available; otherwise mark arithmetic as `needs_audit`.
-2. Provisional known-score formula — incomplete candidates may show a non-final `provisional_known_percent`, but final totals remain `incomplete`.
-3. Closed evidence-label set — `SUPPORTED_EVIDENCE`, `PARTIALLY_SUPPORTED_EVIDENCE`, `INFERRED_EVIDENCE`, `ABSENT_EVIDENCE`, `CONTRADICTED_EVIDENCE`, `UNRESOLVED_CONFLICT`.
-4. Absent-vs-contradicted separation — missing evidence is not a contradiction; contradiction is not an unknown.
-5. Elementor Responsive Inheritance Rule — absent mobile evidence does not automatically force `?`, but score ceilings apply based on flow quality and mobile-risk signals.
-6. Hidden Recommendation Scan — direct recommendation terms auto-fail; subjective non-mechanical phrasing is flagged for Stage 5.
-7. Evidence Map Requirement — every scored candidate must first map Stage 2 evidence, Stage 3 claims, gates, and missing evidence.
-8. Unknown-to-Score Ceiling — inferred or unresolved evidence caps numeric optimism; criterion-critical unknowns must become `?`.
-9. Shared Unknown Consistency Rule — the same unknown must be treated consistently across affected candidates.
-10. Candidate Classification — each candidate becomes `complete_gate_pass`, `complete_but_immediate_reject`, `incomplete_unresolved`, `approval_required_excluded`, or `rejected_risk_documented`.
-11. Fairness and Consistency Check — verifies consistent criterion interpretation and no optimism from weaker evidence.
-12. Schema-versioned `Audit_Trail_Payload` — Stage 4 hands off `ev4-score-evidence-payload@1.2.0` to Stage 5.
-13. Stage 5 Spot-Check Authority — Stage 5 uses the payload as primary audit index but may inspect Stage 2, Stage 3, rubric, and defaults when triggered.
+File: stages/05_SCORE_AUDIT.md
+Status: confirmed_v1.0.0
+Input payload schema: ev4-score-evidence-payload@1.2.0
+Output payload schema: ev4-score-audit-payload@1.0.0
 
-Stage 4 is now `confirmed_hardened_v1.2.0`.
+Stage 5 controls:
+- Required Inputs Gate
+- Payload Schema Gate
+- Mandatory spot-check triggers
+- Severity levels: blocker, major, minor, note
+- Rubric Fidelity Audit
+- Evidence Label Audit
+- Unknown Discipline Audit
+- Arithmetic Audit
+- Immediate Rejection Gate Audit
+- Elementor Responsive Inheritance Audit
+- Hidden Recommendation Audit
+- Fairness and Consistency Audit
+- Candidate Classification Audit
+- Audit Trail Payload Audit
+- Precise Repair Routing
 
----
+Stage 6 is allowed only if Stage 5 returns pass or pass_with_minor_flags.
 
 ## Current Next Step
 
-Define Stage 5 — `/score-audit`.
+Define Stage 6 — /recommend.
 
-Goal:
-Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, separated absent evidence from contradicted evidence, applied Elementor inheritance caps correctly, applied gates correctly, treated shared unknowns consistently, avoided hidden recommendation bias, produced valid raw/normalized arithmetic, and emitted a schema-versioned audit payload.
+Goal: choose a recommended architecture only from audited Stage 4 outputs that passed Stage 5. The recommendation must be evidence-bound and must preserve the audit trail into later implementation stages.
