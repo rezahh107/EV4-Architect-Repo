@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.10.0
+Version: 0.11.0
 Status: in_progress
-Last confirmed stage: Stage 10 — /handoff-export contract hardening
-Current next step: Run one realistic E2E pipeline test before marking the prompt pack release-ready.
+Last confirmed stage: E2E Test Plan — contract hardening
+Current next step: Run E2E-001 using `experiments/E2E-001-smart-home-connector-fixture.md` and produce `ev4-e2e-test-report@1.0.0` before marking the prompt pack release-ready.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-06-22
 
@@ -20,6 +20,7 @@ Last automation update: 2026-06-22
 9. /implementation
 10. /final-audit
 11. /handoff-export
+12. /e2e-test
 
 ## Stage Status
 
@@ -36,14 +37,15 @@ Last automation update: 2026-06-22
 | /recommend | confirmed_hardened_v1.1.0_patch | Recommendation matrix, provenance ledger, tie handling, build-tree readiness gate, debug record |
 | /stage-anchor-contract | active_v1.1.0 | Adds confidence_delta, target_stage_hardening_status, and partial_rerun_state |
 | /partial-rerun-contract | active_v1.0.0 | Defines safe partial reruns and invalidation rules |
-| /debug-trace-contract | active | External trace contract for pipeline debugging |
+| /debug-trace-contract | active_v1.0.0 | External trace contract for pipeline debugging |
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
 | /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, exact payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
 | /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, scoped CSS/responsive/editability/accessibility/design-system audits, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
 | /handoff-export | confirmed_hardened_v1.0.0 | Stage 10 hardened with input gate, Source Access Matrix binding, handoff eligibility matrix, final builder handoff format, blocked handoff report, payload ledger, checklist templates, audit-flag preservation, Handoff_Payload schema, repair anchor, self-audit, debug trace addendum, and E2E release boundary |
 | /elementor-knowledge-base-strategy | draft_active_v0.3.0 | Adds mandatory Stage Source Access Matrix to prevent RAG/source leakage into scoring and recommendation |
 | /tuya-concept-reference | active_v0.2.0 | Adds provisional-to-contradicted transition rule and evidence reclassification behavior |
-| /e2e-test-plan | draft_active | First real pipeline run remains a release blocker before release-level confirmation |
+| /e2e-test-plan | confirmed_hardened_v1.0.0 | Defines full-pipeline E2E scope, fixture contract, source-access checks, anchor validation, debug trace validation, negative controls, report schema, repair routing, and release-boundary rules |
+| /e2e-test | not_run | Next action is E2E-001 execution; release blocker remains until a passing `ev4-e2e-test-report@1.0.0` exists |
 
 ## Active Hardening / Contract Files
 
@@ -55,6 +57,7 @@ Last automation update: 2026-06-22
 - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
 - knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
 - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
+- experiments/E2E-001-smart-home-connector-fixture.md
 - stages/04_SCORE_EVIDENCE_v1.3_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.1_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.2_HARDENING_PATCH.md
@@ -70,15 +73,18 @@ Last automation update: 2026-06-22
 - examples/scoring/SCORING-CAL-003-arithmetic-needs-audit.md
 - examples/scoring/SCORING-CAL-004-overlay-na.md
 
-## Hardened Stage Files
+## Hardened Stage / Validation Files
 
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
+- experiments/END_TO_END_PIPELINE_TEST_PLAN.md
 
-## Scaffolded Stage Files
+## Scaffolded / Draft Work Remaining
 
-- None currently. Stage 10 scaffold has been replaced by `confirmed_hardened_v1.0.0` contract hardening. Earlier stage-level draft work still remains for `/research` and the first E2E test plan.
+- `/research` remains `draft_required`.
+- `/e2e-test` has not been run yet.
+- The prompt pack is not release-ready until E2E-001 or another realistic E2E run passes.
 
 ## Stage Anchor v1.1 Notes
 
@@ -95,12 +101,12 @@ Purpose:
 - preserve critical unknowns;
 - preserve blockers and gate results;
 - record whether confidence increased, decreased, stayed unchanged, or was resolved;
-- prevent running scaffolded/draft stages as production output without explicit user approval;
+- prevent running scaffolded/draft stages as production output without explicit approval;
 - preserve invalidation triggers for partial reruns;
 - prevent long-context drift;
 - keep handoffs compact and auditable.
 
-The anchor is an external structured handoff.
+The anchor is an external structured handoff, not hidden reasoning.
 
 ## Partial Rerun Notes
 
@@ -113,7 +119,7 @@ It must first produce a `PARTIAL RERUN PLAN` that identifies:
 - reusable stages;
 - invalidated downstream stages;
 - required payloads;
-- required user confirmation.
+- required confirmation if the rerun depends on a missing decision.
 
 ## Knowledge Base / RAG Notes
 
@@ -144,10 +150,11 @@ Key gates:
 - Stage 7/8 may use TUYA + official docs to map approved architecture/tree decisions to structure and implementation.
 - Stage 9 may use Stage 8, Stage 7, Stage 6, Stage 5, Stage 4 constraints, TUYA audit concepts, official docs, and export evidence only to audit preservation and capability claims; it must not generate new architecture or implementation.
 - Stage 10 may use final audited outputs, debug traces, anchors, and payloads only to package the run; it must not change decisions.
+- E2E validation must check source-access compliance across every stage, especially Stage 2, Stage 4, Stage 6, Stage 9, and Stage 10.
 
 ## TUYA Internal Concept Reference Notes
 
-The TUYA workbook is now treated as an internal conceptual reference, not as official Elementor documentation.
+The TUYA workbook is treated as an internal conceptual reference, not as official Elementor documentation.
 
 Use `knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md` to preserve:
 
@@ -178,7 +185,7 @@ provisional + direct conflicting evidence → CONTRADICTED_EVIDENCE
 unknown by itself ≠ contradiction
 ```
 
-This prevents the pipeline from preserving a weak provisional heuristic after later Stage evidence disproves it.
+This prevents the pipeline from preserving a weak provisional heuristic after later stage evidence disproves it.
 
 ## Stage 8 — /implementation Hardening Notes
 
@@ -282,6 +289,33 @@ Important limitation:
 Stage 10 hardening confirms the handoff-export prompt contract. It does not mean a real EV4 run has been packaged, and it does not remove the E2E release blocker.
 ```
 
+## E2E Test Plan Hardening Notes
+
+The E2E test plan is confirmed as a hardened validation contract.
+
+Added controls:
+
+- full pipeline scope from `/intake` through `/handoff-export`;
+- explicit release boundary;
+- versioned schemas: `ev4-e2e-test-plan@1.0.0`, `ev4-e2e-fixture@1.0.0`, and `ev4-e2e-test-report@1.0.0`;
+- first fixture: `experiments/E2E-001-smart-home-connector-fixture.md`;
+- stage-by-stage Source Access Matrix check;
+- Stage Anchor validation against `ev4-stage-anchor@1.1.0`;
+- Debug Trace validation against `ev4-debug-trace@1.0.0`;
+- measurement matrix for anchor quality, drift control, scoring, audit, recommendation, build tree, implementation, final audit, and handoff preservation;
+- negative-control probes for RAG leakage, hidden recommendation, unknown-to-number errors, forced ties, flattened meaningful content, invented implementation values, global CSS leakage, and softened failed handoff;
+- E2E status taxonomy: `pass`, `pass_with_minor_flags`, `fail_repairable`, `fail_blocked`;
+- structured `E2E_TEST_REPORT` schema;
+- repair routing table;
+- release-blocker removal criteria;
+- NEXT WORK ANCHOR for E2E-001.
+
+Important limitation:
+
+```text
+E2E test plan hardening confirms the validation contract. It does not mean the E2E test has been executed, and it does not remove the release blocker.
+```
+
 ## E2E Test Notes
 
 Before marking the prompt pack release-ready, run at least one realistic section through:
@@ -290,18 +324,30 @@ Before marking the prompt pack release-ready, run at least one realistic section
 /intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation → /final-audit → /handoff-export
 ```
 
-The test should measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, implementation preservation of the approved tree, whether final audit correctly blocks handoff when blocker/high defects exist, and whether Stage 10 preserves every audit flag and blocker without inventing new implementation decisions.
+The test must measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, implementation preservation of the approved tree, whether final audit correctly blocks handoff when blocker/high defects exist, and whether Stage 10 preserves every audit flag and blocker without inventing new implementation decisions.
+
+The prepared first fixture is:
+
+```text
+experiments/E2E-001-smart-home-connector-fixture.md
+```
+
+Fixture limitation:
+
+```text
+E2E-001 is a realistic textual mockup, not an actual screenshot. It validates pipeline discipline and propagation, not pixel-accurate screenshot interpretation.
+```
 
 ## Current Next Step
 
 Preferred next action:
 
 ```text
-Run the first realistic E2E pipeline test using the hardened Stage 8, Stage 9, and Stage 10 contracts.
+Run E2E-001 using the hardened test plan and produce ev4-e2e-test-report@1.0.0.
 ```
 
 Release blocker before final release confirmation:
 
 ```text
-Run one E2E test before marking the prompt pack release-ready.
+Run one passing E2E test before marking the prompt pack release-ready.
 ```
