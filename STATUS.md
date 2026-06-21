@@ -1,10 +1,11 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.7.4
+Version: 0.8.0
 Status: in_progress
-Last confirmed stage: Stage 7 — /build-tree
-Current next step: Run first E2E pipeline test or continue to Stage 8 — /implementation hardening
+Last confirmed stage: Stage 8 — /implementation
+Current next step: Continue to Stage 9 — /final-audit hardening. Release blocker: run one E2E pipeline test before marking Stage 9 production-confirmed.
 Language: Persian reports, English technical labels allowed
+Last automation update: 2026-06-22
 
 ## Pipeline
 
@@ -37,12 +38,12 @@ Language: Persian reports, English technical labels allowed
 | /partial-rerun-contract | active_v1.0.0 | Defines safe partial reruns and invalidation rules |
 | /debug-trace-contract | active | External trace contract for pipeline debugging |
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
-| /implementation | draft_scaffolded | Stage 8 scaffold created; needs hardening |
+| /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, exact payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
 | /final-audit | draft_scaffolded | Stage 9 scaffold created; needs hardening |
 | /handoff-export | draft_scaffolded | Stage 10 scaffold created; needs hardening |
 | /elementor-knowledge-base-strategy | draft_active_v0.3.0 | Adds mandatory Stage Source Access Matrix to prevent RAG/source leakage into scoring and recommendation |
 | /tuya-concept-reference | active_v0.2.0 | Adds provisional-to-contradicted transition rule and evidence reclassification behavior |
-| /e2e-test-plan | draft_active | First real pipeline run recommended before finalizing later stages |
+| /e2e-test-plan | draft_active | First real pipeline run remains a release blocker before Stage 9 production confirmation |
 
 ## Active Hardening / Contract Files
 
@@ -60,15 +61,19 @@ Language: Persian reports, English technical labels allowed
 - stages/06_RECOMMEND.md
 - stages/06_RECOMMEND_v1.1_HARDENING_PATCH.md
 - stages/07_BUILD_TREE.md
+- stages/08_IMPLEMENTATION.md
 - examples/scoring/README.md
 - examples/scoring/SCORING-CAL-001-contradicted-evidence.md
 - examples/scoring/SCORING-CAL-002-absent-vs-contradicted.md
 - examples/scoring/SCORING-CAL-003-arithmetic-needs-audit.md
 - examples/scoring/SCORING-CAL-004-overlay-na.md
 
-## Scaffolded Stage Files
+## Hardened Stage Files
 
 - stages/08_IMPLEMENTATION.md
+
+## Scaffolded Stage Files
+
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
 
@@ -170,26 +175,56 @@ unknown by itself ≠ contradiction
 
 This prevents the pipeline from preserving a weak provisional heuristic after later Stage evidence disproves it.
 
-## E2E Test Notes
+## Stage 8 — /implementation Hardening Notes
 
-Before finalizing later stages, run at least one realistic section through:
+Stage 8 is now confirmed as a hardened contract, not a scaffold.
+
+Added controls:
+
+- strict input authorization against `ev4-stage-anchor@1.1.0` and `ev4-build-tree-payload@1.0.0`;
+- mandatory Stage Source Access Matrix binding;
+- official source ledger for Elementor platform-capability claims;
+- exact `elementor_settings_plan` schema;
+- widget mapping schema with editability, accessibility, dependency, and fallback policy;
+- class and variable application map;
+- scoped CSS need map and validator;
+- asset and accessibility schema;
+- responsive implementation schema and safe example shapes;
+- position/layering implementation plan;
+- dynamic data / interaction plan;
+- implementation risks schema;
+- Stage 8 self-audit;
+- `Implementation_Payload` schema;
+- debug trace addendum;
+- repair routes;
+- NEXT STAGE ANCHOR template for `/final-audit`.
+
+Important limitation:
 
 ```text
-/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree
+Stage 8 hardening confirms the prompt contract. It does not replace the first real E2E pipeline run.
 ```
 
-The test should measure anchor quality, drift control, repair loop cost, output usability, and whether unknowns survive to the correct stage.
+## E2E Test Notes
+
+Before marking Stage 9 as production-confirmed, run at least one realistic section through:
+
+```text
+/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation
+```
+
+The test should measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, and whether implementation preserves the approved tree.
 
 ## Current Next Step
 
 Preferred next action:
 
 ```text
-Run one E2E test before Stage 8 hardening.
+Continue to Stage 9 — /final-audit hardening in hardening mode.
 ```
 
-Alternative:
+Release blocker before production confirmation:
 
 ```text
-Continue to Stage 8 — /implementation hardening, but keep the first E2E test as a release blocker before Stage 9.
+Run one E2E test before marking Stage 9 confirmed for production pipeline use.
 ```
