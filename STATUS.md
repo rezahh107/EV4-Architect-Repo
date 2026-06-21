@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.7.1
+Version: 0.7.2
 Status: in_progress
 Last confirmed stage: Stage 7 — /build-tree
-Current next stage: Stage 8 — /implementation hardening
+Current next step: Run first E2E pipeline test or continue to Stage 8 — /implementation hardening
 Language: Persian reports, English technical labels allowed
 
 ## Pipeline
@@ -25,26 +25,33 @@ Language: Persian reports, English technical labels allowed
 | Stage | Status | Notes |
 |---|---|---|
 | /intake | confirmed | Lightweight default-based intake |
-| /research | draft_required | Needs source policy and version-pinned source rules |
+| /research | draft_required | Needs source policy, version-pinned source rules, and RAG integration |
 | /decompose | confirmed_with_example_bank | Controlled Visual Role Decomposition with 12 examples |
 | /decomposition-example-bank | active_enhanced | Pattern-based examples plus authoring standard |
 | /architectures | confirmed_hardened_v1.1.0 | Coverage matrix, unknown propagation, recommendation ban, dynamic guardrails |
 | /score-evidence | confirmed_hardened_v1.3.0_patch | Uses rubric 1.3 and Stage 4 v1.3 hardening patch |
 | /score-audit | confirmed_hardened_v1.2.0_patch | Adds Stage 5 self-audit, hidden recommendation guard, tie handoff, responsive cap reference binding |
 | /scoring-calibration-bank | active | examples/scoring calibration cases added |
-| /recommend | confirmed_hardened_v1.1.0_patch | Adds recommendation basis matrix, provenance ledger, strict tie handling, build-tree readiness gate, and debug record |
-| /stage-anchor-contract | active | contracts/STAGE_ANCHOR_CONTRACT.md added; all future stages must start from an anchor |
-| /debug-trace-contract | active | Model-readable external trace contract; no hidden chain-of-thought dependency |
-| /build-tree | confirmed_hardened_v1.0.0 | Final naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
+| /recommend | confirmed_hardened_v1.1.0_patch | Recommendation matrix, provenance ledger, tie handling, build-tree readiness gate, debug record |
+| /stage-anchor-contract | active_v1.1.0 | Adds confidence_delta, target_stage_hardening_status, and partial_rerun_state |
+| /partial-rerun-contract | active_v1.0.0 | Defines safe partial reruns and invalidation rules |
+| /debug-trace-contract | active | External trace contract; no hidden chain-of-thought dependency |
+| /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
 | /implementation | draft_scaffolded | Stage 8 scaffold created; needs hardening |
 | /final-audit | draft_scaffolded | Stage 9 scaffold created; needs hardening |
 | /handoff-export | draft_scaffolded | Stage 10 scaffold created; needs hardening |
+| /elementor-knowledge-base-strategy | draft_active | RAG/docs strategy added; supports stages but does not replace pipeline |
+| /e2e-test-plan | draft_active | First real pipeline run recommended before finalizing later stages |
 
 ## Active Hardening / Contract Files
 
+- 02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md
 - contracts/STAGE_ANCHOR_CONTRACT.md
+- contracts/PARTIAL_RERUN_CONTRACT.md
 - contracts/BUILD_TREE_NAMING_AND_STRUCTURE_CONTRACT.md
 - diagnostics/LLM_DEBUG_TRACE_CONTRACT.md
+- references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
+- experiments/END_TO_END_PIPELINE_TEST_PLAN.md
 - stages/04_SCORE_EVIDENCE_v1.3_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.1_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.2_HARDENING_PATCH.md
@@ -63,84 +70,77 @@ Language: Persian reports, English technical labels allowed
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
 
-## Stage Anchor Notes
+## Stage Anchor v1.1 Notes
 
-A Stage Anchor is now required before starting each stage after `/intake`.
+A Stage Anchor is required before starting each stage after `/intake`.
+
+New v1.1 fields:
+
+- `target_stage_hardening_status`
+- `confidence_delta`
+- `partial_rerun_state`
 
 Purpose:
 
 - preserve critical unknowns;
 - preserve blockers and gate results;
+- record whether confidence increased, decreased, stayed unchanged, or was resolved;
+- prevent running scaffolded/draft stages as production output without explicit user approval;
+- preserve invalidation triggers for partial reruns;
 - prevent long-context drift;
-- keep handoffs compact and auditable;
-- avoid reliance on conversational memory alone.
+- keep handoffs compact and auditable.
 
 The anchor is not hidden chain-of-thought. It is an external structured handoff.
 
-## Stage 5 v1.2 Notes
+## Partial Rerun Notes
 
-Stage 5 now has these additional constraints before Stage 6:
+If only one input changes, the assistant must not automatically rerun the full pipeline.
 
-- It must audit its own audit report for hidden recommendation leakage.
-- It must keep candidate reporting neutral and avoid implied preference.
-- It must emit a tie handoff payload instead of breaking ties.
-- It must bind responsive inheritance audits to the authoritative Stage 4/rubric rule.
-- It must emit `ev4-score-audit-payload@1.2.0` when the v1.2 patch is active.
+It must first produce a `PARTIAL RERUN PLAN` that identifies:
 
-## Stage 6 v1.1 Notes
+- changed input;
+- earliest safe rerun stage;
+- reusable stages;
+- invalidated downstream stages;
+- required payloads;
+- required user confirmation.
 
-Stage 6 is the first stage allowed to recommend an architecture, but v1.1 makes the recommendation process stricter.
+## Knowledge Base / RAG Notes
 
-It may run only after Stage 5 returns `pass` or `pass_with_minor_flags`.
+A structured Elementor knowledge base may support `/research`, `/architectures`, `/build-tree`, and `/implementation`.
 
-It must:
+It must not replace the pipeline or skip `/decompose`, `/score-evidence`, `/score-audit`, or `/recommend`.
 
-- select only from audit-eligible candidates;
-- never override failed gates or Stage 5 findings;
-- emit a neutral Recommendation Basis Matrix before selection;
-- use a Recommendation Provenance Ledger for every recommendation reason;
-- run strict tie handling when Stage 5 emits `selection_ambiguity_flag` or candidates are close;
-- avoid subjective or hidden-ranking language outside allowed recommendation sections;
-- carry forward unresolved flags and required confirmations;
-- block `/build-tree` when confirmations, blockers, or unresolved decision requirements remain;
-- emit `ev4-recommend-payload@1.1.0`;
-- emit `ev4-recommend-debug-record@1.0.0`.
+Core distinction:
 
-## Stage 7 v1.0 Notes
+```text
+platform capability ≠ project-specific behavior
+```
 
-Stage 7 is now the structural bridge between `/recommend` and `/implementation`.
+Official documentation can prove Elementor can do something; it cannot by itself prove that the current section should use that thing.
 
-It must:
+Future export evidence / EDIS may strengthen implementation grounding but must still pass through the pipeline.
 
-- start from a valid Stage Anchor from `/recommend`;
-- use only the selected audited candidate;
-- produce an Elementor Structure Panel tree;
-- use human-readable `structure_label` values and machine-readable EV4 class names;
-- apply the naming convention `[section-role]__[content-group]--[variant]`;
-- keep meaningful content editable;
-- isolate overlays and decorations in named stages;
-- enforce a wrapper budget and justify extra wrappers;
-- produce a responsive structure contract without final CSS;
-- emit `ev4-build-tree-payload@1.0.0`;
-- emit the next Stage Anchor for `/implementation`.
+## E2E Test Notes
 
-## Debug Trace Contract Notes
+Before finalizing later stages, run at least one realistic section through:
 
-The debug trace layer is active as `diagnostics/LLM_DEBUG_TRACE_CONTRACT.md`.
+```text
+/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree
+```
 
-It does not reveal hidden chain-of-thought. It requires each stage, when debug mode is requested, to externalize a compact trace of:
-
-- inputs received and missing;
-- decisions made;
-- evidence used;
-- unknowns propagated;
-- rules applied;
-- failure symptoms;
-- repair route;
-- handoff payload schema.
-
-This allows a model-language debugger to find the first broken stage and propose a minimal repair patch.
+The test should measure anchor quality, drift control, repair loop cost, output usability, and whether unknowns survive to the correct stage.
 
 ## Current Next Step
 
-Harden Stage 8 — /implementation, including allowed output formats, scoped CSS boundaries, widget-by-widget implementation contract, asset handling, and implementation debug trace.
+Preferred next action:
+
+```text
+Run one E2E test before Stage 8 hardening.
+```
+
+Alternative:
+
+```text
+Continue to Stage 8 — /implementation hardening, but keep the first E2E test as a release blocker before Stage 9.
+```
