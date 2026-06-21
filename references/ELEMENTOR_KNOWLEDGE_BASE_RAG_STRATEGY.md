@@ -1,7 +1,7 @@
 # Elementor Knowledge Base / RAG Strategy
 
 Status: draft_active
-Version: 0.2.0
+Version: 0.3.0
 Applies to: `/research`, `/architectures`, `/build-tree`, `/implementation`
 
 ---
@@ -39,6 +39,33 @@ It skips:
 - debug trace and repair routing.
 
 Therefore, RAG may support a stage, but it must not collapse the pipeline into a single visual-to-tree guess.
+
+---
+
+## Stage Source Access Matrix
+
+This matrix controls which knowledge sources may influence each stage. It is mandatory because otherwise retrieval can leak conceptual guidance into scoring or recommendation and bias the pipeline.
+
+| Stage | Primary sources allowed | Restricted / forbidden sources | Rule |
+|---|---|---|---|
+| Stage 1 `/intake` | User constraints, project defaults | RAG docs only if user asks a platform-capability question | Do not research unless a blocking constraint depends on platform capability. |
+| Stage 2 `/decompose` | Screenshot/image, user description, user-provided constraints, Stage Anchor | TUYA, Elementor docs, RAG concepts as decision sources | Decompose what is visible/provided only. Do not use docs to invent visual groups. |
+| Stage 3 `/architectures` | Stage 2 output, Stage Anchor, project defaults, TUYA concepts, official Elementor docs, RAG facts | Final recommendation language, scoring totals | RAG may verify architecture feasibility and candidate families, not choose a winner. |
+| Stage 4 `/score-evidence` | Rubric, Stage 2 output, Stage 3 candidates, Stage Anchor, scoring calibration cases | TUYA as independent scoring evidence; broad RAG docs as direct score boosters | Score only evidence and rubric. TUYA can explain terminology but cannot raise a score. |
+| Stage 5 `/score-audit` | Stage 4 report, Audit_Trail_Payload, Rubric, Stage 2/3 spot-checks, Stage Anchor | New architecture evidence except for audit spot-check | Audit the scoring process, not the section design. |
+| Stage 6 `/recommend` | Audited Stage 4/5 outputs, Tie_Handoff_Payload, Stage Anchor | New RAG claims, new visual assumptions, direct TUYA preference | Recommend only among audited eligible candidates. |
+| Stage 7 `/build-tree` | Stage 6 Recommendation_Payload, Stage Anchor, TUYA concepts, Elementor docs, naming contract | New candidate selection, direct screenshot reinterpretation | Build the tree from the selected architecture; do not re-architect. |
+| Stage 8 `/implementation` | Stage 7 Build_Tree_Payload, Stage Anchor, official Elementor docs, widget/settings references, TUYA concepts, export evidence if available | New recommendation, new scoring | Implement the approved tree with documented settings and scoped constraints. |
+| Stage 9 `/final-audit` | Stage 8 output, Stage 7 tree, Stage 6 recommendation, Rubric, TUYA audit concepts, export evidence if available | New architecture generation | Audit implementation against the approved tree and prior gates. |
+| Stage 10 `/handoff-export` | Final audited outputs, debug traces, anchors, payloads | New decisions | Package the run; do not change decisions. |
+
+Hard rule:
+
+```text
+Stage 4 must not use TUYA or RAG to improve a candidate score unless the same fact is already present in Stage 2/3 evidence or official project rules.
+Stage 2 must not use RAG to see things that are not visible or user-provided.
+Stage 6 must not use RAG to break a tie unless Stage 5 explicitly requested a source-backed clarification and the result is routed through the tie protocol.
+```
 
 ---
 
@@ -189,7 +216,8 @@ Do not use the knowledge base to:
 - bypass scoring or audit;
 - fabricate exact widget settings not present in docs or exports;
 - treat undocumented behavior as confirmed;
-- treat TUYA internal concepts as official Elementor platform documentation.
+- treat TUYA internal concepts as official Elementor platform documentation;
+- allow Stage 4 or Stage 6 to use conceptual references as hidden preference signals.
 
 ---
 
@@ -198,8 +226,10 @@ Do not use the knowledge base to:
 The knowledge base strategy is valid only if:
 
 - every retrieved fact has a source and fact class;
+- the Stage Source Access Matrix is followed;
 - platform capability is not confused with project-specific behavior;
 - internal concept references are classified as conceptual guidance, not official capability proof;
 - docs support Stage 3/7/8 decisions but do not replace Stage 2/4/5/6;
 - unsupported claims become `unknown`, not implementation facts;
-- future export evidence is allowed to strengthen implementation grounding.
+- future export evidence is allowed to strengthen implementation grounding;
+- Stage 4 scoring and Stage 6 recommendation remain bound to their approved inputs and cannot import new RAG preference signals.
