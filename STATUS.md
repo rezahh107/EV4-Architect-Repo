@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.3.1  
+Version: 0.4.0  
 Status: in_progress  
-Last confirmed stage: Stage 3 — `/architectures`  
-Current next stage: Stage 4 — `/score-evidence`  
+Last confirmed stage: Stage 4 — `/score-evidence`  
+Current next stage: Stage 5 — `/score-audit`  
 Language: Persian reports, English technical labels allowed  
 
 ---
@@ -44,12 +44,12 @@ Current planned stages:
 | Stage | Status | Notes |
 |---|---|---|
 | `/intake` | confirmed | Lightweight default-based intake |
-| `/research` | draft | Documentation source policy remains useful, but Stage 2 and Stage 3 embed initial research grounding |
+| `/research` | draft | Documentation source policy remains useful, but Stage 2, Stage 3, and Stage 4 embed initial research grounding |
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
 | `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
 | `/architectures` | confirmed_hardened_v1.1.0 | Architecture Enumeration with coverage matrix, unknown propagation, hidden recommendation ban, dynamic guardrails, and tradeoff requirements |
-| `/score-evidence` | current_next | Needs Rubric v2 and evidence schema |
-| `/score-audit` | not_started | Needs audit rules |
+| `/score-evidence` | confirmed_v1.0.0 | Evidence-bound scoring using rubric weights, gates, evidence labels, confidence, unknown handling, arithmetic check, and uncertainty register |
+| `/score-audit` | current_next | Needs independent audit rules for Stage 4 scoring quality |
 | `/recommend` | not_started | Depends on score audit |
 | `/build-tree` | not_started | Needs naming convention |
 | `/implementation` | not_started | Needs Elementor settings schema |
@@ -164,9 +164,63 @@ Stage 3 has been hardened with these mandatory controls:
 
 ---
 
+## Confirmed Stage 4 Summary
+
+Stage 4 is `/score-evidence`: Evidence-Bound Architecture Scoring.
+
+It evaluates Stage 3 architecture candidates using the scoring rubric without recommending, ranking by taste, hiding unknowns, or letting visual precision override higher-weight criteria.
+
+### Scoring Rubric
+
+The rubric has been added to:
+
+```text
+rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
+```
+
+Current weighted criteria:
+
+| Criterion | Weight |
+|---|---:|
+| Elementor-Native Feasibility | ×4 |
+| Normal-Flow Safety | ×4 |
+| Responsiveness | ×4 |
+| Editability | ×3 |
+| Structural Clarity | ×2 |
+| Overlay Containment | ×2 |
+| Performance | ×2 |
+| Accessibility | ×2 |
+| Design-System Fit | ×1 |
+| Visual Precision | ×1 |
+
+Immediate rejection gates:
+
+```text
+Elementor-Native Feasibility < 3 → immediate_reject
+Normal-Flow Safety < 2 → immediate_reject
+Responsiveness < 2 → immediate_reject
+```
+
+### Stage 4 v1.0.0 Controls
+
+Stage 4 has been confirmed with these mandatory controls:
+
+1. Required Inputs Gate — Stage 2 decomposition, Stage 3 candidates, Coverage Matrix, Unknown Propagation Ledger, and rubric must exist.
+2. Evidence Labels — every criterion score must be labeled `confirmed`, `partially_supported`, `inferred`, `unknown`, or `conflict`.
+3. Confidence Labels — every criterion score must include `high`, `medium`, `low`, or `unknown` confidence.
+4. Unknown Handling — insufficient evidence must use `?`; incomplete candidates cannot receive a fake total.
+5. Immediate Rejection Gates — rubric gate failures override total score.
+6. Conservative Scoring — weak evidence lowers score or becomes `?` instead of being invented.
+7. Arithmetic Check — totals must never exceed `/100`.
+8. Uncertainty Register — every `?` score must be listed with evidence needed.
+9. Hidden Recommendation Ban — scoring must not imply a winner before `/score-audit` and `/recommend`.
+10. Self-Audit — Stage 4 must verify evidence, arithmetic, gates, unknowns, and handoff before completion.
+
+---
+
 ## Current Next Step
 
-Define Stage 4 — `/score-evidence`.
+Define Stage 5 — `/score-audit`.
 
 Goal:
-Create an evidence-bound scoring schema that evaluates architecture candidates using the rubric without hallucinating, ranking by taste, or hiding unknowns.
+Create an independent scoring-audit stage that checks whether `/score-evidence` followed the rubric, handled unknowns honestly, applied gates correctly, and avoided hidden recommendation bias.
