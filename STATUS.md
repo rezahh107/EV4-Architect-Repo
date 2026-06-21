@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.2.2  
+Version: 0.3.0  
 Status: in_progress  
-Last confirmed stage: Stage 2 — `/decompose`  
-Current next stage: Stage 3 — `/architectures`  
+Last confirmed stage: Stage 3 — `/architectures`  
+Current next stage: Stage 4 — `/score-evidence`  
 Language: Persian reports, English technical labels allowed  
 
 ---
@@ -44,11 +44,11 @@ Current planned stages:
 | Stage | Status | Notes |
 |---|---|---|
 | `/intake` | confirmed | Lightweight default-based intake |
-| `/research` | draft | Documentation source policy remains useful, but Stage 2 embeds initial research grounding |
+| `/research` | draft | Documentation source policy remains useful, but Stage 2 and Stage 3 embed initial research grounding |
 | `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
 | `/decomposition-example-bank` | active_enhanced | 12 synthetic pattern-based examples plus authoring standard under `examples/decomposition/` |
-| `/architectures` | current_next | Needs architecture enumeration rules |
-| `/score-evidence` | not_started | Needs Rubric v2 and evidence schema |
+| `/architectures` | confirmed | Architecture Enumeration; generates candidates only, no scoring or recommendation |
+| `/score-evidence` | current_next | Needs Rubric v2 and evidence schema |
 | `/score-audit` | not_started | Needs audit rules |
 | `/recommend` | not_started | Depends on score audit |
 | `/build-tree` | not_started | Needs naming convention |
@@ -123,9 +123,38 @@ Location: `examples/decomposition/`
 
 ---
 
+## Confirmed Stage 3 Summary
+
+Stage 3 is `/architectures`: Architecture Enumeration.
+
+It uses the completed Stage 2 decomposition to generate multiple viable Elementor V4 implementation architecture candidates. It must not score, rank, recommend, produce a final Elementor tree, or write implementation code.
+
+Stage 3 uses a hybrid strategy:
+
+```text
+Baseline Patterns + Section-Specific Variants
+```
+
+Required architecture families include:
+
+- A01 — Native Flow Flexbox Architecture
+- A02 — Native Grid / Repeated Card Architecture
+- A03 — Relative Stage + Absolute Overlay Architecture
+- A04 — SVG Connector Layer Architecture
+- A05 — Dynamic Loop / Repeater Architecture
+- A06 — Widget-Native Architecture
+- A07 — Hybrid Native + Scoped Custom CSS Architecture
+- A08 — HTML/SVG Widget Isolated Decoration Architecture
+- R01 — Rejected Single Static Image Architecture
+- R02 — Third-Party Plugin Architecture requiring user approval
+
+Stage 3 usually requires at least 3 viable candidates plus any relevant rejected-risk candidates. Complex overlay, connector, dynamic, carousel, FAQ, pricing, or portfolio sections usually require at least 4 viable candidates.
+
+---
+
 ## Current Next Step
 
-Define Stage 3 — `/architectures`.
+Define Stage 4 — `/score-evidence`.
 
 Goal:
-Create rules for enumerating all viable Elementor V4 implementation architectures before scoring or recommendation.
+Create an evidence-bound scoring schema that evaluates architecture candidates using the rubric without hallucinating, ranking by taste, or hiding unknowns.
