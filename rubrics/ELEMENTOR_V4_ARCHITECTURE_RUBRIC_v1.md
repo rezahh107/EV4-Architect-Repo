@@ -1,7 +1,7 @@
 # Elementor V4 — Architecture Scoring Rubric
 
-Version: 1.1  
-Status: confirmed_hardened_for_stage_4  
+Version: 1.2  
+Status: confirmed_hardened_for_stage_4_v1.2.0  
 Scope: Elementor V4 architecture evaluation  
 Language: Persian reports, English technical labels allowed
 
@@ -9,7 +9,7 @@ Language: Persian reports, English technical labels allowed
 
 ## Purpose
 
-This rubric scores Elementor V4 section architecture candidates. It is not a visual beauty contest.
+This rubric scores Elementor V4 section architecture candidates. It is not a visual beauty contest and it must not be used as a recommendation stage.
 
 The rubric prioritizes:
 
@@ -30,9 +30,9 @@ The rubric prioritizes:
 
 For each candidate:
 
-1. Give each criterion a raw score from `1` to `5`.
-2. Multiply each raw score by its weight.
-3. Sum all weighted values to get `raw_weighted_total`.
+1. Give each criterion a raw score from `1` to `5`, or `?` if evidence is insufficient.
+2. Multiply each numeric raw score by its weight.
+3. If all 10 criteria are numeric, sum all weighted values to get `raw_weighted_total`.
 4. Normalize to `/100` using this formula:
 
 ```text
@@ -41,16 +41,70 @@ normalized_total = (raw_weighted_total / 125) × 100
 
 Why `/125`?
 
-The maximum raw weighted total is:
-
 ```text
 (5×4) + (5×4) + (5×4) + (5×3) + (5×2) + (5×2) + (5×2) + (5×2) + (5×1) + (5×1)
 = 125
 ```
 
-Therefore the decision bands are based on `normalized_total`, not the unnormalized raw weighted total.
+Therefore decision bands are based on `normalized_total`, not the raw weighted total.
 
 If any criterion is `?`, do not calculate a final normalized score. Mark the candidate as `incomplete`.
+
+---
+
+## Incomplete Candidate Provisional Formula
+
+If any criterion is `?`, Stage 4 may show a provisional known-score only for orientation:
+
+```text
+known_weighted_average_1_to_5 = Σ(known score × weight) / Σ(known weights)
+provisional_known_percent = known_weighted_average_1_to_5 × 20
+known_weight_coverage = Σ(known weights) / 25
+```
+
+Rules:
+
+- This is not a final score.
+- It cannot be used for decision bands.
+- It cannot be used to compare incomplete candidates.
+- The candidate must remain `final_score_status: incomplete`.
+
+---
+
+## Evidence Semantics
+
+Every criterion score must be labeled with one evidence state:
+
+| Label | Meaning | Scoring implication |
+|---|---|---|
+| `SUPPORTED_EVIDENCE` | Direct Stage 2/3 evidence supports the claim | Numeric score allowed |
+| `PARTIALLY_SUPPORTED_EVIDENCE` | Some support exists, but assumptions remain | Usually capped at 4 |
+| `INFERRED_EVIDENCE` | Reasonable inference, not directly proven | Usually capped at 3 |
+| `ABSENT_EVIDENCE` | Source material does not say enough | Usually `?`; never contradiction by itself |
+| `CONTRADICTED_EVIDENCE` | Evidence conflicts with the candidate claim | Low score or gate failure |
+| `UNRESOLVED_CONFLICT` | Conflicting evidence cannot yet be resolved | `?` or capped at 2 |
+
+Core rule:
+
+```text
+Absent evidence is not contradicted evidence.
+Contradicted evidence is not unknown evidence.
+```
+
+---
+
+## Arithmetic Policy
+
+LLMs must not be trusted as arithmetic engines.
+
+Stage 4 should use Python, calculator, spreadsheet, or another runtime when available.
+
+If arithmetic tooling is not available:
+
+- show weighted row values,
+- show formulas,
+- mark `arithmetic_confidence: needs_audit`,
+- hand the result to `/score-audit` for arithmetic verification.
 
 ---
 
@@ -75,6 +129,12 @@ Immediate rejection gate:
 
 ```text
 Elementor-Native Feasibility < 3 → immediate_reject
+```
+
+Guardrail:
+
+```text
+Repeated visual group does not prove Loop Grid, CPT, ACF, WooCommerce, or dynamic data.
 ```
 
 ---
@@ -111,10 +171,10 @@ Can the architecture work across desktop, tablet, and mobile without brittle dup
 
 | Score | Meaning |
 |---:|---|
-| 5 | One DOM; clear responsive strategy; only limited overrides |
-| 4 | One DOM with moderate overrides; no duplicate section required |
-| 3 | Several complex overrides are needed but strategy is still plausible |
-| 2 | Mobile likely breaks or requires a separate layout approach |
+| 5 | One DOM; explicit credible desktop/tablet/mobile strategy; limited overrides |
+| 4 | One DOM; no mobile view shown, but native normal-flow inheritance potential is strong and Stage 2 has no material mobile-risk signal |
+| 3 | Plausible responsive inheritance, but meaningful uncertainty remains due to dense content, visual core, connectors, overlays, or layout complexity |
+| 2 | Mobile likely breaks, or fixed/absolute/connector/floating strategy creates unresolved collision risk |
 | 1 | Requires separate mobile section or is not usable on mobile |
 
 Immediate rejection gate:
@@ -122,6 +182,12 @@ Immediate rejection gate:
 ```text
 Responsiveness < 2 → immediate_reject
 ```
+
+Important:
+
+- Absence of mobile evidence does not automatically force `?`.
+- Absence of mobile evidence also does not allow score `5`.
+- Use Stage 4's Elementor Responsive Inheritance Rule to cap the score.
 
 ---
 
@@ -208,6 +274,13 @@ Does the architecture preserve real text, logical reading order, alt decisions, 
 | 2 | Meaningful text/image content is likely inaccessible |
 | 1 | Section is effectively inaccessible |
 
+Guardrail:
+
+```text
+Visual Core is not automatically decorative.
+Decoration is not automatically alt="" unless context supports it.
+```
+
 ---
 
 ### 9. Design-System Fit
@@ -250,27 +323,6 @@ Visual Precision must never override Elementor-Native Feasibility, Normal-Flow S
 
 ---
 
-## Scoring Table Template
-
-```text
-| Criterion                  | Weight | Raw Score 1–5 | Weighted Result |
-|---------------------------|--------|---------------|-----------------|
-| Elementor-Native           | ×4     |               |                 |
-| Normal-Flow Safety         | ×4     |               |                 |
-| Responsiveness             | ×4     |               |                 |
-| Editability                | ×3     |               |                 |
-| Structural Clarity         | ×2     |               |                 |
-| Overlay Containment        | ×2     |               |                 |
-| Performance                | ×2     |               |                 |
-| Accessibility              | ×2     |               |                 |
-| Design-System Fit          | ×1     |               |                 |
-| Visual Precision           | ×1     |               |                 |
-| RAW WEIGHTED TOTAL         |        |               | /125            |
-| NORMALIZED TOTAL           |        |               | /100            |
-```
-
----
-
 ## Decision Rules
 
 Decision bands use `normalized_total`:
@@ -291,16 +343,20 @@ Responsiveness < 2 → immediate_reject
 
 If any gate score is `?`, gate status is `unresolved` and the candidate cannot be treated as primary-ready.
 
+Incomplete candidates do not receive decision-band status.
+
 ---
 
 ## Notes for the Model
 
 - Do not recommend an architecture before full scoring and `/score-audit`.
+- Use only the Stage 4 v1.2 evidence labels.
 - If two architectures have close normalized totals, ×4 criteria are more important than low-weight visual precision.
 - Visual Precision is never a final decision reason by itself.
 - If evidence is insufficient for a criterion, mark it `?` and explain the missing evidence.
 - Do not convert unknowns into optimistic numeric scores.
-- Never compare incomplete candidates by numeric total.
+- Never compare incomplete candidates by numeric total or provisional known percent.
+- Hidden recommendation wording is a Stage 4 failure.
 
 ---
 
