@@ -1,7 +1,7 @@
 # TUYA Elementor V4 Concepts — Internal Pipeline Reference
 
 Status: active_reference
-Version: 0.1.0
+Version: 0.2.0
 Source: `TUYA_Standalone_Workbook_v32_0_0_lessons_1_21_release_candidate_v25.html`
 Applies to: `/research`, `/architectures`, `/build-tree`, `/implementation`, `/final-audit`
 
@@ -101,6 +101,36 @@ Important distinction:
 ```text
 provisional ≠ confirmed
 unknown ≠ contradicted
+```
+
+### Provisional-to-Contradicted Transition Rule
+
+A `provisional` item is not permanently provisional. If a later stage receives stronger evidence that directly conflicts with the provisional claim, the item must be reclassified as `CONTRADICTED_EVIDENCE`.
+
+Required transition logic:
+
+| Previous state | New evidence | New EV4 label | Required action |
+|---|---|---|---|
+| `provisional` | Later evidence supports it | `SUPPORTED_EVIDENCE` or `PARTIALLY_SUPPORTED_EVIDENCE` | Update `confidence_delta` in Stage Anchor |
+| `provisional` | Later evidence is still incomplete | `PARTIALLY_SUPPORTED_EVIDENCE` | Keep as non-final and carry forward |
+| `provisional` | Later evidence directly conflicts | `CONTRADICTED_EVIDENCE` | Lower score or block dependent decision; record contradiction |
+| `unknown` | Later evidence confirms | `SUPPORTED_EVIDENCE` | Resolve unknown and update Anchor |
+| `unknown` | Later evidence conflicts with an assumed claim | `CONTRADICTED_EVIDENCE` against the assumed claim | Do not treat the original unknown as contradiction by itself |
+
+Operational rule:
+
+```text
+A provisional TUYA-derived heuristic may guide exploration.
+It must be replaced by Stage evidence when Stage evidence is stronger.
+If contradicted, the downstream candidate, score, tree node, or implementation setting must be repaired.
+```
+
+Example:
+
+```text
+TUYA concept says a visual node may be decoration inside a relative visual stage.
+Stage 2 observes that this node carries readable product data.
+Result: the decoration assumption becomes CONTRADICTED_EVIDENCE for any candidate that treats it as decoration-only.
 ```
 
 ---
@@ -315,7 +345,8 @@ Do not use this file to:
 - replace Stage 4 scoring;
 - skip Stage 5 audit;
 - jump from TUYA pattern similarity to a final build tree;
-- promote provisional values to confirmed implementation.
+- promote provisional values to confirmed implementation;
+- keep a provisional claim unchanged after stronger evidence contradicts it.
 
 ---
 
@@ -326,6 +357,7 @@ A stage uses this reference correctly only if:
 - TUYA concepts are cited as internal conceptual guidance;
 - official docs or export evidence are used for platform/runtime claims;
 - provisional and unknown items remain visible;
+- provisional claims are upgraded, downgraded, resolved, or contradicted when later evidence requires it;
 - content remains in normal flow unless a later audited decision says otherwise;
 - overlay layers stay inside named relative stages;
 - build-tree decisions preserve editability and Structure Panel clarity.
