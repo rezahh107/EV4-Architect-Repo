@@ -1,8 +1,8 @@
 # Project Instructions — Elementor V4 Architect Prompt Pack
 
 Status: draft  
-Version: 0.2.0  
-Confirmed stage coverage: Stage 1 — `/intake`, Stage 2 — `/decompose`  
+Version: 0.3.0  
+Confirmed stage coverage: Stage 1 — `/intake`, Stage 2 — `/decompose`, Stage 3 — `/architectures`  
 
 ---
 
@@ -259,3 +259,121 @@ Stage 2 passes only if:
 - It does not score architectures.
 - It lists unknowns instead of inventing facts.
 - It hands off to `/architectures` only after the decomposition snapshot is complete.
+
+---
+
+## Stage 3 — /architectures: Architecture Enumeration
+
+The `/architectures` phase generates all viable Elementor V4 architecture candidates based on the Stage 2 decomposition.
+
+It must generate candidates, not choose one.
+
+### Stage 3 Core Rule
+
+Generate architecture candidates first. Scoring and recommendation happen later.
+
+Use this strategy:
+
+```text
+Baseline Patterns + Section-Specific Variants
+```
+
+### Required Input
+
+Stage 3 requires a completed Stage 2 `DECOMPOSITION SNAPSHOT`.
+
+If Stage 2 is missing or incomplete, stop and request `/decompose` first.
+
+### Required Architecture Families
+
+Consider these families when relevant:
+
+- A01 — Native Flow Flexbox Architecture
+- A02 — Native Grid / Repeated Card Architecture
+- A03 — Relative Stage + Absolute Overlay Architecture
+- A04 — SVG Connector Layer Architecture
+- A05 — Dynamic Loop / Repeater Architecture
+- A06 — Widget-Native Architecture
+- A07 — Hybrid Native + Scoped Custom CSS Architecture
+- A08 — HTML/SVG Widget Isolated Decoration Architecture
+- R01 — Rejected Single Static Image Architecture
+- R02 — Third-Party Plugin Architecture requiring user approval
+
+### Stage 3 Allowed Work
+
+Allowed:
+
+- Generate multiple viable architecture candidates.
+- Include baseline architecture patterns even if they may later score poorly.
+- Include section-specific variants based on Stage 2.
+- Mark each candidate as native, hybrid, overlay, dynamic, widget-native, rejected-risk, or approval-required.
+- Explain the editable content strategy.
+- Explain normal-flow vs overlay boundaries.
+- Explain the responsive premise.
+- Explain design-system and accessibility implications.
+- List architecture-specific unknowns and risks.
+- Hand off candidates to `/score-evidence`.
+
+Forbidden:
+
+- Do not choose the final architecture.
+- Do not score candidates.
+- Do not rank candidates.
+- Do not produce the final Elementor tree.
+- Do not provide exact CSS values.
+- Do not write implementation code.
+- Do not introduce a third-party plugin as a normal candidate without `requires_user_approval`.
+- Do not flatten meaningful content into a single static image.
+
+### /architectures Output Format
+
+Return:
+
+```text
+ARCHITECTURE CANDIDATES
+
+Input basis:
+- Stage 2 summary used:
+- Key repeated groups:
+- Key overlay/connector risks:
+- Key unknowns that affect architecture:
+
+Candidate A01 — [Architecture Name]
+- family: Native Flow Flexbox | Native Grid | Relative Stage + Overlay | SVG Connector Layer | Dynamic Loop | Widget-Native | Hybrid CSS | HTML/SVG Decoration | Rejected-Risk | Third-Party Approval
+- status: viable | risky | rejected | requires_user_approval
+- best_for:
+- structure_premise:
+- editable_content_strategy:
+- normal_flow_strategy:
+- overlay_strategy:
+- responsive_premise:
+- design_system_strategy:
+- likely_elementor_tools:
+- custom_css_need: none | low | medium | high | unknown
+- dynamic_data_need: none | possible | likely | unknown
+- accessibility_notes:
+- architecture_unknowns:
+- known_risks:
+- why_include_this_candidate:
+
+Candidate A02 — ...
+
+Rejected / Non-primary Candidates:
+- ...
+
+Do not choose a winner yet.
+Allowed next step:
+- /score-evidence
+```
+
+### Stage 3 Pass Criteria
+
+Stage 3 passes only if:
+
+- It uses the Stage 2 decomposition as input.
+- It generates more than one architecture candidate.
+- It includes baseline patterns and section-specific variants when relevant.
+- It separates viable, risky, rejected, and approval-required candidates.
+- It explains editability, normal-flow, overlay, responsive, design-system, and accessibility implications for each candidate.
+- It does not score, rank, or recommend a winner.
+- It hands off to `/score-evidence`.
