@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.2.0  
+Version: 0.2.1  
 Status: in_progress  
 Last confirmed stage: Stage 2 — `/decompose`  
 Current next stage: Stage 3 — `/architectures`  
@@ -45,7 +45,8 @@ Current planned stages:
 |---|---|---|
 | `/intake` | confirmed | Lightweight default-based intake |
 | `/research` | draft | Documentation source policy remains useful, but Stage 2 embeds initial research grounding |
-| `/decompose` | confirmed | Controlled Visual Role Decomposition; no architecture recommendation allowed |
+| `/decompose` | confirmed_with_example_bank | Controlled Visual Role Decomposition; no architecture recommendation allowed |
+| `/decomposition-example-bank` | active | 12 synthetic pattern-based examples under `examples/decomposition/` |
 | `/architectures` | current_next | Needs architecture enumeration rules |
 | `/score-evidence` | not_started | Needs Rubric v2 and evidence schema |
 | `/score-audit` | not_started | Needs audit rules |
@@ -94,6 +95,29 @@ Stage 2 is `/decompose`: Controlled Visual Role Decomposition.
 It converts a screenshot, reference image, or section description into a role-based visual inventory. It must classify visible groups, meaningful content, repeated component candidates, visual core, decoration layers, overlay or connector candidates, responsive risks, unknowns, and forbidden implementation assumptions.
 
 Stage 2 must not recommend an architecture, score options, produce an Elementor tree, assign exact CSS values, infer actual DOM, or choose widgets/plugins.
+
+Stage 2 now includes an active Example Bank with 12 synthetic, pattern-based decomposition examples. These examples act as few-shot guidance and calibration material for the GPT Project.
+
+---
+
+## Decomposition Example Bank
+
+Location: `examples/decomposition/`
+
+| ID | Pattern | Purpose |
+|---|---|---|
+| EX-DCP-001 | Smart Home Connector Section | Connector decoration vs editable feature cards |
+| EX-DCP-002 | Split Hero with Dashboard Mockup | Copy area vs visual mockup vs decoration |
+| EX-DCP-003 | Services / Feature Cards Grid | Repeated card components and flow groups |
+| EX-DCP-004 | Pricing Cards | Repeated plan cards, CTA content, feature lists |
+| EX-DCP-005 | Testimonial Cards / Carousel | Quote/avatar/name grouping and carousel unknowns |
+| EX-DCP-006 | Logo Strip / Partner Grid | Repeated logos and accessibility unknowns |
+| EX-DCP-007 | CTA Band | Primary message, CTA, and background decoration |
+| EX-DCP-008 | FAQ Accordion | Interactive content groups and state unknowns |
+| EX-DCP-009 | Stats / Metrics | Repeated metric blocks and long-number risks |
+| EX-DCP-010 | Product / Portfolio Grid | Repeated item cards with image/title/meta/CTA |
+| EX-DCP-011 | Process Timeline | Step sequence, connector lines, order semantics |
+| EX-DCP-012 | Overlapping Floating Cards | Overlay risks and responsive collision |
 
 ---
 
