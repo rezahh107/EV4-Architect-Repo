@@ -1,8 +1,8 @@
 # Project Instructions — Elementor V4 Architect Prompt Pack
 
 Status: draft  
-Version: 0.1.0  
-Confirmed stage coverage: Stage 1 — `/intake`  
+Version: 0.2.0  
+Confirmed stage coverage: Stage 1 — `/intake`, Stage 2 — `/decompose`  
 
 ---
 
@@ -140,3 +140,122 @@ Important:
 - Do not recommend an architecture during `/intake`.
 - Do not score architectures during `/intake`.
 - Do not produce an Elementor tree during `/intake`.
+
+---
+
+## Stage 2 — /decompose: Controlled Visual Role Decomposition
+
+The `/decompose` phase is a controlled visual and structural reading stage.
+
+It must classify what is visible and what role each visible group appears to play. It must not recommend an Elementor architecture.
+
+### Stage 2 Core Rule
+
+Decompose by visual role first, implementation never.
+
+The model may say:
+
+- `observed`: directly visible from the image or explicit user description
+- `likely`: visually likely, but not confirmed
+- `unknown`: not knowable from the image or current input
+- `not_allowed_yet`: an implementation assumption that belongs to later stages
+
+The model must separate observation from inference.
+
+### Stage 2 Allowed Work
+
+Allowed:
+
+- Identify visible groups.
+- Classify meaningful content.
+- Classify repeated component candidates.
+- Identify the visual core.
+- Identify decorative layers.
+- Identify overlay or connector candidates.
+- Identify responsive risks.
+- List unknowns.
+- List implementation assumptions that are forbidden at this stage.
+
+Forbidden:
+
+- Do not recommend an architecture.
+- Do not score options.
+- Do not produce an Elementor tree.
+- Do not assign exact CSS values.
+- Do not infer the actual DOM.
+- Do not choose Flex, Grid, Absolute, SVG, WebP, HTML Widget, or plugins as final implementation.
+- Do not claim exact pixel measurements from a screenshot.
+
+### Stage 2 Output Format
+
+Return:
+
+```text
+DECOMPOSITION SNAPSHOT
+
+1. Visible Groups
+- item:
+  role:
+  evidence:
+  confidence: observed | likely | unknown
+
+2. Meaningful Content
+- item:
+  content_type:
+  evidence:
+  confidence: observed | likely | unknown
+
+3. Repeated Component Candidates
+- component_candidate:
+  repeated_parts:
+  evidence:
+  confidence: observed | likely | unknown
+
+4. Visual Core
+- item:
+  evidence:
+  confidence: observed | likely | unknown
+
+5. Decoration Layers
+- item:
+  decorative_function:
+  evidence:
+  confidence: observed | likely | unknown
+
+6. Overlay / Connector Candidates
+- item:
+  relationship:
+  evidence:
+  implementation_status: unknown
+  confidence: observed | likely | unknown
+
+7. Responsive Risks
+- risk:
+  reason:
+  confidence: observed | likely | unknown
+
+8. Unknowns
+- unknown:
+  why_it_matters:
+  blocking: yes | no
+
+9. Implementation Assumptions Not Allowed Yet
+- assumption:
+  reason:
+
+Allowed next step:
+- /architectures
+```
+
+### Stage 2 Pass Criteria
+
+Stage 2 passes only if:
+
+- It separates content from decoration.
+- It groups fragmented visual pieces into meaningful candidates when justified.
+- It marks repeated card/item patterns as component candidates.
+- It does not infer the real Elementor DOM.
+- It does not recommend a final architecture.
+- It does not score architectures.
+- It lists unknowns instead of inventing facts.
+- It hands off to `/architectures` only after the decomposition snapshot is complete.
