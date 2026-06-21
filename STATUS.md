@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.9.0
+Version: 0.10.0
 Status: in_progress
-Last confirmed stage: Stage 9 — /final-audit contract hardening
-Current next step: Continue to Stage 10 — /handoff-export hardening. Release blocker: run one E2E pipeline test before marking the prompt pack release-ready.
+Last confirmed stage: Stage 10 — /handoff-export contract hardening
+Current next step: Run one realistic E2E pipeline test before marking the prompt pack release-ready.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-06-22
 
@@ -40,7 +40,7 @@ Last automation update: 2026-06-22
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
 | /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, exact payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
 | /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, scoped CSS/responsive/editability/accessibility/design-system audits, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
-| /handoff-export | draft_scaffolded | Stage 10 scaffold created; needs hardening |
+| /handoff-export | confirmed_hardened_v1.0.0 | Stage 10 hardened with input gate, Source Access Matrix binding, handoff eligibility matrix, final builder handoff format, blocked handoff report, payload ledger, checklist templates, audit-flag preservation, Handoff_Payload schema, repair anchor, self-audit, debug trace addendum, and E2E release boundary |
 | /elementor-knowledge-base-strategy | draft_active_v0.3.0 | Adds mandatory Stage Source Access Matrix to prevent RAG/source leakage into scoring and recommendation |
 | /tuya-concept-reference | active_v0.2.0 | Adds provisional-to-contradicted transition rule and evidence reclassification behavior |
 | /e2e-test-plan | draft_active | First real pipeline run remains a release blocker before release-level confirmation |
@@ -63,6 +63,7 @@ Last automation update: 2026-06-22
 - stages/07_BUILD_TREE.md
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
+- stages/10_HANDOFF_EXPORT.md
 - examples/scoring/README.md
 - examples/scoring/SCORING-CAL-001-contradicted-evidence.md
 - examples/scoring/SCORING-CAL-002-absent-vs-contradicted.md
@@ -73,10 +74,11 @@ Last automation update: 2026-06-22
 
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
+- stages/10_HANDOFF_EXPORT.md
 
 ## Scaffolded Stage Files
 
-- stages/10_HANDOFF_EXPORT.md
+- None currently. Stage 10 scaffold has been replaced by `confirmed_hardened_v1.0.0` contract hardening. Earlier stage-level draft work still remains for `/research` and the first E2E test plan.
 
 ## Stage Anchor v1.1 Notes
 
@@ -141,6 +143,7 @@ Key gates:
 - Stage 6 must recommend only from audited Stage 4/5 outputs; no new RAG preference signals.
 - Stage 7/8 may use TUYA + official docs to map approved architecture/tree decisions to structure and implementation.
 - Stage 9 may use Stage 8, Stage 7, Stage 6, Stage 5, Stage 4 constraints, TUYA audit concepts, official docs, and export evidence only to audit preservation and capability claims; it must not generate new architecture or implementation.
+- Stage 10 may use final audited outputs, debug traces, anchors, and payloads only to package the run; it must not change decisions.
 
 ## TUYA Internal Concept Reference Notes
 
@@ -248,22 +251,53 @@ Important limitation:
 Stage 9 hardening confirms the final-audit prompt contract. It does not mean a real implementation has passed final audit, and it does not remove the E2E release blocker.
 ```
 
+## Stage 10 — /handoff-export Hardening Notes
+
+Stage 10 is confirmed as a hardened contract, not a scaffold.
+
+Added controls:
+
+- strict input authorization against `ev4-stage-anchor@1.1.0` and `ev4-final-audit-payload@1.0.0`;
+- mandatory Source Access Matrix binding for handoff/export packaging;
+- authoritative source order focused on final audit, implementation, build tree, recommendation, anchors, and debug traces;
+- handoff eligibility matrix tied to Stage 9 final audit status;
+- two output modes: `FINAL BUILDER HANDOFF` and `HANDOFF BLOCKED REPORT`;
+- payload ledger requirements;
+- builder-facing templates for architecture summary, Structure Panel tree, Elementor build checklist, class/variable/component checklist, scoped CSS, assets/accessibility, responsive, dynamic data, QA, and debug trace references;
+- audit flag preservation rules for blocker/high/medium/low/info findings;
+- unresolved unknown and required confirmation survival rules;
+- `Handoff_Payload` schema `ev4-handoff-export-payload@1.0.0`;
+- blocked handoff payload schema;
+- safe partial rerun plan for blocked handoffs;
+- repair anchor template;
+- final closure note template;
+- strict Stage 10 self-audit;
+- regression cases for softened failed audits, disappearing medium flags, new CSS, missing E2E, unknown cleanup, and payload ledger gaps;
+- debug trace addendum;
+- explicit E2E release-ready boundary.
+
+Important limitation:
+
+```text
+Stage 10 hardening confirms the handoff-export prompt contract. It does not mean a real EV4 run has been packaged, and it does not remove the E2E release blocker.
+```
+
 ## E2E Test Notes
 
 Before marking the prompt pack release-ready, run at least one realistic section through:
 
 ```text
-/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation → /final-audit
+/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation → /final-audit → /handoff-export
 ```
 
-The test should measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, implementation preservation of the approved tree, and whether final audit correctly blocks handoff when blocker/high defects exist.
+The test should measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, implementation preservation of the approved tree, whether final audit correctly blocks handoff when blocker/high defects exist, and whether Stage 10 preserves every audit flag and blocker without inventing new implementation decisions.
 
 ## Current Next Step
 
 Preferred next action:
 
 ```text
-Continue to Stage 10 — /handoff-export hardening in hardening mode.
+Run the first realistic E2E pipeline test using the hardened Stage 8, Stage 9, and Stage 10 contracts.
 ```
 
 Release blocker before final release confirmation:
