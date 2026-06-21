@@ -5,6 +5,7 @@ Stage: Stage 2 — `/decompose`
 Purpose: few-shot guidance + calibration for Controlled Visual Role Decomposition  
 Minimum examples: 5  
 Current examples: 12  
+Authoring standard: `examples/decomposition/EXAMPLE_AUTHORING_STANDARD.md`
 
 ---
 
@@ -43,6 +44,22 @@ For a new section:
 7. Identify responsive risks.
 8. Mark unknowns instead of inventing facts.
 9. List implementation assumptions that are not allowed yet.
+
+---
+
+## Enhanced authoring requirements
+
+New or revised examples should follow `EXAMPLE_AUTHORING_STANDARD.md`.
+
+Useful additions from external review have been adopted as an example-authoring standard:
+
+- each example should include metadata: ID, pattern type, complexity, and teaching goal;
+- each example should distinguish `Source Pattern` from `Synthetic Example Description`;
+- examples should include explicit `Forbidden Assumptions`;
+- examples should include short negative examples under `Forbidden Decomposition Examples`;
+- interactive patterns must mark state and behavior as unknown unless explicitly stated;
+- accessibility status should use `meaningful | decorative | unknown`, not premature certainty;
+- repeated UI patterns should be marked as component candidates without choosing Repeater, Loop, CPT, ACF, or static hardcoding in Stage 2.
 
 ---
 
