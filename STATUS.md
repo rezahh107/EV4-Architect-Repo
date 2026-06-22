@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.14.0
-Status: rag_strategy_contract_hardened
-Last confirmed stage: Elementor Knowledge Base / RAG Strategy contract hardening
-Current next step: Harden `knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md` from `active_reference v0.2.0` into an active v1.0.0 internal concept reference contract aligned with `references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md` and `stages/02_RESEARCH.md`.
+Version: 0.15.0
+Status: tuya_concept_reference_hardened
+Last confirmed stage: TUYA internal concept reference contract hardening
+Current next step: Prepare or run `/e2e-screenshot-validation` when raster screenshot evidence is available; do not remove the E2E-001 textual-fixture limitation until screenshot-based validation passes.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-06-22
 
@@ -23,6 +23,7 @@ Last automation update: 2026-06-22
 10. /final-audit
 11. /handoff-export
 12. /e2e-test
+13. /e2e-screenshot-validation
 
 ---
 
@@ -46,10 +47,11 @@ Last automation update: 2026-06-22
 | /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
 | /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
 | /handoff-export | confirmed_hardened_v1.0.0 | Stage 10 hardened with input gate, Source Access Matrix binding, handoff eligibility matrix, blocked handoff report, payload ledger, audit-flag preservation, Handoff_Payload schema, repair anchor, self-audit, debug trace, and E2E release boundary |
-| /elementor-knowledge-base-strategy | active_v1.0.0 | Hardened from `draft_active_v0.3.0` into `ev4-rag-strategy-contract@1.0.0`; now has current stage matrix, `/research` source-pinning ownership, source classes, source pins, retrieved fact schema, downstream permission defaults, freshness policy, EDIS boundary, conflict lifecycle, leakage probes, repair routes, self-audit, debug trace, and next anchor |
-| /tuya-concept-reference | active_reference_v0.2.0 | Next unfinished source-policy-adjacent contract. Needs alignment with RAG Strategy v1.0.0 and Research v1.0.0 source classification rules |
+| /elementor-knowledge-base-strategy | active_v1.0.0 | Hardened into `ev4-rag-strategy-contract@1.0.0`; owns current Stage Source Access Matrix, `/research` source-pinning ownership, source classes, retrieved fact schema, downstream permissions, freshness policy, EDIS boundary, conflict lifecycle, leakage probes, repair routes, self-audit, debug trace, and TUYA handoff |
+| /tuya-concept-reference | active_v1.0.0 | Hardened into `ev4-tuya-concept-reference@1.0.0`; now explicitly `source_type: internal_concept_reference` and `fact_class: project_conceptual_model`, with TUYA concept fact schema, downstream permission matrix, leakage probes, repair routes, self-audit, debug trace addendum, and next-work anchor |
 | /e2e-test-plan | confirmed_hardened_v1.0.0 | Defines full-pipeline E2E scope, fixture contract, source-access checks, anchor validation, debug trace validation, negative controls, report schema, repair routing, and release-boundary rules |
 | /e2e-test | pass_with_minor_flags | E2E-001 completed through /handoff-export and produced `ev4-e2e-test-report@1.0.0`; textual fixture limitation remains as medium non-blocking flag |
+| /e2e-screenshot-validation | not_run | Requires raster screenshot evidence or a screenshot fixture before pixel-accurate interpretation can be validated |
 
 ---
 
@@ -87,6 +89,7 @@ Last automation update: 2026-06-22
 
 - stages/02_RESEARCH.md
 - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
+- knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
@@ -97,11 +100,51 @@ Last automation update: 2026-06-22
 
 ## Scaffolded / Draft / Validation Work Remaining
 
-- `knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md` remains `active_reference v0.2.0`; it is now the next highest-priority unfinished source-policy-adjacent contract because the active RAG Strategy depends on strict TUYA source classification.
+- `/e2e-screenshot-validation` is not run and cannot run without raster screenshot evidence or a screenshot fixture.
 - E2E-001 used a realistic textual mockup, not a raster screenshot.
 - Pixel-accurate screenshot interpretation remains unvalidated by E2E-001.
 - Real Elementor export JSON / EDIS validation remains future work.
 - Live Elementor/browser rendering remains future work.
+
+---
+
+## TUYA Concept Reference Contract Result
+
+```yaml
+TUYA_CONCEPT_REFERENCE:
+  file: knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
+  status: active_v1.0.0
+  version: 1.0.0
+  reference_schema: ev4-tuya-concept-reference@1.0.0
+  source_type: internal_concept_reference
+  fact_class: project_conceptual_model
+  aligned_with:
+    - ev4-rag-strategy-contract@1.0.0
+    - ev4-research-payload@1.0.0
+    - ev4-stage-anchor@1.1.0
+    - ev4-partial-rerun@1.0.0
+    - ev4-debug-trace@1.0.0
+  confirmed_capabilities:
+    - input authorization gate
+    - corrected source classification
+    - TUYA concept fact schema
+    - downstream permission matrix
+    - provisional / unknown / contradicted lifecycle
+    - stage-specific use rules
+    - forbidden leakage probes
+    - repair routes
+    - TUYA_CONCEPT_REFERENCE_PAYLOAD
+    - self-audit checklist
+    - EV4_DEBUG_TRACE addendum
+    - NEXT WORK ANCHOR to /e2e-screenshot-validation
+```
+
+Strict boundary:
+
+```text
+TUYA may guide vocabulary, thinking order, normal-flow discipline, relative visual stage logic, responsive caution, design-system mindset, and DOM/audit checklisting.
+TUYA must not prove platform capability, infer screenshot content, raise scores, break recommendation ties, invent exact settings, override official docs/export evidence, soften final-audit findings, or clean up handoff risks.
+```
 
 ---
 
@@ -119,23 +162,7 @@ RAG_STRATEGY_CONTRACT:
     - contracts/STAGE_ANCHOR_CONTRACT.md
     - contracts/PARTIAL_RERUN_CONTRACT.md
     - diagnostics/LLM_DEBUG_TRACE_CONTRACT.md
-  confirmed_capabilities:
-    - current pipeline Stage Source Access Matrix
-    - `/research` as source-pinning owner
-    - source class taxonomy
-    - source pin schema
-    - retrieved fact schema
-    - downstream permission defaults
-    - official source freshness policy
-    - EDIS/export evidence boundary
-    - conflict lifecycle
-    - unsupported claim and unknown policy
-    - forbidden leakage probes
-    - repair routes
-    - RAG strategy payload schema
-    - self-audit
-    - EV4 debug trace addendum
-    - NEXT WORK ANCHOR to `/tuya-concept-reference`
+    - knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
 ```
 
 Strict boundary:
@@ -162,19 +189,6 @@ RESEARCH_CONTRACT:
   status: confirmed_hardened_v1.0.0
   stage_version: 1.0.0
   payload_schema: ev4-research-payload@1.0.0
-  confirmed_capabilities:
-    - input gate
-    - source access policy
-    - source pinning
-    - retrieved fact ledger
-    - unknown and unsupported claim register
-    - conflict register
-    - downstream source permission map
-    - repair routes
-    - regression cases
-    - self-audit
-    - EV4 debug trace addendum
-    - NEXT STAGE ANCHOR to /decompose
 ```
 
 Strict boundary:
@@ -215,11 +229,6 @@ E2E_TEST_REPORT:
   high_findings: []
   medium_findings:
     - E2E001-MED-001: textual fixture cannot validate pixel-accurate screenshot interpretation or exact visual matching
-  low_findings:
-    - E2E001-LOW-001: exact token values remain unknown
-    - E2E001-LOW-002: exact icon source/library remains unknown
-    - E2E001-LOW-003: animation requirement remains unknown
-    - E2E001-LOW-004: dynamic dashboard data requirement remains unknown
 ```
 
 Release boundary interpretation:
@@ -242,16 +251,6 @@ Required v1.1 fields include:
 - `confidence_delta`
 - `partial_rerun_state`
 
-Purpose:
-
-- preserve critical unknowns;
-- preserve blockers and gate results;
-- record whether confidence increased, decreased, stayed unchanged, or was resolved;
-- prevent running scaffolded/draft stages as production output without explicit approval;
-- preserve invalidation triggers for partial reruns;
-- prevent long-context drift;
-- keep handoffs compact and auditable.
-
 The anchor is an external structured handoff, not hidden reasoning.
 
 ---
@@ -268,89 +267,6 @@ It must first produce a `PARTIAL RERUN PLAN` that identifies:
 - invalidated downstream stages;
 - required payloads;
 - required confirmation if the rerun depends on a missing decision.
-
----
-
-## Knowledge Base / RAG Notes
-
-A structured Elementor knowledge base may support `/research`, `/architectures`, `/build-tree`, `/implementation`, and `/final-audit`, but only within the active RAG Strategy v1.0.0 source-access matrix.
-
-Core distinction:
-
-```text
-platform_capability ≠ project-specific behavior
-```
-
-Key gates:
-
-- `/research` retrieves and pins sources; it does not interpret screenshots.
-- `/decompose` uses only image/user-provided evidence and must not use RAG to invent visual groups.
-- `/architectures` may use TUYA concepts and official docs only to verify architecture feasibility.
-- `/score-evidence` must score from Rubric + Stage 3/4 evidence; TUYA/RAG cannot boost scores by themselves.
-- `/recommend` must recommend only from audited Stage 5/6 outputs; no new RAG preference signals.
-- `/build-tree`, `/implementation`, and `/final-audit` may use approved source facts only within their stage boundaries.
-- `/handoff-export` may package source ledgers and flags but must not change decisions.
-- `/e2e-test` must probe for RAG leakage across all stages.
-
----
-
-## TUYA Internal Concept Reference Notes
-
-The TUYA workbook is treated as an internal conceptual reference, not as official Elementor documentation.
-
-Current TUYA file:
-
-```yaml
-TUYA_CONCEPT_REFERENCE:
-  file: knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
-  status: active_reference_v0.2.0
-  next_action: harden_to_v1.0.0
-```
-
-Required classification:
-
-```text
-source_type: internal_concept_reference
-fact_class: project_conceptual_model
-```
-
-TUYA may guide vocabulary, thinking order, normal-flow discipline, relative visual stage logic, responsive caution, design-system mindset, and DOM/audit checklisting. It may not prove platform capability, raise Stage 5 scores directly, break Stage 7 ties, or override official docs/export evidence.
-
----
-
-## Stage 8 — /implementation Hardening Notes
-
-Stage 8 is confirmed as a hardened contract, not a scaffold.
-
-Important limitation:
-
-```text
-Stage 8 hardening confirms the prompt contract. It does not replace a real pipeline run.
-```
-
----
-
-## Stage 9 — /final-audit Hardening Notes
-
-Stage 9 is confirmed as a hardened contract, not a scaffold.
-
-Important limitation:
-
-```text
-Stage 9 hardening confirms the final-audit prompt contract. It does not mean every future real implementation has passed final audit.
-```
-
----
-
-## Stage 10 — /handoff-export Hardening Notes
-
-Stage 10 is confirmed as a hardened contract, not a scaffold.
-
-Important limitation:
-
-```text
-Stage 10 hardening confirms the handoff-export prompt contract. It does not mean a future real EV4 run can skip final audit or E2E validation.
-```
 
 ---
 
@@ -387,16 +303,85 @@ Not validated by E2E-001:
 Preferred next action:
 
 ```text
-Harden knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md from active_reference v0.2.0 to active_v1.0.0.
+Prepare or run /e2e-screenshot-validation when raster screenshot evidence or a screenshot fixture is available.
 ```
 
-The next run should align TUYA with RAG Strategy v1.0.0 and `stages/02_RESEARCH.md` by adding or tightening:
+Do not remove the E2E-001 medium flag until screenshot-based validation produces a verifiable report.
 
-- `source_type: internal_concept_reference` naming consistency;
-- `fact_class: project_conceptual_model` enforcement;
-- TUYA-specific downstream permission matrix;
-- provisional/unknown/contradicted evidence lifecycle;
-- forbidden capability/scoring/recommendation leakage probes;
-- repair routes for TUYA misuse;
-- self-audit;
-- debug trace and Stage Anchor handoff references.
+---
+
+## NEXT WORK ANCHOR — /e2e-screenshot-validation
+
+```text
+NEXT WORK ANCHOR — /e2e-screenshot-validation
+anchor_schema: ev4-stage-anchor@1.1.0
+source_stage: /tuya-concept-reference
+target_stage: /e2e-screenshot-validation
+target_stage_hardening_status: draft
+project_status_version: 0.15.0
+payload_schema_in:
+  - ev4-tuya-concept-reference@1.0.0
+  - ev4-e2e-test-report@1.0.0
+  - ev4-rag-strategy-contract@1.0.0
+payload_schema_out:
+  - ev4-e2e-screenshot-validation-report@0.1.0 or newer active schema
+
+Carry-forward facts:
+- key_decisions:
+  - TUYA is active only as internal_concept_reference.
+  - TUYA facts are project_conceptual_model only.
+  - TUYA cannot prove official platform capability, visual grouping, scoring, recommendation, exact settings, or export/runtime behavior.
+- critical_unknowns:
+  - pixel-accurate raster screenshot interpretation remains unvalidated.
+  - real Elementor export JSON / EDIS remains unvalidated.
+  - live Elementor/browser rendering remains unvalidated.
+- blocking_items:
+  - None for TUYA concept-reference contract hardening.
+  - Screenshot/export/live-rendering validation remain separate future tracks.
+- gate_results:
+  - TUYA contract gate: pass
+  - RAG alignment gate: pass
+  - Debug trace compatibility: pass
+- audit_flags:
+  - TUYA-LP probes must be preserved in E2E/final-audit.
+  - Do not remove E2E-001 textual-fixture medium flag.
+- required_user_confirmations:
+  - A real screenshot or screenshot fixture is required before pixel-accurate validation can run.
+
+Partial rerun state:
+- reusable_until:
+  - RAG Strategy v1.0.0 remains active
+  - Research contract v1.0.0 remains active
+  - TUYA source classification remains unchanged
+- invalidation_triggers:
+  - TUYA workbook source changes
+  - RAG Strategy source-class taxonomy changes
+  - Stage Source Access Matrix changes
+  - official docs/export evidence contradicts a TUYA concept used downstream
+- earliest_safe_rerun_stage: /research for source classification changes; /decompose for visual evidence changes; /score-evidence for scoring leakage; /final-audit for audit-only leakage
+- downstream_payloads_dependent_on_this_stage:
+  - future research payloads
+  - future architecture payloads
+  - future final-audit payloads
+  - future handoff payloads
+  - future E2E reports
+
+Stage boundary:
+- allowed_work:
+  - Prepare or run screenshot-based E2E validation when raster screenshot evidence exists.
+  - Validate that /decompose uses only visible/user evidence.
+  - Validate that TUYA does not leak into visual grouping, scoring, recommendation, implementation, final audit, or handoff.
+- forbidden_work:
+  - Do not mark pixel-accurate screenshot interpretation validated without raster screenshot evidence.
+  - Do not use TUYA to infer screenshot content.
+  - Do not remove E2E-001 medium flag unless a screenshot-based E2E resolves it.
+- stop_conditions:
+  - missing screenshot/visual fixture
+  - missing required payload chain
+  - TUYA leakage detected without repair route
+  - no verifiable screenshot-validation report schema
+
+Debug trace:
+- debug_trace_required: yes
+- expected_debug_trace_schema: ev4-debug-trace@1.0.0
+```
