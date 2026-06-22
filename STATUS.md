@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.15.3
+Version: 0.15.4
 Status: stage_8_10_alignment_patch_history_preserved
 Last confirmed stage: Stage 8–10 hardening alignment patch + STATUS history preservation
 Current next step: Prepare or run `/e2e-screenshot-validation` when raster screenshot evidence is available; do not remove the E2E-001 textual-fixture limitation until screenshot-based validation passes.
@@ -128,6 +128,8 @@ Follow-up for a future cleanup PR:
 
 ```text
 Inline the v1.0.1 alignment rules directly into stages/08_IMPLEMENTATION.md, stages/09_FINAL_AUDIT.md, and stages/10_HANDOFF_EXPORT.md, then retire this overlay only after STATUS.md and all embedded anchor/payload examples agree.
+
+This cleanup is non-blocking for the current prompt-pack contract hardening because STATUS.md and the active alignment patch define the current source-of-truth order.
 ```
 
 ---
@@ -392,7 +394,7 @@ anchor_schema: ev4-stage-anchor@1.1.0
 source_stage: /stage-8-10-alignment-patch
 target_stage: /e2e-screenshot-validation
 target_stage_hardening_status: draft
-project_status_version: 0.15.3
+project_status_version: 0.15.4
 payload_schema_in:
   - ev4-stage-hardening-alignment-patch@1.0.1
   - ev4-e2e-test-report@1.0.0
@@ -408,7 +410,7 @@ Carry-forward facts:
   - Stage 10 /handoff-export is confirmed_hardened_v1.0.0.
   - Stage 8–10 alignment patch v1.0.1 is active.
   - E2E-001 validates prompt-pack full-pipeline contract with minor textual-fixture limitation.
-  - STATUS.md 0.15.3 preserves the historical contract/audit sections that 0.15.1 compacted.
+  - STATUS.md 0.15.4 preserves the historical contract/audit sections that 0.15.1 compacted.
 - critical_unknowns:
   - pixel-accurate raster screenshot interpretation remains unvalidated.
   - real Elementor export JSON / EDIS remains unvalidated.
@@ -418,7 +420,7 @@ Carry-forward facts:
     previous_confidence: confirmed
     current_confidence: confirmed
     direction: increased
-    reason: strict critic review found only alignment issues; patch v1.0.1 corrected them; STATUS.md v0.15.3 preserved history for auditability
+    reason: strict critic review found only alignment issues; patch v1.0.1 corrected them; STATUS.md v0.15.4 preserved history for auditability
     downstream_impact: /implementation, /final-audit, and /handoff-export may run with aligned anchors and scoped E2E wording
 - blocking_items:
   - None for Stage 8–10 prompt-contract hardening.
