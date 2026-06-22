@@ -1,8 +1,8 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.15.0
-Status: tuya_concept_reference_hardened
-Last confirmed stage: TUYA internal concept reference contract hardening
+Version: 0.15.4
+Status: stage_8_10_alignment_patch_history_preserved
+Last confirmed stage: Stage 8–10 hardening alignment patch + STATUS history preservation
 Current next step: Prepare or run `/e2e-screenshot-validation` when raster screenshot evidence is available; do not remove the E2E-001 textual-fixture limitation until screenshot-based validation passes.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-06-22
@@ -40,15 +40,16 @@ Last automation update: 2026-06-22
 | /score-audit | confirmed_hardened_v1.2.0_patch | Adds Stage 5 self-audit, hidden recommendation guard, tie handoff, responsive cap reference binding |
 | /scoring-calibration-bank | active | examples/scoring calibration cases added |
 | /recommend | confirmed_hardened_v1.1.0_patch | Recommendation matrix, provenance ledger, tie handling, build-tree readiness gate, debug record |
-| /stage-anchor-contract | active_v1.1.0 | Adds confidence_delta, target_stage_hardening_status, and partial_rerun_state |
+| /stage-anchor-contract | active_v1.1.0 | Adds `confidence_delta`, `target_stage_hardening_status`, and `partial_rerun_state` |
 | /partial-rerun-contract | active_v1.0.0 | Defines safe partial reruns and invalidation rules |
 | /debug-trace-contract | active_v1.0.0 | External trace contract for pipeline debugging |
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
-| /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
-| /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
-| /handoff-export | confirmed_hardened_v1.0.0 | Stage 10 hardened with input gate, Source Access Matrix binding, handoff eligibility matrix, blocked handoff report, payload ledger, audit-flag preservation, Handoff_Payload schema, repair anchor, self-audit, debug trace, and E2E release boundary |
+| /implementation | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 8 remains confirmed; next-anchor status/schema must follow active STATUS.md |
+| /final-audit | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 9 remains confirmed; scoped E2E validation vocabulary applies |
+| /handoff-export | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 10 remains confirmed; E2E payload state must not be hard-coded |
 | /elementor-knowledge-base-strategy | active_v1.0.0 | Hardened into `ev4-rag-strategy-contract@1.0.0`; owns current Stage Source Access Matrix, `/research` source-pinning ownership, source classes, retrieved fact schema, downstream permissions, freshness policy, EDIS boundary, conflict lifecycle, leakage probes, repair routes, self-audit, debug trace, and TUYA handoff |
-| /tuya-concept-reference | active_v1.0.0 | Hardened into `ev4-tuya-concept-reference@1.0.0`; now explicitly `source_type: internal_concept_reference` and `fact_class: project_conceptual_model`, with TUYA concept fact schema, downstream permission matrix, leakage probes, repair routes, self-audit, debug trace addendum, and next-work anchor |
+| /tuya-concept-reference | active_v1.0.0 | Hardened into `ev4-tuya-concept-reference@1.0.0`; explicitly `source_type: internal_concept_reference` and `fact_class: project_conceptual_model` |
+| /stage-8-10-alignment-patch | confirmed_hardening_patch_v1.0.1 | `stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md` |
 | /e2e-test-plan | confirmed_hardened_v1.0.0 | Defines full-pipeline E2E scope, fixture contract, source-access checks, anchor validation, debug trace validation, negative controls, report schema, repair routing, and release-boundary rules |
 | /e2e-test | pass_with_minor_flags | E2E-001 completed through /handoff-export and produced `ev4-e2e-test-report@1.0.0`; textual fixture limitation remains as medium non-blocking flag |
 | /e2e-screenshot-validation | not_run | Requires raster screenshot evidence or a screenshot fixture before pixel-accurate interpretation can be validated |
@@ -77,6 +78,7 @@ Last automation update: 2026-06-22
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
+- stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md
 - examples/scoring/README.md
 - examples/scoring/SCORING-CAL-001-contradicted-evidence.md
 - examples/scoring/SCORING-CAL-002-absent-vs-contradicted.md
@@ -93,6 +95,7 @@ Last automation update: 2026-06-22
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
+- stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md
 - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
 - experiments/E2E-001-test-report.md
 
@@ -105,6 +108,87 @@ Last automation update: 2026-06-22
 - Pixel-accurate screenshot interpretation remains unvalidated by E2E-001.
 - Real Elementor export JSON / EDIS validation remains future work.
 - Live Elementor/browser rendering remains future work.
+
+---
+
+## Source-of-Truth Order for Stage 8–10 Alignment
+
+When a stage file contains an older embedded example or stale placeholder, use this precedence:
+
+```text
+1. Latest active STATUS.md stage state
+2. stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md
+3. The base Stage 8/9/10 contract body
+4. Older embedded example placeholders only when not contradicted by 1 or 2
+```
+
+This is required because the current patch intentionally preserves the confirmed Stage 8/9/10 contracts while correcting their stale anchor/E2E wording through an active alignment layer.
+
+Follow-up for a future cleanup PR:
+
+```text
+Inline the v1.0.1 alignment rules directly into stages/08_IMPLEMENTATION.md, stages/09_FINAL_AUDIT.md, and stages/10_HANDOFF_EXPORT.md, then retire this overlay only after STATUS.md and all embedded anchor/payload examples agree.
+
+This cleanup is non-blocking for the current prompt-pack contract hardening because STATUS.md and the active alignment patch define the current source-of-truth order.
+```
+
+---
+
+## Stage 8–10 Alignment Patch Result
+
+```yaml
+STAGE_8_10_ALIGNMENT_PATCH:
+  file: stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md
+  status: confirmed_hardening_patch_v1.0.1
+  version: 1.0.1
+  applies_to:
+    - stages/08_IMPLEMENTATION.md
+    - stages/09_FINAL_AUDIT.md
+    - stages/10_HANDOFF_EXPORT.md
+    - STATUS.md
+  fixes:
+    - Stage 8 and Stage 9 next-anchor templates must use active STATUS.md status/schema values, not stale scaffolded placeholders.
+    - Stage 9 and Stage 10 must use scoped E2E validation vocabulary.
+    - Stage 10 must not hard-code e2e_run_available false when E2E-001 evidence exists.
+  confirmed_stage_state:
+    /implementation: confirmed_hardened_v1.0.0
+    /final-audit: confirmed_hardened_v1.0.0
+    /handoff-export: confirmed_hardened_v1.0.0
+```
+
+Strict boundary:
+
+```text
+E2E-001 may support prompt-pack full-pipeline contract validation with minor textual-fixture limitation.
+E2E-001 must not be used to claim pixel-accurate screenshot interpretation, live Elementor rendering, or real Elementor export JSON validation.
+```
+
+---
+
+## E2E Validation State
+
+```yaml
+e2e_validation_state:
+  prompt_pack_full_pipeline:
+    status: pass_with_minor_flags
+    evidence_ref: experiments/E2E-001-test-report.md
+    limitation: realistic textual mockup, not raster screenshot
+  pixel_accurate_screenshot_interpretation:
+    status: not_validated
+    required_next_stage: /e2e-screenshot-validation
+  live_elementor_rendering:
+    status: not_validated
+  real_elementor_export_json_or_EDIS:
+    status: not_validated
+```
+
+Release boundary interpretation:
+
+```text
+The previous release blocker requiring one passing E2E run is removed for the prompt-pack full-pipeline contract because E2E-001 reached /handoff-export, preserved anchors/payloads/unknowns/flags, and left no blocker/high finding.
+
+This does not claim pixel-accurate screenshot interpretation, live Elementor rendering, or real export JSON validation. Those remain future validation tracks.
+```
 
 ---
 
@@ -231,14 +315,6 @@ E2E_TEST_REPORT:
     - E2E001-MED-001: textual fixture cannot validate pixel-accurate screenshot interpretation or exact visual matching
 ```
 
-Release boundary interpretation:
-
-```text
-The previous release blocker requiring one passing E2E test is removed for the prompt-pack full-pipeline contract because E2E-001 reached /handoff-export, preserved anchors/payloads/unknowns/flags, and left no blocker/high finding.
-
-This does not claim pixel-accurate screenshot interpretation, live Elementor rendering, or real export JSON validation. Those remain future validation tracks.
-```
-
 ---
 
 ## Stage Anchor v1.1 Notes
@@ -315,53 +391,68 @@ Do not remove the E2E-001 medium flag until screenshot-based validation produces
 ```text
 NEXT WORK ANCHOR — /e2e-screenshot-validation
 anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /tuya-concept-reference
+source_stage: /stage-8-10-alignment-patch
 target_stage: /e2e-screenshot-validation
 target_stage_hardening_status: draft
-project_status_version: 0.15.0
+project_status_version: 0.15.4
 payload_schema_in:
-  - ev4-tuya-concept-reference@1.0.0
+  - ev4-stage-hardening-alignment-patch@1.0.1
   - ev4-e2e-test-report@1.0.0
   - ev4-rag-strategy-contract@1.0.0
+  - ev4-tuya-concept-reference@1.0.0
 payload_schema_out:
   - ev4-e2e-screenshot-validation-report@0.1.0 or newer active schema
 
 Carry-forward facts:
 - key_decisions:
-  - TUYA is active only as internal_concept_reference.
-  - TUYA facts are project_conceptual_model only.
-  - TUYA cannot prove official platform capability, visual grouping, scoring, recommendation, exact settings, or export/runtime behavior.
+  - Stage 8 /implementation is confirmed_hardened_v1.0.0.
+  - Stage 9 /final-audit is confirmed_hardened_v1.0.0.
+  - Stage 10 /handoff-export is confirmed_hardened_v1.0.0.
+  - Stage 8–10 alignment patch v1.0.1 is active.
+  - E2E-001 validates prompt-pack full-pipeline contract with minor textual-fixture limitation.
+  - STATUS.md 0.15.4 preserves the historical contract/audit sections that 0.15.1 compacted.
 - critical_unknowns:
   - pixel-accurate raster screenshot interpretation remains unvalidated.
   - real Elementor export JSON / EDIS remains unvalidated.
   - live Elementor/browser rendering remains unvalidated.
+- confidence_delta:
+  - item: Stage 8–10 contract hardening consistency
+    previous_confidence: confirmed
+    current_confidence: confirmed
+    direction: increased
+    reason: strict critic review found only alignment issues; patch v1.0.1 corrected them; STATUS.md v0.15.4 preserved history for auditability
+    downstream_impact: /implementation, /final-audit, and /handoff-export may run with aligned anchors and scoped E2E wording
 - blocking_items:
-  - None for TUYA concept-reference contract hardening.
+  - None for Stage 8–10 prompt-contract hardening.
   - Screenshot/export/live-rendering validation remain separate future tracks.
 - gate_results:
-  - TUYA contract gate: pass
-  - RAG alignment gate: pass
-  - Debug trace compatibility: pass
+  - Stage 8 contract review: pass
+  - Stage 9 contract review: pass
+  - Stage 10 contract review: pass
+  - Alignment patch: pass
+  - STATUS history preservation: pass
 - audit_flags:
-  - TUYA-LP probes must be preserved in E2E/final-audit.
   - Do not remove E2E-001 textual-fixture medium flag.
+  - Do not claim screenshot/live/export validation without evidence.
 - required_user_confirmations:
   - A real screenshot or screenshot fixture is required before pixel-accurate validation can run.
 
 Partial rerun state:
 - reusable_until:
-  - RAG Strategy v1.0.0 remains active
-  - Research contract v1.0.0 remains active
-  - TUYA source classification remains unchanged
+  - Stage 8–10 contracts remain reusable until STATUS.md, stage schemas, source-access matrix, Stage Anchor Contract, Partial Rerun Contract, Debug Trace Contract, RAG/TUYA boundaries, or E2E evidence scope changes.
 - invalidation_triggers:
-  - TUYA workbook source changes
-  - RAG Strategy source-class taxonomy changes
-  - Stage Source Access Matrix changes
-  - official docs/export evidence contradicts a TUYA concept used downstream
-- earliest_safe_rerun_stage: /research for source classification changes; /decompose for visual evidence changes; /score-evidence for scoring leakage; /final-audit for audit-only leakage
+  - Stage 8/9/10 schema changes
+  - E2E-001 evidence contradicted or superseded
+  - screenshot fixture added
+  - real Elementor export JSON added
+  - live rendering evidence added
+  - source-access or TUYA/RAG boundary changes
+- earliest_safe_rerun_stage:
+  - /e2e-screenshot-validation for screenshot-specific validation
+  - /handoff-export for packaging wording defects only
+  - /final-audit for audit-scope or severity-boundary defects
+  - /implementation for implementation schema or CSS/widget-map defects
 - downstream_payloads_dependent_on_this_stage:
-  - future research payloads
-  - future architecture payloads
   - future final-audit payloads
   - future handoff payloads
   - future E2E reports
