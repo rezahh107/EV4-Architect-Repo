@@ -1,7 +1,7 @@
 # EV4 Run Copilot Instructions
 
 Status: active_addon_for_controlled_project_use  
-Version: 1.0.0  
+Version: 1.0.1  
 Use in: separate ChatGPT Project chat, or as a companion instruction file  
 Language: Persian reports, English technical labels allowed
 
@@ -80,7 +80,7 @@ The copilot must not:
 - reinterpret the screenshot;
 - use TUYA/RAG/docs/examples to alter the pipeline result;
 - hide project risks;
-- reveal hidden chain-of-thought.
+- expose private reasoning; use the public review checklist instead.
 
 ---
 
@@ -161,7 +161,9 @@ stage_review_checklist:
 
 ## Required Output Format
 
-```text
+Use this exact shape. The outer example uses a four-backtick fence so the nested user prompt code block remains valid Markdown.
+
+````text
 ## EV4 Run Copilot Review
 
 Stage detected:
@@ -172,6 +174,22 @@ Decision:
 
 Review result:
 - pass/fail with short reason
+
+Stage review checklist:
+```yaml
+stage_review_checklist:
+  stage_detected: yes/no
+  allowed_work_respected: pass/fail
+  forbidden_work_violations: []
+  required_payload_present: pass/fail/not_applicable
+  self_audit_present: pass/fail
+  debug_trace_present: pass/fail
+  stage_anchor_present: pass/fail/not_applicable
+  unknowns_preserved: pass/fail
+  audit_flags_preserved: pass/fail/not_applicable
+  repair_route_present_if_needed: pass/fail/not_applicable
+  production_ready_overclaim: pass/fail
+```
 
 Problems found:
 - ...
@@ -184,12 +202,12 @@ Next allowed stage:
 
 Exact user prompt to send next:
 ```text
-...
+[Insert exact user prompt here]
 ```
 
 توضیح ساده برای کاربر:
 - ...
-```
+````
 
 ---
 
