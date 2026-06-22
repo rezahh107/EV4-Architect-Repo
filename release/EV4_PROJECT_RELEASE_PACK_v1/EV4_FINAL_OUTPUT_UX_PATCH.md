@@ -1,7 +1,7 @@
 # EV4 Final Output UX Patch
 
 Status: active_addon_for_handoff_export  
-Version: 1.0.0  
+Version: 1.0.1  
 Applies to: `/handoff-export` and completed pipeline runs  
 Language: Persian user-facing explanation, English technical identifiers allowed
 
@@ -47,6 +47,20 @@ This patch must not be used to:
 
 ---
 
+## Language and Template-Key Rule
+
+The final UX layer is user-facing, so its explanatory labels must be Persian.
+
+Rules:
+
+- Keep the two required top-level section headers exactly as written in this file.
+- Use the Persian snapshot keys shown in the template below.
+- Keep technical identifiers in English inside the values, for example `ARCH-FAM-C`, `Build_Tree_Payload`, `Heading Widget`, `smart-home__feature-card--default`.
+- Do not translate schema names, payload names, stage names, class names, widget names, or candidate IDs.
+- Do not invent alternate top-level headings.
+
+---
+
 ## Required Section 1 — PIPELINE RESULT SNAPSHOT
 
 Every `/handoff-export` output must include this section before or immediately after the technical `Handoff_Payload` summary.
@@ -54,46 +68,46 @@ Every `/handoff-export` output must include this section before or immediately a
 ```text
 ## PIPELINE RESULT SNAPSHOT — خلاصه خروجی خط لوله
 
-1. Selected architecture
+1. معماری انتخاب‌شده
    - Candidate selected: ...
-   - Why it was selected: one short audit-backed sentence.
+   - دلیل انتخاب: یک جمله کوتاه و audit-backed.
 
-2. Elementor build structure
+2. ساختار ساخت در Elementor
    - Root section: ...
    - Main content layer: ...
    - Repeated cards: ...
    - Visual core: ...
    - Decorative / connector layer: ...
 
-3. Editable content
+3. محتوای قابل ویرایش
    - Editable text: ...
    - Editable assets: ...
 
-4. Decorative-only items
+4. موارد صرفاً تزئینی
    - Decorative layers: ...
    - Items that must not contain meaningful content: ...
 
-5. Builder can now
+5. Builder الان می‌تواند
    - ...
 
-6. Remaining risks
+6. ریسک‌ها و unknownهای باقی‌مانده
    - Medium flags: ...
    - Minor flags: ...
    - Unknowns: ...
 
-7. Not production-ready because
+7. چرا production-ready نیست
    - live Elementor rendering not validated;
    - export JSON / EDIS not validated;
    - mobile/tablet behavior unresolved;
    - exact pixel matching not validated.
 
-8. Next practical action
+8. اقدام عملی بعدی
    - ...
 ```
 
 Rules:
 
-- Use simple Persian.
+- Use simple Persian for explanatory values and descriptions.
 - Keep candidate IDs, class names, widget names, schema names, and payload names in English.
 - Do not add new evidence.
 - Do not imply clean pass when flags remain.
@@ -187,10 +201,17 @@ Do not:
 
 Required output:
 - PIPELINE RESULT SNAPSHOT — خلاصه خروجی خط لوله
-- Builder-facing concise checklist
-- Remaining risks and unknowns
-- Production Boundary Statement
 - توضیح معلم‌گونه برای کاربر
+
+Inside PIPELINE RESULT SNAPSHOT, include these nested items:
+- معماری انتخاب‌شده
+- ساختار ساخت در Elementor
+- محتوای قابل ویرایش
+- موارد صرفاً تزئینی
+- Builder الان می‌تواند
+- ریسک‌ها و unknownهای باقی‌مانده
+- چرا production-ready نیست
+- اقدام عملی بعدی
 
 In the teacher-style Persian explanation, explain very simply:
 - I gave you a screenshot and wanted to build it in Elementor.
