@@ -1,11 +1,13 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.11.0
-Status: in_progress
-Last confirmed stage: E2E Test Plan — contract hardening
-Current next step: Run E2E-001 using `experiments/E2E-001-smart-home-connector-fixture.md` and produce `ev4-e2e-test-report@1.0.0` before marking the prompt pack release-ready.
+Version: 0.12.0
+Status: e2e_validated_with_minor_flags
+Last confirmed stage: E2E-001 — full-pipeline validation
+Current next step: Harden `/research` into a confirmed contract with versioned source policy, source pinning, `ev4-research-payload@1.0.0`, repair routes, self-audit, debug trace, and Stage Anchor handoff.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-06-22
+
+---
 
 ## Pipeline
 
@@ -22,13 +24,15 @@ Last automation update: 2026-06-22
 11. /handoff-export
 12. /e2e-test
 
+---
+
 ## Stage Status
 
 | Stage | Status | Notes |
 |---|---|---|
 | /intake | confirmed | Lightweight default-based intake |
-| /research | draft_required | Needs source policy, version-pinned source rules, and RAG integration |
-| /decompose | confirmed_with_example_bank | Controlled Visual Role Decomposition with 12 examples |
+| /research | draft_required | Highest-priority unfinished stage. Needs source policy, version-pinned source rules, retrieval output schema, RAG integration, repair routes, self-audit, debug trace, and anchor handoff. |
+| /decompose | confirmed_with_example_bank | Controlled Visual Role Decomposition with example bank |
 | /decomposition-example-bank | active_enhanced | Pattern-based examples plus authoring standard |
 | /architectures | confirmed_hardened_v1.1.0 | Coverage matrix, unknown propagation, recommendation ban, dynamic guardrails |
 | /score-evidence | confirmed_hardened_v1.3.0_patch | Uses rubric 1.3 and Stage 4 v1.3 hardening patch |
@@ -39,13 +43,15 @@ Last automation update: 2026-06-22
 | /partial-rerun-contract | active_v1.0.0 | Defines safe partial reruns and invalidation rules |
 | /debug-trace-contract | active_v1.0.0 | External trace contract for pipeline debugging |
 | /build-tree | confirmed_hardened_v1.0.0 | Naming convention, Structure Panel tree schema, wrapper budget, widget constraints, responsive contract |
-| /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, exact payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
-| /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, scoped CSS/responsive/editability/accessibility/design-system audits, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
-| /handoff-export | confirmed_hardened_v1.0.0 | Stage 10 hardened with input gate, Source Access Matrix binding, handoff eligibility matrix, final builder handoff format, blocked handoff report, payload ledger, checklist templates, audit-flag preservation, Handoff_Payload schema, repair anchor, self-audit, debug trace addendum, and E2E release boundary |
+| /implementation | confirmed_hardened_v1.0.0 | Stage 8 hardened with input gate, payload schema, source ledger, settings schema, widget map, class/variable map, scoped CSS validator, asset/accessibility map, responsive examples, repair routes, self-audit, debug trace, and anchor handoff |
+| /final-audit | confirmed_hardened_v1.0.0 | Stage 9 hardened with input gate, Source Access Matrix binding, severity taxonomy, audit checklists, repair routes, regression cases, Final_Audit_Payload schema, self-audit, debug trace, and anchor handoff |
+| /handoff-export | confirmed_hardened_v1.0.0 | Stage 10 hardened with input gate, Source Access Matrix binding, handoff eligibility matrix, blocked handoff report, payload ledger, audit-flag preservation, Handoff_Payload schema, repair anchor, self-audit, debug trace, and E2E release boundary |
 | /elementor-knowledge-base-strategy | draft_active_v0.3.0 | Adds mandatory Stage Source Access Matrix to prevent RAG/source leakage into scoring and recommendation |
 | /tuya-concept-reference | active_v0.2.0 | Adds provisional-to-contradicted transition rule and evidence reclassification behavior |
 | /e2e-test-plan | confirmed_hardened_v1.0.0 | Defines full-pipeline E2E scope, fixture contract, source-access checks, anchor validation, debug trace validation, negative controls, report schema, repair routing, and release-boundary rules |
-| /e2e-test | not_run | Next action is E2E-001 execution; release blocker remains until a passing `ev4-e2e-test-report@1.0.0` exists |
+| /e2e-test | pass_with_minor_flags | E2E-001 completed through /handoff-export and produced `ev4-e2e-test-report@1.0.0`; textual fixture limitation remains as medium non-blocking flag |
+
+---
 
 ## Active Hardening / Contract Files
 
@@ -58,6 +64,7 @@ Last automation update: 2026-06-22
 - knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
 - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
 - experiments/E2E-001-smart-home-connector-fixture.md
+- experiments/E2E-001-test-report.md
 - stages/04_SCORE_EVIDENCE_v1.3_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.1_HARDENING_PATCH.md
 - stages/05_SCORE_AUDIT_v1.2_HARDENING_PATCH.md
@@ -73,18 +80,79 @@ Last automation update: 2026-06-22
 - examples/scoring/SCORING-CAL-003-arithmetic-needs-audit.md
 - examples/scoring/SCORING-CAL-004-overlay-na.md
 
+---
+
 ## Hardened Stage / Validation Files
 
 - stages/08_IMPLEMENTATION.md
 - stages/09_FINAL_AUDIT.md
 - stages/10_HANDOFF_EXPORT.md
 - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
+- experiments/E2E-001-test-report.md
+
+---
 
 ## Scaffolded / Draft Work Remaining
 
-- `/research` remains `draft_required`.
-- `/e2e-test` has not been run yet.
-- The prompt pack is not release-ready until E2E-001 or another realistic E2E run passes.
+- `/research` remains `draft_required` and is now the next highest-priority unfinished contract.
+- E2E-001 used a realistic textual mockup, not a raster screenshot.
+- Pixel-accurate screenshot interpretation remains unvalidated by E2E-001.
+- Real Elementor export JSON / EDIS validation remains future work.
+
+---
+
+## E2E-001 Result
+
+```yaml
+E2E_TEST_REPORT:
+  schema: ev4-e2e-test-report@1.0.0
+  test_id: E2E-001
+  fixture: experiments/E2E-001-smart-home-connector-fixture.md
+  fixture_type: realistic_mockup_description
+  e2e_status: pass_with_minor_flags
+  stages_completed:
+    - /intake
+    - /decompose
+    - /architectures
+    - /score-evidence
+    - /score-audit
+    - /recommend
+    - /build-tree
+    - /implementation
+    - /final-audit
+    - /handoff-export
+  first_failure_stage: null
+  release_blocker_removed: yes
+  release_blocker_scope: prompt-pack full-pipeline E2E contract
+  source_access_violations: []
+  blocker_findings: []
+  high_findings: []
+  medium_findings:
+    - E2E001-MED-001: textual fixture cannot validate pixel-accurate screenshot interpretation or exact visual matching
+  low_findings:
+    - E2E001-LOW-001: exact token values remain unknown
+    - E2E001-LOW-002: exact icon source/library remains unknown
+    - E2E001-LOW-003: animation requirement remains unknown
+    - E2E001-LOW-004: dynamic dashboard data requirement remains unknown
+```
+
+E2E-001 selected architecture during the authorized `/recommend` stage:
+
+```yaml
+selected_candidate_id: A02_native_plus_scoped_decorative_css
+selected_candidate_family: native editable structure + section-scoped decorative CSS
+reason: highest audited eligible score, editable meaningful content, contained decorative connector/glow layer, no third-party dependency, no flattened dashboard content
+```
+
+Release boundary interpretation:
+
+```text
+The previous release blocker requiring one passing E2E test is removed for the prompt-pack full-pipeline contract because E2E-001 reached /handoff-export, preserved anchors/payloads/unknowns/flags, and left no blocker/high finding.
+
+This does not claim pixel-accurate screenshot interpretation, live Elementor rendering, or real export JSON validation. Those remain future validation tracks.
+```
+
+---
 
 ## Stage Anchor v1.1 Notes
 
@@ -108,6 +176,8 @@ Purpose:
 
 The anchor is an external structured handoff, not hidden reasoning.
 
+---
+
 ## Partial Rerun Notes
 
 If only one input changes, the assistant must not automatically rerun the full pipeline.
@@ -120,6 +190,8 @@ It must first produce a `PARTIAL RERUN PLAN` that identifies:
 - invalidated downstream stages;
 - required payloads;
 - required confirmation if the rerun depends on a missing decision.
+
+---
 
 ## Knowledge Base / RAG Notes
 
@@ -139,7 +211,7 @@ Future export evidence / EDIS may strengthen implementation grounding and final 
 
 ### Stage Source Access Matrix
 
-The RAG Strategy now defines which sources each stage may use.
+The RAG Strategy defines which sources each stage may use.
 
 Key gates:
 
@@ -151,6 +223,8 @@ Key gates:
 - Stage 9 may use Stage 8, Stage 7, Stage 6, Stage 5, Stage 4 constraints, TUYA audit concepts, official docs, and export evidence only to audit preservation and capability claims; it must not generate new architecture or implementation.
 - Stage 10 may use final audited outputs, debug traces, anchors, and payloads only to package the run; it must not change decisions.
 - E2E validation must check source-access compliance across every stage, especially Stage 2, Stage 4, Stage 6, Stage 9, and Stage 10.
+
+---
 
 ## TUYA Internal Concept Reference Notes
 
@@ -176,8 +250,6 @@ It may guide reasoning but must not prove platform capability or bypass the EV4 
 
 ### TUYA Evidence Transition Rule
 
-A TUYA-derived `provisional` item may be reclassified later.
-
 ```text
 provisional + stronger supporting evidence → supported / partially supported
 provisional + still incomplete evidence → stays provisional
@@ -185,169 +257,89 @@ provisional + direct conflicting evidence → CONTRADICTED_EVIDENCE
 unknown by itself ≠ contradiction
 ```
 
-This prevents the pipeline from preserving a weak provisional heuristic after later stage evidence disproves it.
+---
 
 ## Stage 8 — /implementation Hardening Notes
 
 Stage 8 is confirmed as a hardened contract, not a scaffold.
 
-Added controls:
-
-- strict input authorization against `ev4-stage-anchor@1.1.0` and `ev4-build-tree-payload@1.0.0`;
-- mandatory Stage Source Access Matrix binding;
-- official source ledger for Elementor platform-capability claims;
-- exact `elementor_settings_plan` schema;
-- widget mapping schema with editability, accessibility, dependency, and fallback policy;
-- class and variable application map;
-- scoped CSS need map and validator;
-- asset and accessibility schema;
-- responsive implementation schema and safe example shapes;
-- position/layering implementation plan;
-- dynamic data / interaction plan;
-- implementation risks schema;
-- Stage 8 self-audit;
-- `Implementation_Payload` schema;
-- debug trace addendum;
-- repair routes;
-- NEXT STAGE ANCHOR template for `/final-audit`.
-
 Important limitation:
 
 ```text
-Stage 8 hardening confirms the prompt contract. It does not replace the first real E2E pipeline run.
+Stage 8 hardening confirms the prompt contract. It does not replace a real pipeline run.
 ```
+
+---
 
 ## Stage 9 — /final-audit Hardening Notes
 
 Stage 9 is confirmed as a hardened contract, not a scaffold.
 
-Added controls:
-
-- strict input authorization against `ev4-stage-anchor@1.1.0` and `ev4-implementation-payload@1.0.0`;
-- mandatory Source Access Matrix binding for final audit;
-- source/payload classification for audit claims;
-- authoritative source order and conflict rules;
-- ordered Stage 9 output format;
-- severity taxonomy: blocker, high, medium, low, info;
-- final audit statuses and status rules;
-- architecture preservation audit;
-- build tree preservation audit;
-- Elementor-native and dependency audit;
-- editability audit;
-- normal-flow / position / layering audit;
-- responsive audit;
-- accessibility audit;
-- performance / DOM audit;
-- design-system audit;
-- scoped CSS audit;
-- asset / media audit;
-- dynamic data / interaction audit;
-- unknown / confirmation survival audit;
-- blocker/high repair route schema;
-- repair examples;
-- regression examples;
-- Stage 9 self-audit;
-- `Final_Audit_Payload` schema;
-- debug trace addendum;
-- NEXT STAGE ANCHOR template for `/handoff-export`;
-- REPAIR ANCHOR template for failed audit statuses.
-
 Important limitation:
 
 ```text
-Stage 9 hardening confirms the final-audit prompt contract. It does not mean a real implementation has passed final audit, and it does not remove the E2E release blocker.
+Stage 9 hardening confirms the final-audit prompt contract. It does not mean every future real implementation has passed final audit.
 ```
+
+---
 
 ## Stage 10 — /handoff-export Hardening Notes
 
 Stage 10 is confirmed as a hardened contract, not a scaffold.
 
-Added controls:
-
-- strict input authorization against `ev4-stage-anchor@1.1.0` and `ev4-final-audit-payload@1.0.0`;
-- mandatory Source Access Matrix binding for handoff/export packaging;
-- authoritative source order focused on final audit, implementation, build tree, recommendation, anchors, and debug traces;
-- handoff eligibility matrix tied to Stage 9 final audit status;
-- two output modes: `FINAL BUILDER HANDOFF` and `HANDOFF BLOCKED REPORT`;
-- payload ledger requirements;
-- builder-facing templates for architecture summary, Structure Panel tree, Elementor build checklist, class/variable/component checklist, scoped CSS, assets/accessibility, responsive, dynamic data, QA, and debug trace references;
-- audit flag preservation rules for blocker/high/medium/low/info findings;
-- unresolved unknown and required confirmation survival rules;
-- `Handoff_Payload` schema `ev4-handoff-export-payload@1.0.0`;
-- blocked handoff payload schema;
-- safe partial rerun plan for blocked handoffs;
-- repair anchor template;
-- final closure note template;
-- strict Stage 10 self-audit;
-- regression cases for softened failed audits, disappearing medium flags, new CSS, missing E2E, unknown cleanup, and payload ledger gaps;
-- debug trace addendum;
-- explicit E2E release-ready boundary.
-
 Important limitation:
 
 ```text
-Stage 10 hardening confirms the handoff-export prompt contract. It does not mean a real EV4 run has been packaged, and it does not remove the E2E release blocker.
+Stage 10 hardening confirms the handoff-export prompt contract. It does not mean a future real EV4 run can skip final audit or E2E validation.
 ```
 
-## E2E Test Plan Hardening Notes
-
-The E2E test plan is confirmed as a hardened validation contract.
-
-Added controls:
-
-- full pipeline scope from `/intake` through `/handoff-export`;
-- explicit release boundary;
-- versioned schemas: `ev4-e2e-test-plan@1.0.0`, `ev4-e2e-fixture@1.0.0`, and `ev4-e2e-test-report@1.0.0`;
-- first fixture: `experiments/E2E-001-smart-home-connector-fixture.md`;
-- stage-by-stage Source Access Matrix check;
-- Stage Anchor validation against `ev4-stage-anchor@1.1.0`;
-- Debug Trace validation against `ev4-debug-trace@1.0.0`;
-- measurement matrix for anchor quality, drift control, scoring, audit, recommendation, build tree, implementation, final audit, and handoff preservation;
-- negative-control probes for RAG leakage, hidden recommendation, unknown-to-number errors, forced ties, flattened meaningful content, invented implementation values, global CSS leakage, and softened failed handoff;
-- E2E status taxonomy: `pass`, `pass_with_minor_flags`, `fail_repairable`, `fail_blocked`;
-- structured `E2E_TEST_REPORT` schema;
-- repair routing table;
-- release-blocker removal criteria;
-- NEXT WORK ANCHOR for E2E-001.
-
-Important limitation:
-
-```text
-E2E test plan hardening confirms the validation contract. It does not mean the E2E test has been executed, and it does not remove the release blocker.
-```
+---
 
 ## E2E Test Notes
 
-Before marking the prompt pack release-ready, run at least one realistic section through:
+E2E-001 passed with minor flags.
 
-```text
-/intake → /decompose → /architectures → /score-evidence → /score-audit → /recommend → /build-tree → /implementation → /final-audit → /handoff-export
-```
+Validated:
 
-The test must measure anchor quality, drift control, repair loop cost, output usability, unknown survival, CSS scoping, responsive-risk propagation, implementation preservation of the approved tree, whether final audit correctly blocks handoff when blocker/high defects exist, and whether Stage 10 preserves every audit flag and blocker without inventing new implementation decisions.
+- full stage sequence through `/handoff-export`;
+- Stage Source Access Matrix discipline;
+- Stage Anchor v1.1 continuity;
+- Debug Trace compatibility;
+- unknown propagation;
+- Stage 4 arithmetic / N/A / unknown handling;
+- Stage 5 audit behavior;
+- Stage 6 recommendation gate;
+- Stage 7 editability and tree readability;
+- Stage 8 exact-value restraint and scoped CSS map;
+- Stage 9 blocker/high behavior;
+- Stage 10 audit-flag preservation.
 
-The prepared first fixture is:
+Not validated by E2E-001:
 
-```text
-experiments/E2E-001-smart-home-connector-fixture.md
-```
+- pixel-accurate raster screenshot interpretation;
+- live Elementor rendering;
+- real Elementor export JSON;
+- browser/device QA.
 
-Fixture limitation:
-
-```text
-E2E-001 is a realistic textual mockup, not an actual screenshot. It validates pipeline discipline and propagation, not pixel-accurate screenshot interpretation.
-```
+---
 
 ## Current Next Step
 
 Preferred next action:
 
 ```text
-Run E2E-001 using the hardened test plan and produce ev4-e2e-test-report@1.0.0.
+Harden /research from draft_required to a confirmed contract.
 ```
 
-Release blocker before final release confirmation:
+The next run should build or complete `stages/02_RESEARCH.md` or the existing research-stage equivalent with:
 
-```text
-Run one passing E2E test before marking the prompt pack release-ready.
-```
+- input gate;
+- source access policy;
+- official source pinning rules;
+- retrieval output schema;
+- `ev4-research-payload@1.0.0`;
+- forbidden RAG behavior;
+- repair routes;
+- self-audit;
+- debug trace addendum;
+- NEXT STAGE ANCHOR handoff.
