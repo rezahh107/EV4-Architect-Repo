@@ -216,7 +216,7 @@ responsive_start_packet_audit:
     status: authorized | not_authorized | unknown | not_applicable
     source_ref:
   finding_severity: blocker | high | medium | low | info
-  repair_owner: /score-evidence | /build-tree | /implementation | /final-audit | /handoff-export
+  repair_owner: /score-evidence | /score-audit | /build-tree | /implementation | /final-audit | /handoff-export
 ```
 
 Rules:
