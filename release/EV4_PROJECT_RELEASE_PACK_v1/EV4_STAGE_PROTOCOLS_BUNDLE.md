@@ -1,7 +1,7 @@
 # EV4 Stage Protocols Bundle
 
 Status: release_candidate_for_controlled_use
-Version: 1.0.1
+Version: 1.0.2
 
 ---
 
@@ -174,6 +174,18 @@ Builder_Feed_Export_Payload: ev4-builder-feed-export-payload@1.0.0
 Builder_Context_Package: ev4-builder-context-package@1.0.0
 ```
 
+Required Builder Assistant v0.2.0+ compatibility fields:
+
+```text
+approved_structure_tree[].element_generation
+approved_structure_tree[].element_generation_source
+first_builder_batch.actions[].element_generation
+first_builder_batch.actions[].element_generation_source
+widget_mapping_table minItems: 1
+selected_candidate_locked: true
+production_ready_allowed: false
+```
+
 Required interactive guardrails exported to the downstream builder chat:
 
 ```text
@@ -188,6 +200,12 @@ V3/V4 Separation Guard
 No-Grid Assumption
 Checkpoint Confirmation Rule
 Completion Gate Extension
+```
+
+Hardening patch:
+
+```text
+stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md
 ```
 
 This stage is terminal for the main EV4 Architect pipeline and points to a separate Builder Assistant chat/project, not to responsive repair.
