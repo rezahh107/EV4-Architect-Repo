@@ -1,7 +1,7 @@
 # EV4 Stage Protocols Bundle
 
 Status: release_candidate_for_controlled_use
-Version: 1.0.0
+Version: 1.0.1
 
 ---
 
@@ -156,6 +156,41 @@ Allowed: final builder handoff or blocked report.
 Forbidden: new decisions, new CSS, new widgets, architecture repair.
 
 Payload: `ev4-handoff-export-payload@1.0.0`
+
+---
+
+## /builder-feed-export
+
+Purpose: convert a completed `/handoff-export` into a copy-ready `Builder_Context_Package` for a separate interactive Elementor Builder Assistant chat/model.
+
+Allowed: package approved structure, class creation/application map, Structure Panel naming checklist, widget mapping, editable content map, decoration-only map, scoped CSS need map, responsive/accessibility QA seed, first builder batch, and Builder Assistant prompt seed.
+
+Forbidden: redesign, re-score, re-recommend, change selected candidate, add/remove approved classes, write final CSS, resolve unknowns, assume clickability, assume Dynamic Loop, assume mobile connector behavior, or claim production readiness.
+
+Payloads:
+
+```text
+Builder_Feed_Export_Payload: ev4-builder-feed-export-payload@1.0.0
+Builder_Context_Package: ev4-builder-context-package@1.0.0
+```
+
+Required interactive guardrails exported to the downstream builder chat:
+
+```text
+APPROVED_HANDOFF_MODE
+Live Interface Precedence
+Control-Existence Failure Protocol
+Session State Machine
+Persian Control Triggers
+Step Size Contract
+Per-Element Instruction Contract
+V3/V4 Separation Guard
+No-Grid Assumption
+Checkpoint Confirmation Rule
+Completion Gate Extension
+```
+
+This stage is terminal for the main EV4 Architect pipeline and points to a separate Builder Assistant chat/project, not to responsive repair.
 
 ---
 
