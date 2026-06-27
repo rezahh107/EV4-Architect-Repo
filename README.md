@@ -100,6 +100,21 @@ Companion repo:
 https://github.com/rezahh107/EV4-Builder-Assistant-Repo
 ```
 
+The Builder Assistant repo uses a runtime structure based on:
+
+```text
+core/
+modes/
+protocols/
+input-contracts/
+commands/
+schemas/
+examples/
+tests/
+```
+
+That separation keeps this Architect repo focused on architecture, scoring, audit, and handoff, while the Builder Assistant repo focuses on interactive execution, checkpoints, live Elementor UI evidence, correction mode, and completion gates.
+
 ---
 
 ## System Flow
@@ -168,6 +183,29 @@ release/EV4_PROJECT_RELEASE_PACK_v1/EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_
 
 ---
 
+## Downstream Builder Assistant Files
+
+The downstream repo should define its runtime behavior in this order:
+
+```text
+PROJECT_INSTRUCTIONS.md
+core/MASTER_PROMPT.md
+input-contracts/BUILDER_CONTEXT_INPUT_CONTRACT.md
+core/SESSION_STATE_MACHINE.md
+core/LIVE_INTERFACE_PRECEDENCE.md
+modes/APPROVED_HANDOFF_MODE.md
+modes/CORRECTION_MODE.md
+protocols/CONTROL_EXISTENCE_FAILURE.md
+commands/SESSION_COMMANDS.md
+protocols/PER_ELEMENT_INSTRUCTION.md
+protocols/CLASS_APPLICATION_SAFETY.md
+protocols/COMPLETION_GATE.md
+```
+
+`FRESH_IMAGE_MODE.md` should remain fallback-only and must not replace this Architect pipeline when `Builder_Context_Package` exists.
+
+---
+
 ## Current Status
 
 ```yaml
@@ -175,6 +213,7 @@ project_status:
   architect_pipeline: hardened_for_controlled_handoff
   builder_feed_export: added
   builder_context_package_schema: added
+  builder_assistant_repo: initialized
   live_elementor_rendering: not_validated
   real_elementor_export_json_or_EDIS: not_validated
   exact_pixel_matching: not_validated
