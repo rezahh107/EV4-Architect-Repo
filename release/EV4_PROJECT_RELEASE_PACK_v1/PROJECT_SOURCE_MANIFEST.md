@@ -1,7 +1,7 @@
 # Project Source Manifest — EV4 Release Pack v1
 
 Status: release_candidate_for_controlled_use_with_final_output_ux_case_memory_and_builder_feed_addons
-Version: 1.0.4
+Version: 1.0.5
 Date: 2026-06-27
 
 ---
@@ -25,25 +25,30 @@ release/EV4_PROJECT_RELEASE_PACK_v1/EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_
 
 ---
 
-## UX Add-on Files
+## Builder Feed Schema Sync Add-on
 
 ```text
-release/EV4_PROJECT_RELEASE_PACK_v1/EV4_RUN_COPILOT_INSTRUCTIONS.md
-release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FINAL_OUTPUT_UX_PATCH.md
+stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md
+schemas/ev4-builder-context-package.schema.json
+STATUS_0.16.2_BUILDER_FEED_SCHEMA_SYNC.md
 ```
 
 Purpose:
 
 ```text
-EV4_RUN_COPILOT_INSTRUCTIONS.md:
-- Companion reviewer for stage outputs.
-- Checks whether the latest stage obeyed EV4 contracts.
-- Gives the user the exact next prompt.
+- Synchronizes Architect Stage 11 with EV4 Builder Assistant v0.2.0+ package expectations.
+- Requires element_generation and element_generation_source on approved_structure_tree nodes and first_builder_batch actions.
+- Keeps widget_mapping_table non-empty.
+- Adds cross-field integrity requirements for node ids, child links, action ids, class references, and widget class references.
+```
 
-EV4_FINAL_OUTPUT_UX_PATCH.md:
-- Adds PIPELINE RESULT SNAPSHOT to final /handoff-export.
-- Adds a simple teacher-style Persian explanation for the user.
-- Preserves all flags, unknowns, and production-readiness boundaries.
+---
+
+## UX Add-on Files
+
+```text
+release/EV4_PROJECT_RELEASE_PACK_v1/EV4_RUN_COPILOT_INSTRUCTIONS.md
+release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FINAL_OUTPUT_UX_PATCH.md
 ```
 
 ---
@@ -52,15 +57,6 @@ EV4_FINAL_OUTPUT_UX_PATCH.md:
 
 ```text
 release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CASE_MEMORY_PROTOCOL.md
-```
-
-Purpose:
-
-```text
-Adds optional post-build learning after /handoff-export.
-Turns Elementor build feedback into audited case memory.
-Defines validation levels.
-Blocks case memory from being used by /decompose to invent visual facts.
 ```
 
 ---
@@ -92,6 +88,7 @@ EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_EXECUTION_PATCH.md:
 ```text
 STATUS.md
 STATUS_0.16.1_BUILDER_FEED_EXPORT.md
+STATUS_0.16.2_BUILDER_FEED_SCHEMA_SYNC.md
 02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md
 contracts/STAGE_ANCHOR_CONTRACT.md
 contracts/PARTIAL_RERUN_CONTRACT.md
@@ -118,6 +115,7 @@ stages/08_IMPLEMENTATION.md
 stages/09_FINAL_AUDIT.md
 stages/10_HANDOFF_EXPORT.md
 stages/11_BUILDER_FEED_EXPORT.md
+stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md
 stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md
 rubrics/ELEMENTOR_V4_ARCHITECTURE_RUBRIC_v1.md
 schemas/ev4-builder-context-package.schema.json
@@ -141,20 +139,14 @@ validation_state:
     evidence: experiments/E2E-002-screenshot-validation-report.md
   final_output_ux_addons:
     status: added_v1.0.1
-    evidence:
-      - release/EV4_PROJECT_RELEASE_PACK_v1/EV4_RUN_COPILOT_INSTRUCTIONS.md
-      - release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FINAL_OUTPUT_UX_PATCH.md
   case_memory_protocol:
     status: added_v1.0.0
-    evidence:
-      - release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CASE_MEMORY_PROTOCOL.md
-      - cases/README.md
   builder_companion_feed_protocol:
     status: added_v1.1.0
+  builder_feed_schema_sync:
+    status: added_v1.1_hardening_patch
     evidence:
-      - release/EV4_PROJECT_RELEASE_PACK_v1/EV4_BUILDER_COMPANION_FEED_PROTOCOL.md
-      - release/EV4_PROJECT_RELEASE_PACK_v1/EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_EXECUTION_PATCH.md
-      - stages/11_BUILDER_FEED_EXPORT.md
+      - stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md
       - schemas/ev4-builder-context-package.schema.json
   live_elementor_rendering:
     status: not_validated
@@ -186,6 +178,7 @@ EV4_FINAL_OUTPUT_UX_PATCH.md
 EV4_CASE_MEMORY_PROTOCOL.md
 EV4_BUILDER_COMPANION_FEED_PROTOCOL.md
 EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_EXECUTION_PATCH.md
+stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md
 ```
 
 Optional upload:
@@ -212,6 +205,7 @@ Suggested replacement order:
 6. Add EV4_CASE_MEMORY_PROTOCOL.md if you want post-build learning.
 7. Add EV4_BUILDER_COMPANION_FEED_PROTOCOL.md if you want builder feed output.
 8. Add EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_EXECUTION_PATCH.md if you want the downstream interactive Builder Assistant session guardrails.
+9. Add stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md if you want Builder Assistant v0.2.0+ schema compatibility.
 ```
 
 ---
