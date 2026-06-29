@@ -1,22 +1,101 @@
-# Elementor V4 Architect Prompt Pack
+# EV4 Architect Repo
 
-سیستم پرامپت معماری و audit برای Elementor V4
-
-This repository stores the stable instructions, stage specifications, contracts, rubrics, calibration cases, and examples for a GPT Project that works as an **Elementor V4 layout architect and auditor**.
+Status: constructability_gate_alignment_planned  
+Current GitHub slug: `elementor-v4-architect-prompt-pack`  
+Recommended slug: `EV4-Architect-Repo`  
+Role: `architecture_decision_system`  
+Primary downstream gate: `EV4-Constructability-Engineer-Repo`
 
 ---
 
-## Core Idea
+## Summary
 
-The system is a staged prompt pipeline, not one giant prompt.
+`EV4 Architect` decides **what should be built** for an Elementor V4 section.
 
-Its job is to answer:
+It is a staged architecture, scoring, audit, recommendation, and handoff system. It is not the interactive Builder and it is not the Constructability Engineer.
 
 ```text
-What is the safest, editable, Elementor-native architecture for this section?
+Architect says what should be built.
+Constructability Engineer proves how it can be safely built.
+Builder executes only proven strategy.
+Responsive Architect validates and repairs post-build responsive behavior.
 ```
 
-It does **not** act as the final interactive builder assistant. Instead, after the architecture pipeline is completed, it can export a builder-ready feed for a separate downstream assistant.
+Core principle:
+
+```text
+Approved architecture ≠ approved implementation strategy.
+```
+
+This repo may approve a high-level architecture and selected candidate. That approval does not automatically prove that every implementation detail is ready for Builder execution.
+
+---
+
+## Repository Role
+
+This repository owns:
+
+```text
+- visual intake and decomposition
+- architecture candidate generation
+- architecture scoring and audit
+- selected_candidate_id decision
+- approved structure tree
+- approved class names
+- handoff/export packaging
+- architecture-level forbidden work
+```
+
+This repository must not:
+
+```text
+- act as the interactive Elementor Builder
+- perform checkpoint-based live build execution
+- silently resolve execution dependencies
+- claim geometry, overlay, responsive, interaction, or Dynamic Loop execution is proven unless evidence exists
+- change selected_candidate_id after lock
+- claim production readiness without downstream QA evidence
+```
+
+---
+
+## Constructability Gate Alignment
+
+The downstream path is now:
+
+```text
+EV4 Architect Repo
+        │
+        ▼
+EV4 Constructability Engineer Repo
+        │
+        ▼
+EV4 Builder Assistant Repo
+        │
+        ▼
+EV4 Responsive Architect
+```
+
+The Architect output is an approved architecture handoff, not a final Builder-executable package.
+
+Before Builder receives execution instructions, the Constructability Engineer must inspect whether implementation strategy is actually proven.
+
+Examples of execution dependencies the Architect may leave under-specified:
+
+```text
+- connector geometry
+- source and target anchors
+- asset source or placeholder policy
+- overlay containment
+- z-index / positioning model
+- responsive scope
+- interaction behavior
+- Dynamic Loop / data binding approval
+- accessibility evidence
+- exact Elementor UI control evidence
+```
+
+If these are not proven, the package must go to the Constructability Engineer first, not directly to Builder.
 
 ---
 
@@ -39,127 +118,93 @@ It does **not** act as the final interactive builder assistant. Instead, after t
 
 ### Stage 11 — `/builder-feed-export`
 
-`/builder-feed-export` is a terminal bridge stage after `/handoff-export`.
+`/builder-feed-export` remains the compatibility export stage for producing downstream package data.
 
-It converts the audited EV4 handoff into:
+Its output must be treated as an Architect handoff or Constructability intake source unless it has passed the Constructability Engineer gate.
+
+It must not allow Builder to decide strategy. It must not imply that execution dependencies are proven merely because the architecture is approved.
+
+---
+
+## Smart Home Connector Lesson
+
+The Smart Home Connector case exposed the missing middle role.
+
+Architect approved:
 
 ```text
-Builder_Context_Package
+- decorative connector layer
+- Association Lines / SVG node
+- connector visual intent between feature cards and central house visual
 ```
 
-This package is designed for a separate interactive Elementor builder chat/project.
-
-It must not:
+But safe execution also required:
 
 ```text
-- redesign;
-- re-score;
-- re-recommend;
-- change selected_candidate_id;
-- add or remove approved classes;
-- write final CSS;
-- resolve unknowns by assumption;
-- claim production readiness.
+- source anchors for feature cards
+- target anchor for the central visual
+- connector geometry strategy
+- overlay containment
+- z-index / positioning model
+- repair policy for drift
 ```
 
-It may:
+The Builder should not have been forced to choose between one integrated SVG, six independent SVG connectors, CSS lines, or temporary skip.
+
+That choice belongs to the Constructability Engineer or requires Architect/User evidence.
+
+Rule:
 
 ```text
-- package approved structure;
-- package Class Creation & Application Map;
-- package Structure Panel Naming Checklist;
-- package Widget Mapping Table;
-- package Editable Content Map;
-- package Decoration-Only Map;
-- package Scoped CSS Need Map;
-- package first builder action batch;
-- export Builder Assistant guardrails.
+Silence from Architect is not proof of executability.
+not proven executable → not builder-ready
 ```
 
 ---
 
-## Repository Role
+## Output Contract
 
-This repo is the **Architect** system:
+Architect output should preserve:
 
-```text
-EV4 Architect
-= تحلیل، candidateها، scoring، audit، recommendation، build tree، implementation plan، handoff، builder feed
+```yaml
+selected_candidate_locked: true
+selected_candidate_id: <approved candidate id>
+approved_structure_tree: present
+approved_class_names: present
+forbidden_work: visible
+production_ready_allowed: false
 ```
 
-The downstream builder assistant is separate:
+Architect output may include:
 
 ```text
-EV4 Builder Assistant
-= اجرای تعاملی داخل Elementor بر اساس Builder_Context_Package
+- implementation notes
+- visual intent
+- decoration-only map
+- editable content map
+- first suggested execution batch
 ```
 
-Companion repo:
+But these do not bypass Constructability review if execution dependencies remain unproven.
+
+---
+
+## Companion Repositories
 
 ```text
+EV4 Architect Repo
+Current: https://github.com/rezahh107/elementor-v4-architect-prompt-pack
+Recommended: https://github.com/rezahh107/EV4-Architect-Repo
+
+EV4 Constructability Engineer Repo
+https://github.com/rezahh107/EV4-Constructability-Engineer-Repo
+
+EV4 Builder Assistant Repo
 https://github.com/rezahh107/EV4-Builder-Assistant-Repo
+
+EV4 Responsive Architect
+https://github.com/rezahh107/EV4-Responsive-Architect
 ```
-
-The Builder Assistant repo uses a runtime structure based on:
-
-```text
-core/
-modes/
-protocols/
-input-contracts/
-commands/
-schemas/
-examples/
-tests/
-```
-
-That separation keeps this Architect repo focused on architecture, scoring, audit, and handoff, while the Builder Assistant repo focuses on interactive execution, checkpoints, live Elementor UI evidence, correction mode, and completion gates.
-
----
-
-## System Flow
-
-```text
-Reference Section Screenshot
-        │
-        ▼
-EV4 Architect Pipeline
-/intake → /decompose → /architectures → /score-evidence → /score-audit
-→ /recommend → /build-tree → /implementation → /final-audit → /handoff-export
-        │
-        ▼
-/builder-feed-export
-        │
-        ▼
-Builder_Context_Package
-        │
-        ▼
-EV4 Builder Assistant Repo / Project
-        │
-        ▼
-Interactive Elementor build
-        │
-        ▼
-Optional downstream: EV4 Responsive Architect
-```
-
----
-
-## Production Boundary
-
-This project may produce a controlled builder handoff or a builder context package.
-
-It must not claim:
-
-```text
-production-ready
-release-ready
-pixel-perfect
-live Elementor validated
-export JSON / EDIS validated
-```
-
-unless real validation evidence exists.
 
 ---
 
@@ -183,26 +228,23 @@ release/EV4_PROJECT_RELEASE_PACK_v1/EV4_BUILDER_COMPANION_FEED_v1.1_INTERACTIVE_
 
 ---
 
-## Downstream Builder Assistant Files
+## Production Boundary
 
-The downstream repo should define its runtime behavior in this order:
+This project may produce a controlled architecture handoff or Constructability intake package.
+
+It must not claim:
 
 ```text
-PROJECT_INSTRUCTIONS.md
-core/MASTER_PROMPT.md
-input-contracts/BUILDER_CONTEXT_INPUT_CONTRACT.md
-core/SESSION_STATE_MACHINE.md
-core/LIVE_INTERFACE_PRECEDENCE.md
-modes/APPROVED_HANDOFF_MODE.md
-modes/CORRECTION_MODE.md
-protocols/CONTROL_EXISTENCE_FAILURE.md
-commands/SESSION_COMMANDS.md
-protocols/PER_ELEMENT_INSTRUCTION.md
-protocols/CLASS_APPLICATION_SAFETY.md
-protocols/COMPLETION_GATE.md
+production-ready
+release-ready
+pixel-perfect
+live Elementor validated
+export JSON / EDIS validated
+browser validated
+responsive final QA complete
 ```
 
-`FRESH_IMAGE_MODE.md` should remain fallback-only and must not replace this Architect pipeline when `Builder_Context_Package` exists.
+unless matching downstream evidence exists.
 
 ---
 
@@ -210,18 +252,12 @@ protocols/COMPLETION_GATE.md
 
 ```yaml
 project_status:
-  architect_pipeline: hardened_for_controlled_handoff
-  builder_feed_export: added
-  builder_context_package_schema: added
-  builder_assistant_repo: initialized
+  role: architecture_decision_system
+  selected_candidate_authority: architect
+  constructability_gate_required: true
+  builder_direct_execution_allowed: false_unless_constructability_ready
   live_elementor_rendering: not_validated
   real_elementor_export_json_or_EDIS: not_validated
   exact_pixel_matching: not_validated
   production_ready: false
-```
-
-Next downstream work belongs in:
-
-```text
-https://github.com/rezahh107/EV4-Builder-Assistant-Repo
 ```
