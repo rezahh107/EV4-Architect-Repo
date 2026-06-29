@@ -73,7 +73,7 @@ EV4 Constructability Engineer Repo
 EV4 Builder Assistant Repo
         │
         ▼
-EV4 Responsive Architect
+EV4 Responsive Architect Repo
 ```
 
 The Architect output is an approved architecture handoff, not a final Builder-executable package.
