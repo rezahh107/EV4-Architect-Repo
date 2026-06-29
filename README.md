@@ -202,8 +202,8 @@ https://github.com/rezahh107/EV4-Constructability-Engineer-Repo
 EV4 Builder Assistant Repo
 https://github.com/rezahh107/EV4-Builder-Assistant-Repo
 
-EV4 Responsive Architect
-https://github.com/rezahh107/EV4-Responsive-Architect
+EV4 Responsive Architect Repo
+https://github.com/rezahh107/EV4-Responsive-Architect-Repo
 ```
 
 ---
