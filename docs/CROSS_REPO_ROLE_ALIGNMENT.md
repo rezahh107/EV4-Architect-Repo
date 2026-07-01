@@ -21,6 +21,22 @@ Shared Contracts status: future-planned only; no canonical schema migration in t
 - Final visual parity pass/fail status.
 - Tablet/mobile reference-family authorization.
 
+## Stage 10 handoff boundary
+
+Stage 10 Builder-facing wording is pre-CE handoff eligibility only. Terms such as `builder_handoff_allowed`, `FINAL BUILDER HANDOFF`, or `ready_for_builder_handoff` must not be interpreted as Builder-runtime authorization or Builder-executable readiness.
+
+Current boundary:
+
+```yaml
+stage_10_builder_facing_language:
+  allowed_meaning: pre_ce_handoff_eligibility
+  builder_runtime_authorization: false
+  builder_executable_by_default: false
+  ce_proof_required_before_execution: true
+  builder_side_validation_required_before_execution: true
+  boundary_note: stages/10_HANDOFF_EXPORT_PATCH_1_BOUNDARY_NOTE.md
+```
+
 ## Cross-repo responsibilities
 
 ### CE owns
