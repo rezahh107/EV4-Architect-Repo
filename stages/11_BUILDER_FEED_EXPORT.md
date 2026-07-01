@@ -1,18 +1,21 @@
 # Stage 11 — /builder-feed-export
 
-Status: confirmed_hardened_v1.1.0
-Version: 1.1.0
-Payload schema: ev4-builder-context-package@1.0.0
-Anchor required: yes
+Status: role_aligned_compatibility_export_v1.2.0  
+Version: 1.2.0  
+Payload schema: `ev4-architect-builder-feed-export@1.0.0`  
+Legacy compatibility schema: `ev4-builder-context-package@1.0.0` is deprecated for Architect-only exports  
+Anchor required: yes  
 Applies after: `/handoff-export`
 
 ---
 
 ## Purpose
 
-`/builder-feed-export` converts the audited `/handoff-export` into a copy-ready `Builder_Context_Package` for EV4 Builder Assistant.
+`/builder-feed-export` packages the audited `/handoff-export` as a non-executable Architect handoff and CE intake source.
 
-It is a terminal packaging stage. It does not redesign, rescore, repair, or implement the section.
+It does not produce a Builder-runtime intake package by default. It does not authorize Builder execution and it must not bypass the Constructability Engineer.
+
+Builder execution is allowed only after CE constructability proof is present and Builder-side intake validation passes.
 
 ---
 
@@ -33,19 +36,25 @@ unknowns_to_preserve
 production_ready_allowed: false
 ```
 
-It does not add classes, widgets, breakpoints, CSS, clickability, Dynamic Loop assumptions, or mobile/tablet connector behavior.
+It does not add classes, widgets, breakpoints, CSS, clickability, Dynamic Loop assumptions, mobile/tablet connector behavior, Golden Reference locking, Builder package-gate authorization, or executable strategy.
 
 ---
 
-## Required Builder Context Package
+## Required Architect Builder Feed Export
 
 Stage 11 emits:
 
 ```yaml
-Builder_Context_Package:
-  schema: ev4-builder-context-package@1.0.0
+Architect_Builder_Feed_Export:
+  schema: ev4-architect-builder-feed-export@1.0.0
   source_stage: /builder-feed-export
   source_handoff_stage: /handoff-export
+  packet_purpose: ce_intake_source
+  intended_consumer: constructability_engineer
+  ce_review_required: true
+  requires_constructability_engineer_review: true
+  builder_executable_allowed: false
+  builder_ready_status: not_builder_ready_without_ce_proof
   package_status: ready | ready_with_visible_flags | blocked
   selected_candidate_id:
   selected_candidate_locked: true
@@ -59,6 +68,7 @@ Builder_Context_Package:
   reference_screenshot_instruction:
     required_in_new_chat: true
     allowed_use: visual_reference_only
+    forbidden_use: do_not_infer_reference_paradigm_or_responsive_behavior
   approved_structure_tree: []
   class_creation_application_map: []
   widget_mapping_table: []
@@ -73,126 +83,75 @@ Builder_Context_Package:
   audit_flags_to_preserve: []
   unknowns_to_preserve: []
   forbidden_work: []
-  first_builder_batch:
+  first_suggested_builder_batch:
     max_actions:
-    actions:
-      - action_id:
-        target_element:
-        parent:
-        element_type:
-        structure_panel_name:
-        active_class:
-        instruction:
-        properties_not_to_change:
-        expected_result:
-  confirmation_request:
+    actions: []
+  confirmation_request_seed:
     confirmation_id: CONFIRM-BATCH-001
-    confirmed_action_ids:
-      - BATCH-001-A01
-      - BATCH-001-A02
-      - BATCH-001-A03
+    confirmed_action_ids: []
     expected_user_token: تایید BATCH-001
     template_id: standard_batch_confirmation
 ```
 
+`first_suggested_builder_batch` and `confirmation_request_seed` are CE intake data only. They are not Builder execution authorization.
+
 ---
 
-## Structured Confirmation Rule
+## Compatibility Mapping
 
-New exports use `confirmation_request` only.
+Historical Architect exports used:
 
 ```yaml
-confirmation_request:
-  required_fields:
-    - confirmation_id
-    - confirmed_action_ids
-    - expected_user_token
-    - template_id
-  template_id: standard_batch_confirmation
+schema: ev4-builder-context-package@1.0.0
+Builder_Context_Package:
 ```
 
-`confirmation_request.confirmed_action_ids` must match existing `first_builder_batch.actions[*].action_id` values.
+That historical name is now compatibility-only when produced by Architect.
 
-Legacy fields are not emitted in new packages:
+Compatibility exports must declare:
+
+```yaml
+compatibility_note: architect_export_legacy_name_not_builder_runtime_intake
+packet_purpose: ce_intake_source
+intended_consumer: constructability_engineer
+ce_review_required: true
+builder_executable_allowed: false
+builder_ready_status: not_builder_ready_without_ce_proof
+```
+
+Builder must not treat an Architect-only compatibility export as execution-ready unless CE proof has been added and Builder adapter validation passes.
+
+---
+
+## Architect-Owned Intent Fields
+
+Architect may own and emit design-level intent only:
+
+```yaml
+reference_role: inspiration_only | visual_direction | candidate_source_evidence
+desired_outcome: string
+high_level_design_intent: string
+experience_intent: advisory object
+source_visual_evidence_registration:
+  evidence_id:
+  evidence_type:
+  source_ref:
+  allowed_use: design_level_reference_only
+```
+
+Architect must not own:
 
 ```text
-confirmation_sentence
-builder_assistant_prompt_seed
+- final Golden Reference locking
+- Builder Executable Package issuance
+- Builder runtime intake authorization
+- Builder batch execution strategy
+- final visual parity result
+- responsive tablet/mobile reference-family authorization
 ```
-
-If legacy package data is imported, treat those fields as compatibility notes, not checkpoint authority.
 
 ---
 
 ## Required User-Facing Sections
 
-Stage 11 output includes these Persian sections while keeping technical identifiers in English:
-
-1. `BUILDER FEED STATUS`
-2. `SOURCE BOUNDARY`
-3. `APPROVED STRUCTURE SUMMARY`
-4. `CLASS CREATION & APPLICATION MAP`
-5. `STRUCTURE PANEL NAMING CHECKLIST`
-6. `WIDGET MAPPING TABLE`
-7. `EDITABLE CONTENT MAP`
-8. `DECORATION-ONLY MAP`
-9. `ASSET REPLACEMENT MAP`
-10. `SCOPED CSS NEED MAP`
-11. `RESPONSIVE / ACCESSIBILITY QA SEED`
-12. `WHAT NOT TO DO`
-13. `FIRST BUILDER BATCH`
-14. `COPY-READY BUILDER_CONTEXT_PACKAGE`
-15. `FIRST PROMPT FOR BUILDER ASSISTANT CHAT`
-16. `EV4_DEBUG_TRACE`
-
----
-
-## Output Payload
-
-```yaml
-Builder_Feed_Export_Payload:
-  schema: ev4-builder-feed-export-payload@1.1.0
-  source_stage: /builder-feed-export
-  source_handoff_stage: /handoff-export
-  package_status: ready | ready_with_visible_flags | blocked
-  builder_context_package_schema: ev4-builder-context-package@1.0.0
-  selected_candidate_id:
-  selected_candidate_preserved: true | false
-  build_tree_payload_preserved: true | false
-  implementation_payload_preserved: true | false
-  handoff_payload_preserved: true | false
-  new_architecture_created: false
-  new_classes_created: false
-  final_css_written: false
-  production_ready_claim: false
-  first_builder_batch_present: true | false
-  confirmation_request_present: true | false
-  legacy_confirmation_sentence_present: false
-  legacy_prompt_seed_present: false
-  debug_trace_ref_or_payload:
-```
-
----
-
-## Self-Audit
-
-```yaml
-stage_11_self_audit:
-  completed_handoff_used: pass | fail
-  selected_candidate_preserved: pass | fail
-  build_tree_payload_preserved: pass | fail
-  implementation_payload_preserved: pass | fail
-  audit_flags_preserved: pass | fail
-  unknowns_preserved: pass | fail
-  no_new_classes_added: pass | fail
-  no_final_css_written: pass | fail
-  no_redesign_or_rescore: pass | fail
-  approved_handoff_mode_exported: pass | fail
-  confirmation_request_present: pass | fail
-  confirmation_request_action_ids_match_first_batch: pass | fail
-  no_legacy_runtime_confirmation_fields: pass | fail
-  production_ready_claim_blocked: pass | fail
-  self_audit_status: pass | fail
-```
-
-If any required self-audit item fails, emit `BUILDER_FEED_BLOCKED_REPORT` and do not emit a ready `Builder_Context_Package`.
+Stage 11 output includes Persian user-facing sections while keeping technical identifiers in English. It must say explicitly that the output is not Builder-ready until CE emits an executable package and Builder validates the runtime intake package.
