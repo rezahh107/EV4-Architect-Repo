@@ -161,7 +161,7 @@
     "evidence_ref": {
       "type": "string",
       "minLength": 1,
-      "pattern": ".*\\S.*"
+      "pattern": "\\S"
     },
     "stage_name": {
       "enum": [
