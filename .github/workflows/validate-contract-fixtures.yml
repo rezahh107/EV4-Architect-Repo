@@ -1,0 +1,21 @@
+name: validate-contract-fixtures
+
+on:
+  pull_request:
+    paths:
+      - 'schemas/ev4-architect-output-contract.v1.schema.json'
+      - 'fixtures/architect-output-contract/**'
+      - 'scripts/check-architect-contract-schema.py'
+      - '.github/workflows/validate-contract-fixtures.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install 'jsonschema>=4.22.0'
+      - run: python scripts/check-architect-contract-schema.py
