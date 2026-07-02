@@ -146,7 +146,7 @@
     "non_empty_string": {
       "type": "string",
       "minLength": 1,
-      "pattern": ".*\\S.*"
+      "pattern": "\\S"
     },
     "id_string": {
       "type": "string",
