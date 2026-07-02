@@ -1,23 +1,26 @@
 # Stage 11 — /builder-feed-export
 
-Status: role_aligned_compatibility_export_v1.2.0  
-Version: 1.2.0  
-Payload schema: `ev4-architect-builder-feed-export@1.0.0`  
-Legacy compatibility schema: `ev4-builder-context-package@1.0.0` is deprecated for Architect-only exports  
+Status: role_aligned_ce_intake_export_v1.3.0  
+Version: 1.3.0  
+Authoritative CE intake source schema: `ev4-architect-output-contract@1.0.0`  
+Compatibility feed schema: `ev4-architect-builder-feed-export@1.0.0` is legacy/adapter input only  
+Retired Architect-side schema id: `ev4-builder-context-package@1.0.0`  
 Anchor required: yes  
 Applies after: `/handoff-export`
-
----
 
 ## Purpose
 
 `/builder-feed-export` packages the audited `/handoff-export` as a non-executable Architect handoff and CE intake source.
 
-It does not produce a Builder-runtime intake package by default. It does not authorize Builder execution and it must not bypass the Constructability Engineer.
+It does not produce a Builder runtime intake package. It does not permit Builder execution and it must not bypass the Constructability Engineer.
 
-Builder execution is allowed only after CE constructability proof is present and Builder-side intake validation passes.
+Production flow:
 
----
+```text
+Architect → CE → Builder → Responsive
+```
+
+Architect emits a CE-intended source package. CE proves implementation strategy. Builder receives only CE/Gate accepted runtime intake. Responsive receives Builder output and build evidence with CE/Builder provenance.
 
 ## Boundary
 
@@ -36,92 +39,63 @@ unknowns_to_preserve
 production_ready_allowed: false
 ```
 
-It does not add classes, widgets, breakpoints, CSS, clickability, Dynamic Loop assumptions, mobile/tablet connector behavior, Golden Reference locking, Builder package-gate authorization, or executable strategy.
+It does not add classes, widgets, breakpoints, CSS, clickability, Dynamic Loop assumptions, mobile/tablet connector behavior, Golden Reference locking, Builder package-gate approval, executable strategy, or Responsive production handoff approval.
 
----
+## Required Architect Output Contract
 
-## Required Architect Builder Feed Export
-
-Stage 11 emits:
+The authoritative Stage 11 CE intake source is:
 
 ```yaml
-Architect_Builder_Feed_Export:
-  schema: ev4-architect-builder-feed-export@1.0.0
+Architect_Output_Contract:
+  schema: ev4-architect-output-contract@1.0.0
   source_stage: /builder-feed-export
   source_handoff_stage: /handoff-export
   packet_purpose: ce_intake_source
   intended_consumer: constructability_engineer
   ce_review_required: true
-  requires_constructability_engineer_review: true
   builder_executable_allowed: false
   builder_ready_status: not_builder_ready_without_ce_proof
-  package_status: ready | ready_with_visible_flags | blocked
-  selected_candidate_id:
   selected_candidate_locked: true
   production_ready_allowed: false
-  source_payload_ledger:
-    - Handoff_Payload
-    - Final_Audit_Payload
-    - Implementation_Payload
-    - Build_Tree_Payload
-    - Recommendation_Payload
-  reference_screenshot_instruction:
-    required_in_new_chat: true
-    allowed_use: visual_reference_only
-    forbidden_use: do_not_infer_reference_paradigm_or_responsive_behavior
-  approved_structure_tree: []
-  class_creation_application_map: []
-  widget_mapping_table: []
-  editable_content_map: []
-  decoration_only_map: []
-  asset_replacement_map: []
-  scoped_css_need_map: []
-  responsive_qa_seed:
-    unresolved_breakpoints:
-    connector_behavior_status:
-    meaningful_content_visibility_rule:
-  audit_flags_to_preserve: []
-  unknowns_to_preserve: []
-  forbidden_work: []
-  first_suggested_builder_batch:
-    max_actions:
-    actions: []
-  confirmation_request_seed:
-    confirmation_id: CONFIRM-BATCH-001
-    confirmed_action_ids: []
-    expected_user_token: تایید BATCH-001
-    template_id: standard_batch_confirmation
 ```
 
-`first_suggested_builder_batch` and `confirmation_request_seed` are CE intake data only. They are not Builder execution authorization.
+CE's ingestion contract consumes this identity through `ev4-architect-to-ce-input-package@1.0.0`.
 
----
+## Compatibility Feed
 
-## Compatibility Mapping
+`ev4-architect-builder-feed-export@1.0.0` remains a legacy compatibility feed for historical Stage 11 data and adapter/gate migration. It is not the preferred CE intake identity and is not Builder runtime intake.
 
-Historical Architect exports used:
-
-```yaml
-schema: ev4-builder-context-package@1.0.0
-Builder_Context_Package:
-```
-
-That historical name is now compatibility-only when produced by Architect.
-
-Compatibility exports must declare:
+Any compatibility feed must keep these invariants:
 
 ```yaml
-compatibility_note: architect_export_legacy_name_not_builder_runtime_intake
 packet_purpose: ce_intake_source
 intended_consumer: constructability_engineer
 ce_review_required: true
+requires_constructability_engineer_review: true
 builder_executable_allowed: false
 builder_ready_status: not_builder_ready_without_ce_proof
+production_ready_allowed: false
 ```
 
-Builder must not treat an Architect-only compatibility export as execution-ready unless CE proof has been added and Builder adapter validation passes.
+## Retired Architect-side `ev4-builder-context-package@1.0.0`
 
----
+Historical Architect exports previously reused:
+
+```yaml
+schema: ev4-builder-context-package@1.0.0
+```
+
+That schema id is now reserved for Builder runtime intake in `rezahh107/EV4-Builder-Assistant-Repo`.
+
+Architect must not emit new payloads with that schema discriminator. Historical Architect payloads that need machine-readable migration must use:
+
+```yaml
+schema: ev4-architect-legacy-builder-context-export@1.0.0
+legacy_schema_alias: ev4-builder-context-package@1.0.0
+compatibility_note: architect_export_legacy_name_not_builder_runtime_intake
+```
+
+The file `schemas/ev4-builder-context-package.schema.json` is a tombstone and intentionally rejects Architect payloads.
 
 ## Architect-Owned Intent Fields
 
@@ -144,13 +118,11 @@ Architect must not own:
 ```text
 - final Golden Reference locking
 - Builder Executable Package issuance
-- Builder runtime intake authorization
+- Builder runtime intake approval
 - Builder batch execution strategy
 - final visual parity result
-- responsive tablet/mobile reference-family authorization
+- responsive tablet/mobile reference-family approval
 ```
-
----
 
 ## Required User-Facing Sections
 
