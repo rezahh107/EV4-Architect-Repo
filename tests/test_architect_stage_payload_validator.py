@@ -1,8 +1,11 @@
+import copy
 import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "check-architect-stage-payload.py"
@@ -23,6 +26,31 @@ def run_validator_cli(*args):
         check=False,
         timeout=30,
     )
+
+
+def load_minimal_payload():
+    return json.loads((ROOT / "fixtures/architect-stage-payload/valid/minimal-complete.v1.json").read_text(encoding="utf-8"))
+
+
+def set_path(value, dotted_path, replacement):
+    current = value
+    parts = dotted_path.split(".")
+    for part in parts[:-1]:
+        current = current[int(part)] if part.isdigit() else current[part]
+    current[int(parts[-1])] = replacement if parts[-1].isdigit() else current.__setitem__(parts[-1], replacement)
+
+
+def mutate_payload(dotted_path, replacement):
+    payload = load_minimal_payload()
+    current = payload
+    parts = dotted_path.split(".")
+    for part in parts[:-1]:
+        current = current[int(part)] if part.isdigit() else current[part]
+    if parts[-1].isdigit():
+        current[int(parts[-1])] = replacement
+    else:
+        current[parts[-1]] = replacement
+    return payload
 
 
 def test_fixture_suite_passes():
@@ -70,7 +98,7 @@ def test_array_and_primitive_inputs_are_invalid_not_crashes(tmp_path):
 
 def test_diagnostic_order_is_deterministic():
     validator = validator_module.ArchitectPayloadValidator(ROOT)
-    payload = json.loads((ROOT / "fixtures/architect-stage-payload/valid/minimal-complete.v1.json").read_text(encoding="utf-8"))
+    payload = load_minimal_payload()
     payload["architecture_identity"]["decision_source"]["evidence_refs"] = []
     payload["architecture_identity"]["decision_source"]["locked_decision_refs"] = []
     first = validator.validate_value(payload)["diagnostics"]
@@ -89,3 +117,51 @@ def test_cli_json_smoke_valid_fixture():
     )
     assert completed.returncode == 0
     assert json.loads(completed.stdout)["status"] == "valid"
+
+
+@pytest.mark.parametrize(
+    ("path", "replacement"),
+    [
+        ("evidence_register", None),
+        ("evidence_register", 7),
+        ("approved_structure_model", None),
+        ("approved_structure_model.structure_nodes", {"not": "an array"}),
+        ("architecture_identity.decision_source", None),
+        ("forbidden_work", None),
+        ("architect_intent", None),
+        ("architect_intent.scoped_css_intent", []),
+        ("architect_intent.dynamic_loop_intent.evidence_refs", None),
+        ("architect_intent.responsive_risk_seeds", {"not": "an array"}),
+    ],
+)
+def test_schema_invalid_nested_types_fail_before_semantic_rules(path, replacement):
+    validator = validator_module.ArchitectPayloadValidator(ROOT)
+    payload = mutate_payload(path, replacement)
+
+    first = validator.validate_value(payload)
+    second = validator.validate_value(copy.deepcopy(payload))
+
+    assert first == second
+    assert first["status"] == "invalid"
+    codes = [item["code"] for item in first["diagnostics"]]
+    assert "SCHEMA_VALIDATION_FAILED" in codes
+    assert all(code == "SCHEMA_VALIDATION_FAILED" for code in codes)
+    assert all("rule_id" not in item for item in first["diagnostics"])
+
+
+def test_cli_schema_invalid_nested_type_returns_structured_json_without_traceback(tmp_path):
+    payload = mutate_payload("evidence_register", None)
+    malformed = tmp_path / "schema-invalid-nested-type.json"
+    malformed.write_text(json.dumps(payload), encoding="utf-8")
+
+    first = run_validator_cli("--file", str(malformed), "--format", "json")
+    second = run_validator_cli("--file", str(malformed), "--format", "json")
+
+    assert first.returncode == 1
+    assert second.returncode == 1
+    assert first.stderr == ""
+    assert second.stderr == ""
+    assert first.stdout == second.stdout
+    result = json.loads(first.stdout)
+    assert result["status"] == "invalid"
+    assert [item["code"] for item in result["diagnostics"]] == ["SCHEMA_VALIDATION_FAILED"]
