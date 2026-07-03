@@ -32,14 +32,6 @@ def load_minimal_payload():
     return json.loads((ROOT / "fixtures/architect-stage-payload/valid/minimal-complete.v1.json").read_text(encoding="utf-8"))
 
 
-def set_path(value, dotted_path, replacement):
-    current = value
-    parts = dotted_path.split(".")
-    for part in parts[:-1]:
-        current = current[int(part)] if part.isdigit() else current[part]
-    current[int(parts[-1])] = replacement if parts[-1].isdigit() else current.__setitem__(parts[-1], replacement)
-
-
 def mutate_payload(dotted_path, replacement):
     payload = load_minimal_payload()
     current = payload
