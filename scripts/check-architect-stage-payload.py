@@ -99,6 +99,53 @@ class ArchitectPayloadValidator:
         status="invalid" if any(d.severity=="error" for d in ordered) else "insufficient_evidence" if isinstance(value,dict) and value.get("payload_status")=="insufficient_evidence" else "valid"
         return {"status":status,"diagnostics":[d.to_dict() for d in ordered]}
 
+
+def _path_tokens(path: str):
+    return [int(part) if part.isdigit() else part for part in path.split('.') if part]
+
+def _set_path(value: dict[str, Any], path: str, new_value: Any) -> None:
+    cur: Any = value
+    parts = _path_tokens(path)
+    for part in parts[:-1]:
+        cur = cur[part]
+    cur[parts[-1]] = new_value
+
+def _delete_path(value: dict[str, Any], path: str) -> None:
+    cur: Any = value
+    parts = _path_tokens(path)
+    for part in parts[:-1]:
+        cur = cur[part]
+    del cur[parts[-1]]
+
+def _load_case_reports(repo_root: Path, cases_file: Path, expect: str):
+    import copy
+    data = json.loads(cases_file.read_text(encoding='utf-8'))
+    base_path = (cases_file.parent / data['base_fixture']).resolve()
+    base = json.loads(base_path.read_text(encoding='utf-8'))
+    validator = ArchitectPayloadValidator(repo_root)
+    reports = []
+    failures = 0
+    for case in data['cases']:
+        payload = copy.deepcopy(base)
+        for mutation in case.get('mutations', []):
+            if mutation['op'] == 'set':
+                _set_path(payload, mutation['path'], mutation['value'])
+            elif mutation['op'] == 'delete':
+                _delete_path(payload, mutation['path'])
+            else:
+                raise ValueError(f"Unsupported mutation op: {mutation['op']}")
+        result = validator.validate_value(payload)
+        ok = result['status'] == expect
+        failures += 0 if ok else 1
+        reports.append({
+            'fixture': f"{cases_file.relative_to(repo_root)}#{case['case_id']}",
+            'expected': expect,
+            'actual': result['status'],
+            'ok': ok,
+            'diagnostic_codes': [item['code'] for item in result['diagnostics']],
+        })
+    return failures, reports
+
 def iter_expected(root:Path):
     for d,expect in [("valid","valid"),("invalid","invalid"),("insufficient-evidence","insufficient_evidence")]:
         for p in sorted((root/"fixtures/architect-stage-payload"/d).glob("*.json")): yield p,expect
@@ -106,6 +153,11 @@ def iter_expected(root:Path):
 def validate_fixture_suite(repo_root:Path):
     v=ArchitectPayloadValidator(repo_root); reports=[]; failures=0
     for path,expect in iter_expected(repo_root):
+        if path.name == "cases.v1.json":
+            case_failures, case_reports = _load_case_reports(repo_root, path, expect)
+            failures += case_failures
+            reports.extend(case_reports)
+            continue
         r=v.validate_file(path); ok=r["status"]==expect; failures += 0 if ok else 1
         reports.append({"fixture":str(path.relative_to(repo_root)),"expected":expect,"actual":r["status"],"ok":ok,"diagnostic_codes":[d["code"] for d in r["diagnostics"]]})
     return failures,reports
