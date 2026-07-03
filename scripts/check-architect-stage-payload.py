@@ -32,6 +32,12 @@ def jp(parts):
     for p in parts: out += f"[{p}]" if isinstance(p,int) else f".{p}"
     return out
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
 class ArchitectPayloadValidator:
     def __init__(self, repo_root: Path):
         self.repo_root=Path(repo_root)
@@ -46,42 +52,53 @@ class ArchitectPayloadValidator:
         return self.validate_value(value)
     def validate_value(self,value:Any):
         if not isinstance(value,dict): return self._result(value,[D("INPUT_NOT_OBJECT","error","Architect Stage Payload must be a JSON object.","$",observed_type=type(value).__name__)])
-        diags=[D("SCHEMA_VALIDATION_FAILED","error",e.message,jp(list(e.path))) for e in sorted(self.schema_validator.iter_errors(value), key=lambda e:(jp(list(e.path)),e.message))]
-        diags += self._semantic(value)
-        return self._result(value,diags)
+        schema_diags=[D("SCHEMA_VALIDATION_FAILED","error",e.message,jp(list(e.path))) for e in sorted(self.schema_validator.iter_errors(value), key=lambda e:(jp(list(e.path)),e.message))]
+        if schema_diags:
+            return self._result(value,schema_diags)
+        return self._result(value,self._semantic(value))
     def _semantic(self,v:dict):
-        out=[]; evidence={e.get("evidence_id"):e for e in v.get("evidence_register",[]) if isinstance(e,dict)}
-        nodes={n.get("node_id") for n in v.get("approved_structure_model",{}).get("structure_nodes",[]) if isinstance(n,dict)}
+        out=[]
+        evidence_register = _as_list(v.get("evidence_register"))
+        evidence={e.get("evidence_id"):e for e in evidence_register if isinstance(e,dict) and isinstance(e.get("evidence_id"),str)}
+        structure_model = _as_dict(v.get("approved_structure_model"))
+        structure_nodes = _as_list(structure_model.get("structure_nodes"))
+        nodes={n.get("node_id") for n in structure_nodes if isinstance(n,dict) and isinstance(n.get("node_id"),str)}
         out += self._forbidden(v)
-        dec=v.get("architecture_identity",{}).get("decision_source",{}) if isinstance(v.get("architecture_identity"),dict) else {}
+        architecture_identity = _as_dict(v.get("architecture_identity"))
+        dec=_as_dict(architecture_identity.get("decision_source"))
         for field,path in [("evidence_refs","$.architecture_identity.decision_source.evidence_refs"),("locked_decision_refs","$.architecture_identity.decision_source.locked_decision_refs"),("source_evidence_refs","$.architecture_identity.decision_source.source_evidence_refs")]:
-            refs=dec.get(field,[])
+            refs=_as_list(dec.get(field))
             if not refs: out.append(D("A_R01_MISSING_LOCK_EVIDENCE","error","Locked architecture requires explicit evidence references.",path,"A-R01"))
             for r in refs:
-                if r not in evidence: out.append(D("A_R01_UNKNOWN_LOCK_EVIDENCE_REF","error","Locked architecture references unknown evidence.",path,"A-R01",missing_ref=r))
-        if dec.get("approved_structure_ref") and dec.get("approved_structure_ref") not in nodes:
+                if not isinstance(r,str) or r not in evidence: out.append(D("A_R01_UNKNOWN_LOCK_EVIDENCE_REF","error","Locked architecture references unknown evidence.",path,"A-R01",missing_ref=r))
+        approved_structure_ref=dec.get("approved_structure_ref")
+        if approved_structure_ref and approved_structure_ref not in nodes:
             out.append(D("A_R01_APPROVED_STRUCTURE_REF_NOT_FOUND","error","Approved structure reference must point to a structure node.","$.architecture_identity.decision_source.approved_structure_ref","A-R01"))
-        structure=v.get("approved_structure_model",{}).get("structure_nodes",[]) if isinstance(v.get("approved_structure_model"),dict) else []
+        structure=structure_nodes
         if not structure: out.append(D("A_R01_STRUCTURE_MODEL_MISSING","error","Locked architecture requires an approved structure model.","$.approved_structure_model.structure_nodes","A-R01"))
         for i,n in enumerate(structure):
             if not isinstance(n,dict): continue
-            if not n.get("evidence_refs"): out.append(D("A_R01_STRUCTURE_NODE_EVIDENCE_MISSING","error","Every structure node requires source evidence references.",f"$.approved_structure_model.structure_nodes[{i}].evidence_refs","A-R01"))
-            for r in n.get("evidence_refs",[]):
-                if r not in evidence: out.append(D("A_R01_UNKNOWN_STRUCTURE_EVIDENCE_REF","error","Structure node references unknown evidence.",f"$.approved_structure_model.structure_nodes[{i}].evidence_refs","A-R01",missing_ref=r))
+            node_evidence_refs=_as_list(n.get("evidence_refs"))
+            if not node_evidence_refs: out.append(D("A_R01_STRUCTURE_NODE_EVIDENCE_MISSING","error","Every structure node requires source evidence references.",f"$.approved_structure_model.structure_nodes[{i}].evidence_refs","A-R01"))
+            for r in node_evidence_refs:
+                if not isinstance(r,str) or r not in evidence: out.append(D("A_R01_UNKNOWN_STRUCTURE_EVIDENCE_REF","error","Structure node references unknown evidence.",f"$.approved_structure_model.structure_nodes[{i}].evidence_refs","A-R01",missing_ref=r))
             if n.get("node_kind")=="wrapper" and "wrapper_justification" not in n: out.append(D("A_R07_WRAPPER_WITHOUT_JUSTIFICATION","error","Wrapper nodes require explicit structural justification.",f"$.approved_structure_model.structure_nodes[{i}]","A-R07"))
-        missing=sorted(REQUIRED_FORBIDDEN_WORK-set(v.get("forbidden_work",[])))
+        forbidden_work=_as_list(v.get("forbidden_work"))
+        missing=sorted(REQUIRED_FORBIDDEN_WORK-{item for item in forbidden_work if isinstance(item,str)})
         if missing: out.append(D("A_R04_FORBIDDEN_WORK_INCOMPLETE","error","Architect payload must explicitly forbid invented downstream facts.","$.forbidden_work","A-R04",missing=missing))
-        if v.get("payload_status")=="insufficient_evidence" and not v.get("unresolved_evidence"):
+        unresolved_evidence=_as_list(v.get("unresolved_evidence"))
+        if v.get("payload_status")=="insufficient_evidence" and not unresolved_evidence:
             out.append(D("A_R05_UNRESOLVED_EVIDENCE_MISSING","error","Insufficient payloads must structurally state missing evidence.","$.unresolved_evidence","A-R05"))
-        css=v.get("architect_intent",{}).get("scoped_css_intent",{}) if isinstance(v.get("architect_intent"),dict) else {}
+        architect_intent=_as_dict(v.get("architect_intent"))
+        css=_as_dict(architect_intent.get("scoped_css_intent"))
         if css.get("global_css_allowed") is not False: out.append(D("A_R08_GLOBAL_CSS_NOT_ALLOWED","error","Scoped CSS intent must not allow global CSS.","$.architect_intent.scoped_css_intent.global_css_allowed","A-R08"))
         if css.get("meaningful_content_created_by_css_allowed") is not False: out.append(D("A_R08_CSS_CONTENT_CREATION_NOT_ALLOWED","error","CSS must not create meaningful content.","$.architect_intent.scoped_css_intent.meaningful_content_created_by_css_allowed","A-R08"))
-        if "global" in css.get("allowed_selector_scopes",[]): out.append(D("A_R08_GLOBAL_SCOPE_NOT_ALLOWED","error","Allowed selector scopes must remain local.","$.architect_intent.scoped_css_intent.allowed_selector_scopes","A-R08"))
-        dyn=v.get("architect_intent",{}).get("dynamic_loop_intent",{}) if isinstance(v.get("architect_intent"),dict) else {}
+        if "global" in _as_list(css.get("allowed_selector_scopes")): out.append(D("A_R08_GLOBAL_SCOPE_NOT_ALLOWED","error","Allowed selector scopes must remain local.","$.architect_intent.scoped_css_intent.allowed_selector_scopes","A-R08"))
+        dyn=_as_dict(architect_intent.get("dynamic_loop_intent"))
         if dyn.get("status")=="approved":
-            ok=any((evidence.get(r) or {}).get("fact_class")=="project_specific_behavior" and (evidence.get(r) or {}).get("state") in {"observed","validated","resolved"} for r in dyn.get("evidence_refs",[]))
+            ok=any((evidence.get(r) or {}).get("fact_class")=="project_specific_behavior" and (evidence.get(r) or {}).get("state") in {"observed","validated","resolved"} for r in _as_list(dyn.get("evidence_refs")) if isinstance(r,str))
             if not ok: out.append(D("A_R09_DYNAMIC_LOOP_UNSUPPORTED","error","Dynamic Loop approval requires project-specific observed or validated data-source evidence.","$.architect_intent.dynamic_loop_intent","A-R09"))
-        if not v.get("architect_intent",{}).get("responsive_risk_seeds",[]) if isinstance(v.get("architect_intent"),dict) else True:
+        if not _as_list(architect_intent.get("responsive_risk_seeds")):
             out.append(D("A_R10_RESPONSIVE_UNCERTAINTY_NOT_VISIBLE","error","Responsive uncertainty must remain visible.","$.architect_intent.responsive_risk_seeds","A-R10"))
         return out
     def _forbidden(self,value,path="$"):
