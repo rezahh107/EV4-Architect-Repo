@@ -15,7 +15,10 @@ It does not prove constructability, execute Elementor actions, or claim responsi
 1. `README.md`
 2. `STATUS.md`
 3. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
-4. the relevant stage, contract, schema, fixture, and diagnostic files for the task
+4. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
+5. `schemas/ev4-architect-stage-payload.v1.schema.json`
+6. `scripts/check-architect-stage-payload.py`
+7. the relevant stage, contract, schema, fixture, and diagnostic files for the task
 
 When sources conflict, follow the highest-authority current contract or explicit active override. Do not silently merge incompatible rules.
 
@@ -28,9 +31,23 @@ Architect output
 → not accepted: Architect repair package
 ```
 
-Project Gate integration is documented but the verifier and user interface are not implemented yet.
+Project Gate integration is documented. Project Gate owns the common Stage Evidence Bundle envelope, canonical JSON, SHA-256, provenance, structured diagnostics, and envelope validation.
+
+Architect owns Architect-specific evidence, Architect decisions, Architect payload schema, Architect semantic validation, Architect fixtures, and Architect export behavior.
 
 The gate may run this repository's official schemas and validators. It must not create missing architecture facts, change locked identity, or prove implementation strategy.
+
+## Architect Stage Payload v1
+
+Canonical Architect payload:
+
+```text
+ev4-architect-stage-payload@1.0.0
+```
+
+This payload may be wrapped inside the Project Gate Stage Evidence Bundle envelope. It is not a CE proof, Builder runtime intake package, Responsive completion package, or production release claim.
+
+Critical behavioral rules are tracked with stable IDs `A-R01` through `A-R12`. Do not reuse an ID for a different meaning.
 
 ## Hard Boundaries
 
@@ -40,7 +57,8 @@ Do not:
 - present approved architecture as proven implementation strategy;
 - invent geometry, assets, overlays, interactions, responsive behavior, Dynamic Loop behavior, accessibility evidence, or Elementor UI paths;
 - claim Builder readiness, responsive completion, browser validation, or production readiness without downstream evidence;
-- copy Architect schemas into Project Gate as competing canonical contracts.
+- copy Architect schemas into Project Gate as competing canonical contracts;
+- treat legacy builder-feed exports as the canonical Architect Stage Payload.
 
 ## Change Rules
 
@@ -55,7 +73,15 @@ For changes affecting downstream CE intake:
 
 ## Validation
 
-This repository currently has no root package or test command documented as a universal validation entry point. Use the exact validation instructions attached to the files or release package being changed, and do not claim repository-wide validation unless it was actually executed.
+For Architect Stage Payload v1 changes, run:
+
+```bash
+python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
+python scripts/check-architect-stage-payload.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py
+```
+
+This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.
 
 For documentation-only changes, verify links, repository names, file paths, status labels, and cross-repository role descriptions against the current repository contents.
 

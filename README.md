@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: Architect system active; Project Gate integration planned; Project Gate program not implemented.
+Status: Architect system active; Architect Stage Payload v1 implemented; Project Gate Architect-to-CE transition not implemented.
 
 Role: `architecture_decision_system`
 
@@ -34,7 +34,35 @@ Architect → Gate → CE → Gate → Builder → Gate → Responsive → Gate
 
 The user will upload the Architect output and run one check. A successful result provides the CE package. A failed result provides a plain Persian repair package for the Architect-connected model. The corrected output is checked again before CE receives it.
 
-The Python verifier and simple user interface are not implemented yet.
+The Project Gate Python foundation exists, but the Architect-to-CE transition is not implemented yet.
+
+## Architect Stage Payload v1
+
+Canonical Architect payload identity:
+
+```text
+ev4-architect-stage-payload@1.0.0
+```
+
+This payload is Architect-owned evidence for the common Project Gate Stage Evidence Bundle envelope. It contains selected architecture identity, selected-candidate lock evidence, approved structure model, Architect intent maps, evidence register, unresolved evidence, forbidden work, and downstream-boundary assertions.
+
+Implemented now:
+
+```text
+Architect Stage Payload v1 schema and semantic validation
+```
+
+Not implemented yet:
+
+```text
+Project Gate Architect-to-CE transition
+CE intake validation
+Builder execution authorization
+real end-to-end fixture validation
+legacy contract retirement
+```
+
+Legacy handoff and builder-feed contracts remain available during migration and must not be treated as retired by this PR.
 
 ## Architect Handoff
 
@@ -95,8 +123,9 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 ```yaml
 role: architecture_decision_system
 selected_candidate_authority: architect
+architect_stage_payload_v1: implemented_initial_v1
 constructability_gate_required: true
 project_gate_handoff: documented
-project_gate_runtime: not_implemented
+project_gate_architect_to_ce_transition: not_implemented
 production_ready: false
 ```

@@ -476,3 +476,22 @@ Debug trace:
 - debug_trace_required: yes
 - expected_debug_trace_schema: ev4-debug-trace@1.0.0
 ```
+
+---
+
+## Architect Stage Payload v1 Addendum
+
+```yaml
+ARCHITECT_STAGE_PAYLOAD_V1:
+  pr: 13
+  schema: ev4-architect-stage-payload@1.0.0
+  status: implemented_initial_v1
+  semantic_validator: added
+  synthetic_fixtures: added
+  ci_enforcement: added
+  architect_to_ce_transition: not_implemented
+  real_fixture_validation: not_completed
+  legacy_contracts_retired: false
+```
+
+This addendum records PR #13 without replacing the existing historical status entries, hardening records, E2E limitations, unresolved items, or prior next-step history.

@@ -1,0 +1,28 @@
+name: validate-architect-stage-payload
+
+on:
+  pull_request:
+    paths:
+      - 'contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md'
+      - 'schemas/ev4-architect-stage-payload.v1.schema.json'
+      - 'fixtures/architect-stage-payload/**'
+      - 'scripts/check-architect-stage-payload.py'
+      - 'tests/test_architect_stage_payload_validator.py'
+      - '.github/workflows/validate-architect-stage-payload.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
+      - name: Validate Architect Stage Payload fixtures
+        run: python scripts/check-architect-stage-payload.py
+      - name: Run validator regression tests
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py
