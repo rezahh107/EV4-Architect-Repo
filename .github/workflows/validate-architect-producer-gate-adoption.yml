@@ -1,0 +1,31 @@
+name: validate-architect-producer-gate-adoption
+
+on:
+  pull_request:
+    paths:
+      - 'contracts/project-gate/**'
+      - 'manifests/**'
+      - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
+      - 'fixtures/build-tree/**'
+      - 'fixtures/project-gate-export/**'
+      - 'references/ELEMENTOR_V4_OFFICIAL_CAPABILITY_REGISTRY.v1.json'
+      - 'docs/BEHAVIORAL_RULE_COVERAGE_PROMPT_01.md'
+      - 'scripts/check-architect-producer-gate-adoption.py'
+      - 'tests/test_architect_producer_gate_adoption.py'
+      - '.github/workflows/validate-architect-producer-gate-adoption.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run Architect Producer adoption validator
+        run: python scripts/check-architect-producer-gate-adoption.py --format json
+      - name: Run Architect Producer adoption tests
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
