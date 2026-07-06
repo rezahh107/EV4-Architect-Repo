@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: Architect system active; Architect Stage Payload v1 implemented; Project Gate Architect-to-CE transition not implemented.
+Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption pending merge; Project Gate Architect-to-CE runtime transition not implemented.
 
 Role: `architecture_decision_system`
 
@@ -34,7 +34,7 @@ Architect → Gate → CE → Gate → Builder → Gate → Responsive → Gate
 
 The user will upload the Architect output and run one check. A successful result provides the CE package. A failed result provides a plain Persian repair package for the Architect-connected model. The corrected output is checked again before CE receives it.
 
-The Project Gate Python foundation exists, but the Architect-to-CE transition is not implemented yet.
+The Project Gate Python foundation exists, but the Architect-to-CE runtime transition is not implemented yet.
 
 ## Architect Stage Payload v1
 
@@ -50,19 +50,41 @@ Implemented now:
 
 ```text
 Architect Stage Payload v1 schema and semantic validation
+Architect Producer Gate Export adoption artifacts pending merge
 ```
 
 Not implemented yet:
 
 ```text
-Project Gate Architect-to-CE transition
+Project Gate Architect-to-CE runtime transition
 CE intake validation
 Builder execution authorization
-real end-to-end fixture validation
+real Elementor export validation
 legacy contract retirement
 ```
 
 Legacy handoff and builder-feed contracts remain available during migration and must not be treated as retired by this PR.
+
+## Architect Producer Gate Export
+
+The canonical project execution manifest is:
+
+```text
+manifests/architect-pipeline-manifest.v1.json
+```
+
+Current project execution sequence:
+
+```text
+/intake → /research → /decompose → /architectures
+→ /score-evidence → /score-audit → /recommend
+→ /build-tree → /implementation → /final-audit
+→ /handoff-export → /project-gate-export
+```
+
+`/builder-feed-export` remains a legacy compatibility output, not the canonical Producer Gate Export.
+
+`/e2e-test` and `/e2e-screenshot-validation` are validation tracks, not mandatory per-run project execution stages for Producer Gate Export emission.
 
 ## Architect Handoff
 
@@ -98,17 +120,6 @@ repair_owner: unresolved
 
 This repository does not perform interactive Elementor execution, prove constructability, complete responsive QA, or claim production readiness without downstream evidence.
 
-## Current Pipeline
-
-```text
-/intake → /research → /decompose → /architectures
-→ /score-evidence → /score-audit → /recommend
-→ /build-tree → /implementation → /final-audit
-→ /handoff-export → /builder-feed-export
-```
-
-`/builder-feed-export` is an architecture handoff or CE intake source unless it has passed the CE gate.
-
 ## Companion Repositories
 
 ```text
@@ -124,6 +135,7 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 role: architecture_decision_system
 selected_candidate_authority: architect
 architect_stage_payload_v1: implemented_initial_v1
+architect_producer_gate_export_adoption: pending_merge
 constructability_gate_required: true
 project_gate_handoff: documented
 project_gate_architect_to_ce_transition: not_implemented
