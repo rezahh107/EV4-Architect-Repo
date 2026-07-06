@@ -1,0 +1,10 @@
+{
+  "base_fixture": "../valid/blocked-run.v1.json",
+  "cases": [
+    {"case_id":"handoff-allowed-with-blocker","expected_diagnostic":"A_EXPORT_HANDOFF_ALLOWED_WITH_BLOCKER","mutations":[{"op":"set","path":"handoff.allowed","value":true}]},
+    {"case_id":"silent-fallback-allowed","expected_diagnostic":"A_EXPORT_SILENT_FALLBACK_FORBIDDEN","mutations":[{"op":"set","path":"acquisition_mode.silent_fallback_allowed","value":true}]},
+    {"case_id":"final-stage-mismatch","expected_diagnostic":"A_EXPORT_FINAL_BUNDLE_STAGE_MISMATCH","mutations":[{"op":"set","path":"final_stage_bundle.stage","value":"builder"}]},
+    {"case_id":"payload-owner-mismatch","expected_diagnostic":"A_EXPORT_PAYLOAD_OWNER_MISMATCH","mutations":[{"op":"set","path":"final_stage_bundle.payload_schema.owner_repository","value":"rezahh107/EV4-Builder-Assistant-Repo"}]},
+    {"case_id":"legacy-feed-mislabeled","expected_diagnostic":"A_EXPORT_LEGACY_FEED_MISLABELED","mutations":[{"op":"set","path":"export_id","value":"builder-feed-export"}]}
+  ]
+}
