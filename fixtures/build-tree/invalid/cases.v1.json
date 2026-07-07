@@ -1,0 +1,18 @@
+{
+  "base_fixture": "../valid/voice-assistant-reference.v1.json",
+  "cases": [
+    {"case_id":"missing-root","expected_diagnostic":"A_TREE_MISSING_ROOT","mutations":[{"op":"set","path":"Build_Tree_Payload.root_node_id","value":"missing-root"}]},
+    {"case_id":"duplicate-node-id","expected_diagnostic":"A_TREE_DUPLICATE_NODE_ID","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.1.node_id","value":"product-image"}]},
+    {"case_id":"orphan-node","expected_diagnostic":"A_TREE_ORPHAN_NODE","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.2.parent_node_id","value":"missing-parent"}]},
+    {"case_id":"cycle","expected_diagnostic":"A_TREE_CYCLE","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.0.parent_node_id","value":"google-description"}]},
+    {"case_id":"missing-source-role","expected_diagnostic":"A_TREE_MISSING_SOURCE_ROLE","mutations":[{"op":"delete_index","path":"Build_Tree_Payload.semantic_role_coverage","index":0}]},
+    {"case_id":"unauthorized-collapse","expected_diagnostic":"A_TREE_UNAUTHORIZED_ROLE_COLLAPSE","mutations":[{"op":"set","path":"Build_Tree_Payload.semantic_role_coverage.1.disposition","value":"authorized_composite"}]},
+    {"case_id":"meaningful-svg","expected_diagnostic":"A_TREE_MEANINGFUL_CONTENT_STATIC_CARRIER","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.12.content_carrier","value":"static_svg"}]},
+    {"case_id":"vague-label","expected_diagnostic":"A_TREE_VAGUE_STRUCTURE_LABEL","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.2.structure_label","value":"box-1"}]},
+    {"case_id":"invalid-class-name","expected_diagnostic":"A_TREE_INVALID_CLASS_NAME","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.2.class_name","value":"Bad Class"}]},
+    {"case_id":"unknowns-dropped","expected_diagnostic":"A_TREE_UNKNOWN_DROPPED","mutations":[{"op":"set","path":"Build_Tree_Payload.nodes.0.unknowns","value":[]}]},
+    {"case_id":"responsive-contract-missing","expected_diagnostic":"A_TREE_RESPONSIVE_CONTRACT_MISSING","mutations":[{"op":"delete","path":"Build_Tree_Payload.nodes.12.responsive_structural_intent"}]},
+    {"case_id":"summary-without-machine-artifact","expected_diagnostic":"A_TREE_SUMMARY_REPLACED_MACHINE_ARTIFACT","mutations":[{"op":"set","path":"Build_Tree_Payload.machine_artifact_complete","value":false},{"op":"set","path":"Build_Tree_Payload.user_summary_only","value":true}]},
+    {"case_id":"synthetic-labeled-real","expected_diagnostic":"A_TREE_SYNTHETIC_LABELED_REAL","mutations":[{"op":"set","path":"real_elementor_export","value":true}]}
+  ]
+}

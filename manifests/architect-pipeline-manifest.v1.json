@@ -1,0 +1,29 @@
+{
+  "pipeline_id": "ev4-architect-pipeline",
+  "pipeline_version": "1.0.0",
+  "owner_repository": "rezahh107/EV4-Architect-Repo",
+  "project_execution_stages": [
+    {"stage_id":"/intake","stage_version":"1.0.0","ordinal":1,"mandatory":true,"applicability":"always","required_inputs":["user-intake"],"required_outputs":["intake-artifact"],"next_stage":"/research","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/research","stage_version":"1.0.0","ordinal":2,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["research-artifact"],"next_stage":"/decompose","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/decompose","stage_version":"1.0.0","ordinal":3,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["decompose-artifact"],"next_stage":"/architectures","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/architectures","stage_version":"1.1.0","ordinal":4,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["architectures-artifact"],"next_stage":"/score-evidence","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/score-evidence","stage_version":"1.3.0","ordinal":5,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["score-evidence-artifact"],"next_stage":"/score-audit","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/score-audit","stage_version":"1.2.0","ordinal":6,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["score-audit-artifact"],"next_stage":"/recommend","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/recommend","stage_version":"1.1.0","ordinal":7,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["recommend-artifact"],"next_stage":"/build-tree","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/build-tree","stage_version":"1.0.0","ordinal":8,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["build-tree-artifact"],"next_stage":"/implementation","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/implementation","stage_version":"1.0.1","ordinal":9,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["implementation-artifact"],"next_stage":"/final-audit","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/final-audit","stage_version":"1.0.1","ordinal":10,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["final-audit-artifact"],"next_stage":"/handoff-export","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/handoff-export","stage_version":"1.0.1","ordinal":11,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["handoff-export-artifact"],"next_stage":"/project-gate-export","blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"},
+    {"stage_id":"/project-gate-export","stage_version":"1.0.0","ordinal":12,"mandatory":true,"applicability":"always","required_inputs":["stage-anchor"],"required_outputs":["project-gate-export-artifact"],"next_stage":null,"blocked_statuses":["blocked","invalid","insufficient_evidence"],"owner_repository":"rezahh107/EV4-Architect-Repo"}
+  ],
+  "validation_tracks": [
+    {"validation_id":"/builder-feed-export","purpose":"Legacy Builder/CE-facing compatibility output; preserved but not canonical for Project Gate Producer Export.","mandatory_for":["legacy compatibility consumers"],"not_required_for":["producer-gate-export.v1 validation","Project Gate common contract adoption"],"evidence_requirement":"Existing legacy output contract remains available; it must not be silently substituted for Producer Gate Export."},
+    {"validation_id":"/e2e-test","purpose":"Repository/prompt-pack full-pipeline validation track through /handoff-export.","mandatory_for":["release-pack confidence claims"],"not_required_for":["per-run Architect Producer Gate Export emission"],"evidence_requirement":"Structured E2E report; textual fixtures do not prove pixel-accurate screenshot interpretation."},
+    {"validation_id":"/e2e-screenshot-validation","purpose":"Conditional screenshot-validation track for raster screenshot interpretation.","mandatory_for":["screenshot interpretation confidence claims"],"not_required_for":["per-run Architect Producer Gate Export emission without screenshot evidence"],"evidence_requirement":"Raster screenshot fixture or real screenshot evidence plus explicit report."}
+  ],
+  "legacy_compatibility_outputs": [
+    {"output_id":"/handoff-export","status":"preserved","canonical_for_project_gate":false,"retirement_status":"retirement_forbidden"},
+    {"output_id":"/builder-feed-export","status":"preserved","canonical_for_project_gate":false,"retirement_status":"retirement_forbidden"}
+  ],
+  "final_project_gate_export_stage": "/project-gate-export"
+}
