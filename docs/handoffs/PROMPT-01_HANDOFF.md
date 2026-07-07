@@ -57,7 +57,7 @@ project_gate_prompt_0:
 artifact_paths:
   adoption_report: {path: docs/PROJECT_GATE_PRODUCER_ADOPTION.md, status: verified}
   pipeline_manifest: {path: manifests/architect-pipeline-manifest.v1.json, status: verified}
-  stage_payload_schema: {path: schemas/ev4-architect-stage-payload.v1.schema.json, status: verified}
+  pipeline_manifest_schema: {path: schemas/ev4-architect-pipeline-manifest.v1.schema.json, status: verified}
   producer_gate_export_schema: {path: contracts/project-gate/producer-gate-export.v1.schema.json, status: verified}
   producer_gate_export_lock: {path: contracts/project-gate/producer-gate-export.v1.lock.json, status: verified}
   stage_bundle_schema: {path: contracts/project-gate/stage-bundle.v1.schema.json, status: verified}
