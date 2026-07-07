@@ -1,5 +1,6 @@
 name: validate-architect-producer-gate-adoption
 
+# Prompt 01: Architect Producer adoption regression workflow.
 on:
   pull_request:
     paths:
