@@ -5,6 +5,7 @@ branch: feature/architect-producer-gate-adoption
 base_commit: b0651668b97f682bb17f66840c8e8c503fd3935d
 prompt: EV4-ARCHITECT-PROMPT-01-PRODUCER-ADOPTION-TREE-FIDELITY-002
 status: pending_merge
+latest_pr_head_sha: 3c5e94ba98bbd8970755439e7161e0bfc87d2432
 ```
 
 ## Files changed
@@ -13,15 +14,15 @@ status: pending_merge
 - `contracts/project-gate/stage-bundle.v1.schema.json` — supplementary non-authoritative Stage Bundle v1 exact-byte copy for local compatibility checks.
 - `contracts/project-gate/producer-gate-export.v1.lock.json` — immutable Prompt 0 common-contract lock.
 - `.github/workflows/verify-project-gate-contract.yml` — caller workflow for Project Gate reusable verifier.
-- `.github/workflows/validate-architect-producer-gate-adoption.yml` — Architect-side regression workflow.
+- `.github/workflows/validate-architect-producer-gate-adoption.yml` — Architect-side regression workflow with immutable action SHAs.
 - `schemas/ev4-architect-pipeline-manifest.v1.schema.json` — Architect pipeline manifest schema.
 - `manifests/architect-pipeline-manifest.v1.json` — canonical Architect project execution manifest.
 - `contracts/BUILD_TREE_SEMANTIC_FIDELITY_CONTRACT.md` — normative Build Tree semantic fidelity rule.
 - `fixtures/build-tree/**` — valid Voice Assistant reference fixture and invalid semantic-collapse cases.
 - `fixtures/project-gate-export/**` — valid blocked Producer Export fixture and invalid export cases.
 - `references/ELEMENTOR_V4_OFFICIAL_CAPABILITY_REGISTRY.v1.json` — versioned official Elementor V4 capability registry.
-- `scripts/check-architect-producer-gate-adoption.py` — deterministic Architect adoption validator.
-- `tests/test_architect_producer_gate_adoption.py` — pytest regression tests.
+- `scripts/check-architect-producer-gate-adoption.py` — deterministic Architect adoption validator, hardened to return diagnostics for malformed lock/manifest inputs instead of raising runtime exceptions.
+- `tests/test_architect_producer_gate_adoption.py` — pytest regression tests, including malformed lock, non-object manifest stage, null ordinal, and string ordinal cases.
 - `docs/BEHAVIORAL_RULE_COVERAGE_PROMPT_01.md` — coverage addendum for A-R13 through A-R30.
 - `docs/PROMPT_01_PIPELINE_CONFLICT_AND_OVERLAP_REPORT.md` — audit of pipeline declaration conflicts.
 - `docs/PROJECT_GATE_PRODUCER_ADOPTION.md` — adoption boundary and contract chain.
@@ -35,9 +36,20 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_ad
 
 Local patch-tree result before GitHub transfer: `passed`, `4 passed`.
 
+## Tests added after PRF-001 review
+
+```text
+test_lock_null_nested_sections_return_diagnostics
+test_manifest_non_object_stage_returns_diagnostics
+test_manifest_null_ordinal_returns_diagnostics
+test_manifest_string_ordinal_returns_diagnostics
+```
+
+Expected Architect adoption test count after this patch: `8` tests.
+
 ## Tests not run
 
-Remote GitHub Actions exact-head status was not observed before this handoff was written.
+Remote GitHub Actions for exact head `3c5e94ba98bbd8970755439e7161e0bfc87d2432` were in progress when this handoff was updated.
 
 ## Coverage rules advanced
 
@@ -51,6 +63,7 @@ A-R13 through A-R30 added as Architect-side coverage addendum. Do not claim Proj
 - Real Elementor export validation: insufficient_evidence.
 - Live Elementor execution: insufficient_evidence.
 - Responsive completion: insufficient_evidence.
+- Remote exact-head CI final conclusion: insufficient_evidence until workflow runs complete.
 
 ## Next allowed prompt
 
