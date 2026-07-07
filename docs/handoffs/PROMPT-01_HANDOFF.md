@@ -1,79 +1,119 @@
 # PROMPT-01 HANDOFF — Architect Producer Gate Adoption
 
 ```yaml
-branch: feature/architect-producer-gate-adoption
-base_commit: b0651668b97f682bb17f66840c8e8c503fd3935d
-prompt: EV4-ARCHITECT-PROMPT-01-PRODUCER-ADOPTION-TREE-FIDELITY-002
-status: pending_merge
-latest_pr_head_sha: dbc78c32f4ba903aaaf6080b78ac89b7e6250c81
+producer: architect
+repository: rezahh107/EV4-Architect-Repo
+prompt: Prompt 1
+normalization_status: complete
+producer_adoption_status: merged
+producer_pr: 14
+producer_pr_head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
+producer_merge_commit_sha: bf0b63c1f5d78725e7ea24371bab3360d9452a4f
+project_gate_prompt_0_commit: ea19c22c32458068e167b267da8b819e9263cdf7
 exact_head_ci_status: passed
+project_gate_runtime_integration: not_implemented
+producer_repositories_modified_by_prompt_5: false
+prompt_5_ready_input: true
+human_review_required: true
 ```
 
-## Files changed
+## Normalization note
 
-- `contracts/project-gate/producer-gate-export.v1.schema.json` — byte-identical Project Gate Producer Export schema copy.
-- `contracts/project-gate/stage-bundle.v1.schema.json` — supplementary non-authoritative Stage Bundle v1 exact-byte copy for local compatibility checks.
-- `contracts/project-gate/producer-gate-export.v1.lock.json` — immutable Prompt 0 common-contract lock.
-- `.github/workflows/verify-project-gate-contract.yml` — caller workflow for Project Gate reusable verifier.
-- `.github/workflows/validate-architect-producer-gate-adoption.yml` — Architect-side regression workflow with immutable action SHAs.
-- `schemas/ev4-architect-pipeline-manifest.v1.schema.json` — Architect pipeline manifest schema.
-- `manifests/architect-pipeline-manifest.v1.json` — canonical Architect project execution manifest.
-- `contracts/BUILD_TREE_SEMANTIC_FIDELITY_CONTRACT.md` — normative Build Tree semantic fidelity rule.
-- `fixtures/build-tree/**` — valid Voice Assistant reference fixture and invalid semantic-collapse cases.
-- `fixtures/project-gate-export/**` — valid blocked Producer Export fixture and invalid export cases.
-- `references/ELEMENTOR_V4_OFFICIAL_CAPABILITY_REGISTRY.v1.json` — versioned official Elementor V4 capability registry.
-- `scripts/check-architect-producer-gate-adoption.py` — deterministic Architect adoption validator, hardened to return diagnostics for malformed lock/manifest inputs instead of raising runtime errors.
-- `tests/test_architect_producer_gate_adoption.py` — pytest regression tests, including malformed lock, non-object manifest stage, null ordinal, and string ordinal cases.
-- `docs/BEHAVIORAL_RULE_COVERAGE_PROMPT_01.md` — coverage addendum for A-R13 through A-R30.
-- `docs/PROMPT_01_PIPELINE_CONFLICT_AND_OVERLAP_REPORT.md` — audit of pipeline declaration conflicts.
-- `docs/PROJECT_GATE_PRODUCER_ADOPTION.md` — adoption boundary and contract chain.
+This handoff was normalized after Producer PR #14 was merged. It updates stale handoff prose only and does not redo Producer adoption.
 
-## Tests run
+## Canonical Producer evidence
 
-```text
-python scripts/check-architect-producer-gate-adoption.py --format json
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
+```yaml
+producer_pr: 14
+producer_pr_state: merged
+base_branch: main
+head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
+merge_commit_sha: bf0b63c1f5d78725e7ea24371bab3360d9452a4f
+exact_head_ci:
+  - workflow_name: verify-project-gate-contract
+    conclusion: success
+  - workflow_name: validate-architect-producer-gate-adoption
+    conclusion: success
 ```
 
-Local patch-tree result before GitHub transfer: `passed`, `4 passed`.
+## Project Gate Prompt 0 pin
 
-## Tests added after PRF-001 review
-
-```text
-test_lock_null_nested_sections_return_diagnostics
-test_manifest_non_object_stage_returns_diagnostics
-test_manifest_null_ordinal_returns_diagnostics
-test_manifest_string_ordinal_returns_diagnostics
+```yaml
+project_gate_prompt_0:
+  repository: rezahh107/EV4-Project-Gate
+  pr_number: 40
+  merged_commit_sha: ea19c22c32458068e167b267da8b819e9263cdf7
+  producer_gate_export_schema_path: contracts/common/producer-gate-export.v1.schema.json
+  producer_gate_export_schema_sha256: c556bb9deeccdcafeb885a1c8b3dbd660e4e06f452b8ac3c7040d21377465fcc
+  stage_bundle_schema_path: schemas/stage-bundle/stage-bundle.v1.schema.json
+  stage_bundle_schema_sha256: fc1ec6d3f7aecbabaeb0a3455d9eb42788779d2fa1531e8c7b2cb3bde706a886
+  acquisition_mode: producer_emitted_gate_artifact
+  silent_fallback_allowed: false
 ```
 
-Expected Architect adoption test count after this patch: `8` tests.
+## Canonical artifact paths
 
-## Remote exact-head CI
-
-```text
-verify-project-gate-contract: passed
-validate-architect-producer-gate-adoption: passed
+```yaml
+artifact_paths:
+  adoption_report: {path: docs/PROJECT_GATE_PRODUCER_ADOPTION.md, status: verified}
+  pipeline_manifest: {path: manifests/architect-pipeline-manifest.v1.json, status: verified}
+  pipeline_manifest_schema: {path: schemas/ev4-architect-pipeline-manifest.v1.schema.json, status: verified}
+  producer_gate_export_schema: {path: contracts/project-gate/producer-gate-export.v1.schema.json, status: verified}
+  producer_gate_export_lock: {path: contracts/project-gate/producer-gate-export.v1.lock.json, status: verified}
+  stage_bundle_schema: {path: contracts/project-gate/stage-bundle.v1.schema.json, status: verified}
+  validator: {path: scripts/check-architect-producer-gate-adoption.py, status: verified}
+  workflow_project_gate_contract: {path: .github/workflows/verify-project-gate-contract.yml, status: verified}
+  workflow_architect_adoption: {path: .github/workflows/validate-architect-producer-gate-adoption.yml, status: verified}
 ```
 
-Observed on exact PR head `dbc78c32f4ba903aaaf6080b78ac89b7e6250c81`.
+## Validation evidence
 
-## Tests not run
+```yaml
+original_local_tests_recorded:
+  - python scripts/check-architect-producer-gate-adoption.py --format json
+  - PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
+remote_exact_head_ci_observed:
+  verify-project-gate-contract: success
+  validate-architect-producer-gate-adoption: success
+normalization_local_tests_run: []
+normalization_tests_not_run:
+  - python scripts/check-architect-producer-gate-adoption.py --format json
+  - PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
+ci_scope: repository_validation_evidence_only
+```
 
-No additional local full-repository validation was run after the GitHub connector patch.
+## Boundaries preserved
 
-## Coverage rules advanced
-
-A-R13 through A-R30 added as Architect-side coverage addendum. Do not claim Project Gate runtime, CE, Builder, Responsive, or downstream enforcement from this PR.
+- Project Gate runtime integration is not implemented by this Producer handoff.
+- Prompt 5 routing is not implemented by this Producer handoff.
+- No downstream acceptance is claimed.
+- No production readiness is claimed.
+- No evidence is invented or silently normalized.
+- Historical gaps remain: CE acceptance, Builder execution, Responsive completion, real Elementor validation, and live Elementor execution.
 
 ## Remaining insufficient_evidence
 
-- Project Gate runtime integration: not implemented.
-- CE acceptance: not implemented.
-- Cross-repository E2E: insufficient_evidence.
-- Real Elementor export validation: insufficient_evidence.
-- Live Elementor execution: insufficient_evidence.
-- Responsive completion: insufficient_evidence.
+- Project Gate Prompt 4.5 must verify or accept remaining cross-repository evidence requirements.
+- Cross-repository E2E remains `insufficient_evidence`.
+- Real Elementor export validation remains `insufficient_evidence`.
+- Live Elementor execution remains `insufficient_evidence`.
 
-## Next allowed prompt
+## Prompt 5 consumption rule
 
-Prompt 5 may consume this only after the PR is merged and human review is complete.
+`Project Gate may consume this handoff as normalized Producer evidence only after this normalization PR is merged and Project Gate Prompt 4.5 evidence repair verifies or accepts the remaining cross-repository evidence requirements.`
+
+## Files changed by this normalization
+
+```yaml
+files_changed:
+  - docs/handoffs/PROMPT-01_HANDOFF.md
+```
+
+## No-false-execution notes
+
+- Producer adoption was not rerun.
+- Runtime code was not modified.
+- Validators were not modified.
+- Schemas were not modified.
+- Fixtures were not modified.
+- Workflows were not modified.
