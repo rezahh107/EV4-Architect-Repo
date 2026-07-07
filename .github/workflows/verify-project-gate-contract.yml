@@ -1,5 +1,6 @@
 name: verify-project-gate-contract
 
+# Prompt 01: keep this caller pinned to the immutable Project Gate merge commit.
 on:
   pull_request:
     paths:
