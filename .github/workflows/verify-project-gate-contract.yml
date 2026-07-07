@@ -1,6 +1,6 @@
 name: verify-project-gate-contract
 
-# Prompt 01: Project Gate common-contract verification caller.
+# Prompt 01: Project Gate contract verification caller.
 on:
   pull_request:
     paths:
