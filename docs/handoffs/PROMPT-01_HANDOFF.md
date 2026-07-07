@@ -5,7 +5,7 @@ branch: feature/architect-producer-gate-adoption
 base_commit: b0651668b97f682bb17f66840c8e8c503fd3935d
 prompt: EV4-ARCHITECT-PROMPT-01-PRODUCER-ADOPTION-TREE-FIDELITY-002
 status: pending_merge
-latest_pr_head_sha: 09e4524abcfb8d5ce63692dca3c0fe0c210372a8
+latest_pr_head_sha: 95017c7ac41e7e92767255edeaf265236da71c75
 exact_head_ci_status: passed
 ```
 
@@ -22,7 +22,7 @@ exact_head_ci_status: passed
 - `fixtures/build-tree/**` — valid Voice Assistant reference fixture and invalid semantic-collapse cases.
 - `fixtures/project-gate-export/**` — valid blocked Producer Export fixture and invalid export cases.
 - `references/ELEMENTOR_V4_OFFICIAL_CAPABILITY_REGISTRY.v1.json` — versioned official Elementor V4 capability registry.
-- `scripts/check-architect-producer-gate-adoption.py` — deterministic Architect adoption validator, hardened to return diagnostics for malformed lock/manifest inputs instead of raising runtime exceptions.
+- `scripts/check-architect-producer-gate-adoption.py` — deterministic Architect adoption validator, hardened to return diagnostics for malformed lock/manifest inputs instead of raising runtime errors.
 - `tests/test_architect_producer_gate_adoption.py` — pytest regression tests, including malformed lock, non-object manifest stage, null ordinal, and string ordinal cases.
 - `docs/BEHAVIORAL_RULE_COVERAGE_PROMPT_01.md` — coverage addendum for A-R13 through A-R30.
 - `docs/PROMPT_01_PIPELINE_CONFLICT_AND_OVERLAP_REPORT.md` — audit of pipeline declaration conflicts.
@@ -55,7 +55,7 @@ verify-project-gate-contract: passed
 validate-architect-producer-gate-adoption: passed
 ```
 
-Observed on exact PR head `09e4524abcfb8d5ce63692dca3c0fe0c210372a8`.
+Observed on exact PR head `95017c7ac41e7e92767255edeaf265236da71c75`.
 
 ## Tests not run
 
