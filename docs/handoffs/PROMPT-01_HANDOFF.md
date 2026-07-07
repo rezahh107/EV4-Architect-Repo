@@ -5,7 +5,7 @@ branch: feature/architect-producer-gate-adoption
 base_commit: b0651668b97f682bb17f66840c8e8c503fd3935d
 prompt: EV4-ARCHITECT-PROMPT-01-PRODUCER-ADOPTION-TREE-FIDELITY-002
 status: pending_merge
-latest_pr_head_sha: 95017c7ac41e7e92767255edeaf265236da71c75
+latest_pr_head_sha: dc746d3a80b6c87cae4a71f42d8ab621cdf6da33
 exact_head_ci_status: passed
 ```
 
@@ -55,7 +55,7 @@ verify-project-gate-contract: passed
 validate-architect-producer-gate-adoption: passed
 ```
 
-Observed on exact PR head `95017c7ac41e7e92767255edeaf265236da71c75`.
+Observed on exact PR head `dc746d3a80b6c87cae4a71f42d8ab621cdf6da33`.
 
 ## Tests not run
 
