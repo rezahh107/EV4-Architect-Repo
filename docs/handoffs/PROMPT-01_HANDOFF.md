@@ -5,7 +5,8 @@ branch: feature/architect-producer-gate-adoption
 base_commit: b0651668b97f682bb17f66840c8e8c503fd3935d
 prompt: EV4-ARCHITECT-PROMPT-01-PRODUCER-ADOPTION-TREE-FIDELITY-002
 status: pending_merge
-latest_pr_head_sha: 3c5e94ba98bbd8970755439e7161e0bfc87d2432
+latest_pr_head_sha: 09e4524abcfb8d5ce63692dca3c0fe0c210372a8
+exact_head_ci_status: passed
 ```
 
 ## Files changed
@@ -47,9 +48,18 @@ test_manifest_string_ordinal_returns_diagnostics
 
 Expected Architect adoption test count after this patch: `8` tests.
 
+## Remote exact-head CI
+
+```text
+verify-project-gate-contract: passed
+validate-architect-producer-gate-adoption: passed
+```
+
+Observed on exact PR head `09e4524abcfb8d5ce63692dca3c0fe0c210372a8`.
+
 ## Tests not run
 
-Remote GitHub Actions for exact head `3c5e94ba98bbd8970755439e7161e0bfc87d2432` were in progress when this handoff was updated.
+No additional local full-repository validation was run after the GitHub connector patch.
 
 ## Coverage rules advanced
 
@@ -63,8 +73,7 @@ A-R13 through A-R30 added as Architect-side coverage addendum. Do not claim Proj
 - Real Elementor export validation: insufficient_evidence.
 - Live Elementor execution: insufficient_evidence.
 - Responsive completion: insufficient_evidence.
-- Remote exact-head CI final conclusion: insufficient_evidence until workflow runs complete.
 
 ## Next allowed prompt
 
-Prompt 5 may consume this only after the PR is merged and exact-head CI/human review are complete.
+Prompt 5 may consume this only after the PR is merged and human review is complete.
