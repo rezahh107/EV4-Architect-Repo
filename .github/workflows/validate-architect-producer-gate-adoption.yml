@@ -1,6 +1,6 @@
 name: validate-architect-producer-gate-adoption
 
-# Prompt 01: Architect adoption checks.
+# Prompt 01: Architect adoption workflow.
 on:
   pull_request:
     paths:
