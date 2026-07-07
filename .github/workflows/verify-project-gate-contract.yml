@@ -1,6 +1,6 @@
 name: verify-project-gate-contract
 
-# Prompt 01: immutable Project Gate contract verification caller.
+# Prompt 01: Project Gate common-contract verification caller.
 on:
   pull_request:
     paths:
