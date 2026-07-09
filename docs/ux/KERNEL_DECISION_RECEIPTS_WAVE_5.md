@@ -7,7 +7,7 @@ Wave 5 adds a small human-readable receipt layer for Architect Kernel decision t
 
 ## Source of Truth
 
-The machine-readable decision trace remains the source of truth. A success receipt may be shown only when the trace includes all required fields:
+The machine-readable decision trace remains the source of truth. A success receipt may be shown only when the trace includes all Kernel decision record fields required by `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`:
 
 - `decision_family`
 - `decision_card_ref`
@@ -15,9 +15,10 @@ The machine-readable decision trace remains the source of truth. A success recei
 - `rejected_options`
 - `evidence_refs`
 - `evidence_state`
-- `consumer_stage`
 
-If any field is missing or empty, the formatter must show the warning receipt instead of a green success receipt.
+If any required Kernel decision record field is missing or empty, the formatter must show the warning receipt instead of a green success receipt.
+
+`consumer_stage` may appear as receipt-level metadata outside `machine_trace`, but it is not part of the current Kernel decision record shape and must not be required for a success receipt.
 
 ## Receipt Text
 
@@ -40,6 +41,7 @@ Warning receipt pattern:
 - No authored `resolved` or `production_ready` fields are added.
 - Receipt text must not be used to invent Kernel decision traces or decision card references.
 - Receipt text must not be used as proof of decision validity without the machine-readable trace.
+- Receipt metadata outside `machine_trace` must not be treated as Kernel decision evidence.
 
 ## Added Surfaces
 
