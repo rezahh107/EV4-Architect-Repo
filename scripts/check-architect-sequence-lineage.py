@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+_PAYLOAD_VALIDATOR_CACHE: dict[Path, Any] = {}
+
 REQUIRED_LINEAGE_FIELDS = [
     "decision_family",
     "decision_card_ref",
@@ -20,13 +22,19 @@ REQUIRED_LINEAGE_FIELDS = [
 
 
 def _load_payload_validator(repo_root: Path):
+    repo_root = repo_root.resolve()
+    cached = _PAYLOAD_VALIDATOR_CACHE.get(repo_root)
+    if cached is not None:
+        return cached
     script = repo_root / "scripts" / "check-architect-stage-payload.py"
     spec = importlib.util.spec_from_file_location("architect_payload_validator", script)
     module = importlib.util.module_from_spec(spec)
     sys.modules["architect_payload_validator"] = module
     assert spec.loader is not None
     spec.loader.exec_module(module)
-    return module.ArchitectPayloadValidator(repo_root)
+    validator = module.ArchitectPayloadValidator(repo_root)
+    _PAYLOAD_VALIDATOR_CACHE[repo_root] = validator
+    return validator
 
 
 def _path_tokens(path: str) -> list[str | int]:
@@ -81,6 +89,10 @@ def _lineage_snapshot(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return out
 
 
+def _normalize_lineage_value(value: Any) -> Any:
+    return sorted(value) if isinstance(value, list) else value
+
+
 def validate_sequence(repo_root: Path, sequence_path: Path) -> dict[str, Any]:
     data = json.loads(sequence_path.read_text(encoding="utf-8"))
     validator = _load_payload_validator(repo_root)
@@ -115,33 +127,33 @@ def validate_sequence(repo_root: Path, sequence_path: Path) -> dict[str, Any]:
                         "decision_family": family,
                         "field": field,
                     })
-        if baseline is None:
-            baseline = current
-            baseline_step = step_name
-            continue
-        for family, expected in baseline.items():
-            actual = current.get(family)
-            if actual is None:
-                diagnostics.append({
-                    "code": "ARCH-SEQUENCE-LINEAGE-RECORD-MISSING",
-                    "path": f"$.steps[{index}].kernel_decision_records",
-                    "message": "Kernel decision record present in the initial Architect step is missing from a later Architect step.",
-                    "step_id": step_name,
-                    "baseline_step_id": baseline_step,
-                    "decision_family": family,
-                })
-                continue
-            for field, expected_value in expected.items():
-                if actual.get(field) != expected_value:
+        if baseline is not None:
+            for family, expected in baseline.items():
+                actual = current.get(family)
+                if actual is None:
                     diagnostics.append({
-                        "code": "ARCH-SEQUENCE-LINEAGE-DRIFT",
-                        "path": f"$.steps[{index}].kernel_decision_records.{family}.{field}",
-                        "message": "Kernel decision lineage changed across Architect sequence steps without a new inspected decision record.",
+                        "code": "ARCH-SEQUENCE-LINEAGE-RECORD-MISSING",
+                        "path": f"$.steps[{index}].kernel_decision_records",
+                        "message": "Kernel decision record present in the previous Architect step is missing from a later Architect step.",
                         "step_id": step_name,
                         "baseline_step_id": baseline_step,
                         "decision_family": family,
-                        "field": field,
                     })
+                    continue
+                for field, expected_value in expected.items():
+                    actual_value = actual.get(field)
+                    if _normalize_lineage_value(actual_value) != _normalize_lineage_value(expected_value):
+                        diagnostics.append({
+                            "code": "ARCH-SEQUENCE-LINEAGE-DRIFT",
+                            "path": f"$.steps[{index}].kernel_decision_records.{family}.{field}",
+                            "message": "Kernel decision lineage changed across Architect sequence steps without a new inspected decision record.",
+                            "step_id": step_name,
+                            "baseline_step_id": baseline_step,
+                            "decision_family": family,
+                            "field": field,
+                        })
+        baseline = current
+        baseline_step = step_name
     return {"status": "invalid" if diagnostics else "valid", "diagnostics": diagnostics}
 
 
