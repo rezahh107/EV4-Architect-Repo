@@ -1,0 +1,112 @@
+[
+  {
+    "case_id": "skeletal-record",
+    "payload": {
+      "schema_version": 3,
+      "consumer_repo": "EV4-Architect-Repo",
+      "consumer_repo_evidence_state": "expected_unverified",
+      "last_updated": { "date": "2026-07-09", "pr": null, "commit": null },
+      "brc_reference": { "document": "Behavioral_Rule_Coverage_v0.4.1", "profile": "EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE_v0.4.1" },
+      "kernel_reference": { "repo": "EV4-Decision-Kernel", "decision_taxonomy_version": null, "decision_cards_version": null },
+      "records": [ { "escape_route_id": "DER-SKELETON" } ]
+    }
+  },
+  {
+    "case_id": "mapped-without-required-decision-card-ref-pattern",
+    "payload": {
+      "schema_version": 3,
+      "consumer_repo": "EV4-Architect-Repo",
+      "consumer_repo_evidence_state": "expected_unverified",
+      "last_updated": { "date": "2026-07-09", "pr": null, "commit": null },
+      "brc_reference": { "document": "Behavioral_Rule_Coverage_v0.4.1", "profile": "EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE_v0.4.1" },
+      "kernel_reference": { "repo": "EV4-Decision-Kernel", "decision_taxonomy_version": null, "decision_cards_version": null },
+      "records": [
+        {
+          "escape_route_id": "DER-MAPPED-MISSING-CARD",
+          "rule_id": "A-R01",
+          "concept": "Selected candidate lock",
+          "risk": "Critical",
+          "session_scope": "per_artifact",
+          "recovery_action": "block",
+          "consumer_repo": "EV4-Architect-Repo",
+          "consumer_stage": "/recommend",
+          "surface_type": "schema",
+          "file_path": "schemas/example.json",
+          "trigger_type": "field",
+          "detected_problem": "Mapped record lacks a required decision-card reference pattern.",
+          "kernel_mapping": { "mapping_status": "mapped", "decision_family": "architecture_identity", "required_decision_card_ref_pattern": null, "not_applicable_reason": null },
+          "rule_shape": {},
+          "carriers": {},
+          "status": { "enforcement_status": "schema_backed", "evidence_state": "unverified" },
+          "notes": "Negative fixture."
+        }
+      ]
+    }
+  },
+  {
+    "case_id": "ci-enforced-without-ci-step-carrier",
+    "payload": {
+      "schema_version": 3,
+      "consumer_repo": "EV4-Architect-Repo",
+      "consumer_repo_evidence_state": "expected_unverified",
+      "last_updated": { "date": "2026-07-09", "pr": null, "commit": null },
+      "brc_reference": { "document": "Behavioral_Rule_Coverage_v0.4.1", "profile": "EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE_v0.4.1" },
+      "kernel_reference": { "repo": "EV4-Decision-Kernel", "decision_taxonomy_version": null, "decision_cards_version": null },
+      "records": [
+        {
+          "escape_route_id": "DER-CI-MISSING-CARRIER",
+          "rule_id": "A-R01",
+          "concept": "Selected candidate lock",
+          "risk": "Critical",
+          "session_scope": "per_artifact",
+          "recovery_action": "block",
+          "consumer_repo": "EV4-Architect-Repo",
+          "consumer_stage": "/recommend",
+          "surface_type": "workflow",
+          "file_path": ".github/workflows/example.yml",
+          "trigger_type": "ci",
+          "detected_problem": "ci_enforced status lacks a CI_step carrier.",
+          "kernel_mapping": { "mapping_status": "mapped", "decision_family": "architecture_identity", "required_decision_card_ref_pattern": "EV4-DECISION-CARD-*", "not_applicable_reason": null },
+          "rule_shape": {},
+          "carriers": {},
+          "status": { "enforcement_status": "ci_enforced", "evidence_state": "unverified" },
+          "notes": "Negative fixture."
+        }
+      ]
+    }
+  },
+  {
+    "case_id": "authored-resolved-and-production-ready",
+    "payload": {
+      "schema_version": 3,
+      "consumer_repo": "EV4-Architect-Repo",
+      "consumer_repo_evidence_state": "expected_unverified",
+      "last_updated": { "date": "2026-07-09", "pr": null, "commit": null },
+      "brc_reference": { "document": "Behavioral_Rule_Coverage_v0.4.1", "profile": "EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE_v0.4.1" },
+      "kernel_reference": { "repo": "EV4-Decision-Kernel", "decision_taxonomy_version": null, "decision_cards_version": null },
+      "records": [
+        {
+          "escape_route_id": "DER-AUTHORED-DERIVED",
+          "rule_id": "A-R01",
+          "concept": "Selected candidate lock",
+          "risk": "Critical",
+          "session_scope": "per_artifact",
+          "recovery_action": "block",
+          "consumer_repo": "EV4-Architect-Repo",
+          "consumer_stage": "/recommend",
+          "surface_type": "state_file",
+          "file_path": "planning/DECISION_ESCAPE_ROUTES.yml",
+          "trigger_type": "authored_field",
+          "detected_problem": "Record authors derived audit conclusions.",
+          "kernel_mapping": { "mapping_status": "mapped", "decision_family": "architecture_identity", "required_decision_card_ref_pattern": "EV4-DECISION-CARD-*", "not_applicable_reason": null },
+          "rule_shape": {},
+          "carriers": {},
+          "status": { "enforcement_status": "schema_backed", "evidence_state": "unverified" },
+          "notes": "Negative fixture.",
+          "resolved": true,
+          "production_ready": true
+        }
+      ]
+    }
+  }
+]

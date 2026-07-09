@@ -1,0 +1,26 @@
+name: validate-decision-escape-routes
+
+on:
+  pull_request:
+    paths:
+      - 'planning/DECISION_ESCAPE_ROUTES.yml'
+      - 'planning/decision-escape-routes.schema.json'
+      - 'fixtures/decision-escape-routes/**'
+      - 'scripts/check-decision-escape-routes.py'
+      - '.github/workflows/validate-decision-escape-routes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install validation dependencies
+        run: python -m pip install 'jsonschema>=4.22.0' 'PyYAML>=6.0'
+      - name: Validate Decision Escape Routes state and fixtures
+        run: python scripts/check-decision-escape-routes.py

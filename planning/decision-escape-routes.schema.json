@@ -2,18 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/rezahh107/EV4-Architect-Repo/planning/decision-escape-routes.schema.json",
   "title": "EV4 Architect Decision Escape Routes Wave 0 State",
-  "description": "Baseline Wave 0 schema for planning/DECISION_ESCAPE_ROUTES.yml. This schema validates the state-file shape only and does not claim validator, fixture, CI, downstream, runtime, OS/harness, or production enforcement.",
+  "description": "Baseline schema for planning/DECISION_ESCAPE_ROUTES.yml. It validates the state-file shape and BRC-aligned record structure without claiming full escape-route audit completion, downstream enforcement, runtime enforcement, OS/harness enforcement, or production readiness.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "consumer_repo",
-    "consumer_repo_evidence_state",
-    "last_updated",
-    "brc_reference",
-    "kernel_reference",
-    "records"
-  ],
+  "required": ["schema_version", "consumer_repo", "consumer_repo_evidence_state", "last_updated", "brc_reference", "kernel_reference", "records"],
   "properties": {
     "schema_version": { "const": 3 },
     "consumer_repo": { "const": "EV4-Architect-Repo" },
@@ -49,16 +41,127 @@
     },
     "records": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "not": {
-          "anyOf": [
-            { "required": ["resolved"] },
-            { "required": ["production_ready"] }
-          ]
-        }
-      }
+      "items": { "$ref": "#/$defs/record" }
     }
   },
-  "not": { "required": ["routes"] }
+  "not": { "required": ["routes"] },
+  "$defs": {
+    "non_empty_string": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "nullable_non_empty_string": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/non_empty_string" }] },
+    "risk": { "enum": ["Critical", "High", "Medium", "Low"] },
+    "session_scope": { "enum": ["per_artifact", "cross_turn"] },
+    "recovery_action": { "enum": ["block", "repair_request", "rollback", "flag_for_review", "reopen_decision"] },
+    "mapping_status": { "enum": ["mapped", "not_applicable_with_reason", "insufficient_evidence"] },
+    "enforcement_status": { "enum": ["prose_only", "schema_backed", "validator_backed", "fixture_tested", "advisory_ci_observed", "ci_enforced", "sequence_ci_enforced", "runtime_monitor_enforced", "os_harness_enforced", "downstream_contract_enforced"] },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["escape_route_id", "rule_id", "concept", "risk", "session_scope", "recovery_action", "consumer_repo", "consumer_stage", "surface_type", "file_path", "trigger_type", "detected_problem", "kernel_mapping", "rule_shape", "carriers", "status", "notes"],
+      "properties": {
+        "escape_route_id": { "$ref": "#/$defs/non_empty_string" },
+        "rule_id": { "$ref": "#/$defs/non_empty_string" },
+        "concept": { "$ref": "#/$defs/non_empty_string" },
+        "risk": { "$ref": "#/$defs/risk" },
+        "session_scope": { "$ref": "#/$defs/session_scope" },
+        "recovery_action": { "$ref": "#/$defs/recovery_action" },
+        "consumer_repo": { "const": "EV4-Architect-Repo" },
+        "consumer_stage": { "$ref": "#/$defs/non_empty_string" },
+        "surface_type": { "$ref": "#/$defs/non_empty_string" },
+        "file_path": { "$ref": "#/$defs/non_empty_string" },
+        "trigger_type": { "$ref": "#/$defs/non_empty_string" },
+        "detected_problem": { "$ref": "#/$defs/non_empty_string" },
+        "kernel_mapping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mapping_status", "decision_family", "required_decision_card_ref_pattern", "not_applicable_reason"],
+          "properties": {
+            "mapping_status": { "$ref": "#/$defs/mapping_status" },
+            "decision_family": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "required_decision_card_ref_pattern": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "not_applicable_reason": { "$ref": "#/$defs/nullable_non_empty_string" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "mapping_status": { "const": "mapped" } }, "required": ["mapping_status"] },
+              "then": {
+                "properties": {
+                  "decision_family": { "$ref": "#/$defs/non_empty_string" },
+                  "required_decision_card_ref_pattern": { "$ref": "#/$defs/non_empty_string" },
+                  "not_applicable_reason": { "type": "null" }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "mapping_status": { "const": "not_applicable_with_reason" } }, "required": ["mapping_status"] },
+              "then": {
+                "properties": {
+                  "decision_family": { "type": "null" },
+                  "required_decision_card_ref_pattern": { "type": "null" },
+                  "not_applicable_reason": { "$ref": "#/$defs/non_empty_string" }
+                }
+              }
+            }
+          ]
+        },
+        "rule_shape": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "carriers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "prose_source": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "schema_carrier": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "validator_rule": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "valid_fixture": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "invalid_fixture": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "CI_step": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "sequence_CI_step": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "runtime_monitor": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "os_harness_policy": { "$ref": "#/$defs/nullable_non_empty_string" },
+            "downstream_contract": { "$ref": "#/$defs/nullable_non_empty_string" }
+          }
+        },
+        "status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enforcement_status", "evidence_state"],
+          "properties": {
+            "enforcement_status": { "$ref": "#/$defs/enforcement_status" },
+            "evidence_state": { "enum": ["observed", "validated", "derived", "proposed", "unverified", "insufficient_evidence"] }
+          }
+        },
+        "notes": { "$ref": "#/$defs/non_empty_string" }
+      },
+      "not": {
+        "anyOf": [
+          { "required": ["resolved"] },
+          { "required": ["production_ready"] }
+        ]
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "properties": { "enforcement_status": { "const": "ci_enforced" } }, "required": ["enforcement_status"] } }, "required": ["status"] },
+          "then": { "properties": { "carriers": { "required": ["CI_step"], "properties": { "CI_step": { "$ref": "#/$defs/non_empty_string" } } } } }
+        },
+        {
+          "if": { "properties": { "status": { "properties": { "enforcement_status": { "const": "sequence_ci_enforced" } }, "required": ["enforcement_status"] } }, "required": ["status"] },
+          "then": { "properties": { "carriers": { "required": ["sequence_CI_step"], "properties": { "sequence_CI_step": { "$ref": "#/$defs/non_empty_string" } } } } }
+        },
+        {
+          "if": { "properties": { "status": { "properties": { "enforcement_status": { "const": "runtime_monitor_enforced" } }, "required": ["enforcement_status"] } }, "required": ["status"] },
+          "then": { "properties": { "carriers": { "required": ["runtime_monitor"], "properties": { "runtime_monitor": { "$ref": "#/$defs/non_empty_string" } } } } }
+        },
+        {
+          "if": { "properties": { "status": { "properties": { "enforcement_status": { "const": "os_harness_enforced" } }, "required": ["enforcement_status"] } }, "required": ["status"] },
+          "then": { "properties": { "carriers": { "required": ["os_harness_policy"], "properties": { "os_harness_policy": { "$ref": "#/$defs/non_empty_string" } } } } }
+        },
+        {
+          "if": { "properties": { "status": { "properties": { "enforcement_status": { "const": "downstream_contract_enforced" } }, "required": ["enforcement_status"] } }, "required": ["status"] },
+          "then": { "properties": { "carriers": { "required": ["downstream_contract"], "properties": { "downstream_contract": { "$ref": "#/$defs/non_empty_string" } } } } }
+        }
+      ]
+    }
+  }
 }
