@@ -84,6 +84,27 @@ A locked architecture must also include:
 - `source_evidence_refs`;
 - an approved structure node matching the approved structure reference.
 
+## Kernel Decision Records
+
+Architect per-artifact outputs that carry Kernel-governed decisions must include `kernel_decision_records[]`. Each record must include:
+
+```text
+decision_family
+decision_card_ref
+selected_option
+rejected_options
+evidence_refs
+evidence_state
+```
+
+For Wave 2 fixture-tested enforcement, the semantic validator requires Kernel decision records for these mapped P0 per-artifact carriers:
+
+- `architecture_identity.architecture_family` → `layout_structure`
+- `architect_intent.asset_intent.asset_requirements[]` → `media_choice`
+- `architect_intent.scoped_css_intent` CSS/styling choices → `styling_mechanism`
+
+This is Architect decision evidence only. It is not CI enforcement, sequence enforcement, downstream rejection, Builder execution proof, or production readiness.
+
 ## Required Core Sections
 
 ```text

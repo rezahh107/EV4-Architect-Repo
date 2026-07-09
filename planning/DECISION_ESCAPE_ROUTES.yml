@@ -41,21 +41,22 @@ records:
       enforcement: Current evidence is schema/prose only for Architect payload shape; no Kernel decision-record enforcement was implemented in Wave 1.
     carriers:
       prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
-      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/architecture_identity/properties/architecture_family
-      validator_rule: null
-      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
-      invalid_fixture: null
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/kernel_decision_record
+      validator_rule: scripts/check-architect-stage-payload.py::_kernel_decisions
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json#kernel_decision_records
+      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json#architecture-family-without-kernel-decision-record
+      validator_diagnostic: ARCH-KERNEL-DECISION-001
+      test_command: python scripts/check-architect-stage-payload.py
       CI_step: null
       sequence_CI_step: null
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
     status:
-      enforcement_status: schema_backed
-      evidence_state: observed
+      enforcement_status: fixture_tested
+      evidence_state: validated
     notes: >-
-      Wave 1 records the escape route only. Existing schema validates that a string exists, not that the string is backed by a Kernel decision card or selected/rejected options.
-
+      The schema now requires kernel_decision_records, and the semantic validator requires architecture_identity.architecture_family to be backed by a layout_structure Kernel decision record. Positive and negative fixtures pass locally; no CI enforcement is claimed.
   - escape_route_id: ARCH-ESC-002
     rule_id: EV4-ARCH-DECISION-002
     concept: Approved structure node kind and wrapper justification can carry container or positioning decisions without Kernel decision record
@@ -119,21 +120,22 @@ records:
       enforcement: Current evidence is schema/prose only for asset intent shape; no Kernel decision-record enforcement was implemented in Wave 1.
     carriers:
       prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
-      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/asset_intent
-      validator_rule: null
-      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
-      invalid_fixture: null
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/kernel_decision_record
+      validator_rule: scripts/check-architect-stage-payload.py::_kernel_decisions
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json#kernel_decision_records
+      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json#asset-intent-without-kernel-media-choice-record
+      validator_diagnostic: ARCH-KERNEL-DECISION-002
+      test_command: python scripts/check-architect-stage-payload.py
       CI_step: null
       sequence_CI_step: null
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
     status:
-      enforcement_status: schema_backed
-      evidence_state: observed
+      enforcement_status: fixture_tested
+      evidence_state: validated
     notes: >-
-      Existing schema preserves missing-asset evidence gaps but does not prove Kernel-governed media-choice selection.
-
+      The schema now requires kernel_decision_records, and the semantic validator requires asset_intent.asset_requirements to be backed by a media_choice Kernel decision record. Positive and negative fixtures pass locally; no CI enforcement is claimed.
   - escape_route_id: ARCH-ESC-004
     rule_id: EV4-ARCH-DECISION-004
     concept: Scoped CSS intent can carry style scope and implementation method decisions without Kernel decision record
@@ -158,21 +160,22 @@ records:
       enforcement: Current evidence is schema/prose only for scoped CSS boundaries; no Kernel decision-record enforcement was implemented in Wave 1.
     carriers:
       prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
-      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/scoped_css_intent
-      validator_rule: null
-      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
-      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/kernel_decision_record
+      validator_rule: scripts/check-architect-stage-payload.py::_kernel_decisions
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json#kernel_decision_records
+      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json#scoped-css-without-kernel-styling-record
+      validator_diagnostic: ARCH-KERNEL-DECISION-003
+      test_command: python scripts/check-architect-stage-payload.py
       CI_step: null
       sequence_CI_step: null
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
     status:
-      enforcement_status: schema_backed
-      evidence_state: observed
+      enforcement_status: fixture_tested
+      evidence_state: validated
     notes: >-
-      The current payload blocks global CSS and CSS-created meaningful content, but Wave 1 found no Kernel record requirement for choosing custom CSS or selector scope.
-
+      The schema now requires kernel_decision_records, and the semantic validator requires scoped_css_intent CSS/styling choices to be backed by a styling_mechanism Kernel decision record. Positive and negative fixtures pass locally; no CI enforcement is claimed.
   - escape_route_id: ARCH-ESC-005
     rule_id: EV4-ARCH-DECISION-005
     concept: Legacy Architect output widget mapping can carry widget and semantic decisions without Kernel decision record

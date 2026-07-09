@@ -48,7 +48,21 @@ def mutate_payload(dotted_path, replacement):
 def test_fixture_suite_passes():
     failures, reports = validator_module.validate_fixture_suite(ROOT)
     assert failures == 0
-    assert len(reports) == 16
+    assert len(reports) == 20
+
+
+def test_kernel_decision_escape_route_fixtures_have_stable_diagnostics():
+    failures, reports = validator_module.validate_fixture_suite(ROOT)
+    assert failures == 0
+    expected = {
+        "architecture-family-without-kernel-decision-record": "ARCH-KERNEL-DECISION-001",
+        "asset-intent-without-kernel-media-choice-record": "ARCH-KERNEL-DECISION-002",
+        "scoped-css-without-kernel-styling-record": "ARCH-KERNEL-DECISION-003",
+    }
+    for case_id, diagnostic in expected.items():
+        report = next(item for item in reports if item["fixture"].endswith(f"#{case_id}"))
+        assert report["actual"] == "invalid"
+        assert diagnostic in report["diagnostic_codes"]
 
 
 def test_invalid_fixture_rejected_with_stable_rule_code():

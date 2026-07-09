@@ -15,6 +15,11 @@ FORBIDDEN = {
   "live_elementor_validated":"A-R11","real_export_json_validated":"A-R11","exact_pixel_match_validated":"A-R11"
 }
 REQUIRED_FORBIDDEN_WORK = {"no_invent_geometry","no_invent_assets","no_invent_breakpoints","no_infer_dynamic_data","no_claim_builder_ready","no_claim_production_ready"}
+KERNEL_DECISION_CARD_REFS = {
+    "layout_structure": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=layout_structure",
+    "media_choice": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=media_choice",
+    "styling_mechanism": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=styling_mechanism",
+}
 
 @dataclass(frozen=True)
 class Diagnostic:
@@ -64,6 +69,7 @@ class ArchitectPayloadValidator:
         structure_nodes = _as_list(structure_model.get("structure_nodes"))
         nodes={n.get("node_id") for n in structure_nodes if isinstance(n,dict) and isinstance(n.get("node_id"),str)}
         out += self._forbidden(v)
+        out += self._kernel_decisions(v, evidence)
         architecture_identity = _as_dict(v.get("architecture_identity"))
         dec=_as_dict(architecture_identity.get("decision_source"))
         for field,path in [("evidence_refs","$.architecture_identity.decision_source.evidence_refs"),("locked_decision_refs","$.architecture_identity.decision_source.locked_decision_refs"),("source_evidence_refs","$.architecture_identity.decision_source.source_evidence_refs")]:
@@ -101,6 +107,39 @@ class ArchitectPayloadValidator:
         if not _as_list(architect_intent.get("responsive_risk_seeds")):
             out.append(D("A_R10_RESPONSIVE_UNCERTAINTY_NOT_VISIBLE","error","Responsive uncertainty must remain visible.","$.architect_intent.responsive_risk_seeds","A-R10"))
         return out
+
+    def _kernel_decisions(self, v: dict[str, Any], evidence: dict[str, Any]):
+        out = []
+        records = _as_list(v.get("kernel_decision_records"))
+        by_family = {r.get("decision_family"): r for r in records if isinstance(r, dict) and isinstance(r.get("decision_family"), str)}
+        required = []
+        architecture_identity = _as_dict(v.get("architecture_identity"))
+        if architecture_identity.get("architecture_family"):
+            required.append(("layout_structure", "$.architecture_identity.architecture_family", "ARCH-KERNEL-DECISION-001", "Architecture family must be backed by a Kernel layout_structure decision record."))
+        architect_intent = _as_dict(v.get("architect_intent"))
+        asset_intent = _as_dict(architect_intent.get("asset_intent"))
+        if _as_list(asset_intent.get("asset_requirements")):
+            required.append(("media_choice", "$.architect_intent.asset_intent.asset_requirements", "ARCH-KERNEL-DECISION-002", "Asset representation choices must be backed by a Kernel media_choice decision record."))
+        css = _as_dict(architect_intent.get("scoped_css_intent"))
+        if css.get("css_allowed") is True or _as_list(css.get("css_need_map")):
+            required.append(("styling_mechanism", "$.architect_intent.scoped_css_intent", "ARCH-KERNEL-DECISION-003", "Scoped CSS/styling choices must be backed by a Kernel styling_mechanism decision record."))
+        for family, path, code, message in required:
+            record = by_family.get(family)
+            if not record:
+                out.append(D(code, "error", message, path, "A-R12", decision_family=family))
+                continue
+            if record.get("decision_card_ref") != KERNEL_DECISION_CARD_REFS[family]:
+                out.append(D(code, "error", "Kernel decision record must reference the required decision card for its family.", f"$.kernel_decision_records[{records.index(record)}].decision_card_ref", "A-R12", decision_family=family, expected=KERNEL_DECISION_CARD_REFS[family]))
+            if record.get("evidence_state") not in {"observed", "validated", "resolved", "derived", "proposed", "unverified", "insufficient_evidence"}:
+                out.append(D(code, "error", "Kernel decision record evidence_state is invalid.", f"$.kernel_decision_records[{records.index(record)}].evidence_state", "A-R12", decision_family=family))
+        for i, record in enumerate(records):
+            if not isinstance(record, dict):
+                continue
+            for ref in _as_list(record.get("evidence_refs")):
+                if not isinstance(ref, str) or ref not in evidence:
+                    out.append(D("ARCH-KERNEL-DECISION-004", "error", "Kernel decision record references unknown evidence.", f"$.kernel_decision_records[{i}].evidence_refs", "A-R12", missing_ref=ref))
+        return out
+
     def _forbidden(self,value,path="$"):
         out=[]
         if isinstance(value,dict):
