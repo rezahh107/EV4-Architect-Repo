@@ -24,7 +24,6 @@ def complete_trace():
         "rejected_options": ["absolute-only overlay"],
         "evidence_refs": ["ev-rec", "ev-stage7"],
         "evidence_state": "observed",
-        "consumer_stage": "architect",
     }
 
 
@@ -35,6 +34,17 @@ def test_complete_machine_trace_allows_success_receipt():
         "✅ تصمیم به decision card کرنل وصل شده است؛ برای layout_structure "
         "مقدار Relative Stage + SVG Connector Layer انتخاب شد چون evidence_refs معتبر وجود دارد."
     )
+
+
+def test_contract_shaped_kernel_decision_record_without_consumer_stage_allows_success_receipt():
+    trace = complete_trace()
+
+    entry = build_receipt_entry(trace)
+
+    assert "consumer_stage" not in trace
+    assert entry["receipt_status"] == "success"
+    assert entry["missing_trace_fields"] == []
+    assert entry["machine_trace"] is trace
 
 
 def test_missing_decision_card_ref_blocks_success_receipt():
