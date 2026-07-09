@@ -47,16 +47,17 @@ records:
       invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json#architecture-family-without-kernel-decision-record
       validator_diagnostic: ARCH-KERNEL-DECISION-001
       test_command: python scripts/check-architect-stage-payload.py
-      CI_step: null
+      CI_step: .github/workflows/validate-architect-stage-payload.yml / validate / Validate Architect Stage Payload fixtures
       sequence_CI_step: null
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
     status:
-      enforcement_status: fixture_tested
+      enforcement_status: ci_enforced
       evidence_state: validated
     notes: >-
-      The schema now requires kernel_decision_records, and the semantic validator requires architecture_identity.architecture_family to be backed by a layout_structure Kernel decision record. Positive and negative fixtures pass locally; no CI enforcement is claimed.
+      The Architect Stage Payload workflow now runs `python scripts/check-architect-stage-payload.py` on pull requests touching payload fixtures, validator inputs, or this state file. This CI step exercises the valid kernel_decision_records fixture and the architecture-family negative fixture before `ARCH-ESC-001` is treated as CI-enforced; no sequence, runtime, OS/harness, downstream, Project Gate, or production-readiness enforcement is claimed.
+
   - escape_route_id: ARCH-ESC-002
     rule_id: EV4-ARCH-DECISION-002
     concept: Approved structure node kind and wrapper justification can carry container or positioning decisions without Kernel decision record
@@ -126,16 +127,17 @@ records:
       invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json#asset-intent-without-kernel-media-choice-record
       validator_diagnostic: ARCH-KERNEL-DECISION-002
       test_command: python scripts/check-architect-stage-payload.py
-      CI_step: null
+      CI_step: .github/workflows/validate-architect-stage-payload.yml / validate / Validate Architect Stage Payload fixtures
       sequence_CI_step: null
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
     status:
-      enforcement_status: fixture_tested
+      enforcement_status: ci_enforced
       evidence_state: validated
     notes: >-
-      The schema now requires kernel_decision_records, and the semantic validator requires asset_intent.asset_requirements to be backed by a media_choice Kernel decision record. Positive and negative fixtures pass locally; no CI enforcement is claimed.
+      The Architect Stage Payload workflow now runs `python scripts/check-architect-stage-payload.py` on pull requests touching payload fixtures, validator inputs, or this state file. This CI step exercises the valid kernel_decision_records fixture and the asset-intent negative fixture before `ARCH-ESC-003` is treated as CI-enforced; no sequence, runtime, OS/harness, downstream, Project Gate, or production-readiness enforcement is claimed.
+
   - escape_route_id: ARCH-ESC-004
     rule_id: EV4-ARCH-DECISION-004
     concept: Scoped CSS intent can carry style scope and implementation method decisions without Kernel decision record
@@ -166,16 +168,17 @@ records:
       invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json#scoped-css-without-kernel-styling-record
       validator_diagnostic: ARCH-KERNEL-DECISION-003
       test_command: python scripts/check-architect-stage-payload.py
-      CI_step: null
+      CI_step: .github/workflows/validate-architect-stage-payload.yml / validate / Validate Architect Stage Payload fixtures
       sequence_CI_step: null
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
     status:
-      enforcement_status: fixture_tested
+      enforcement_status: ci_enforced
       evidence_state: validated
     notes: >-
-      The schema now requires kernel_decision_records, and the semantic validator requires scoped_css_intent CSS/styling choices to be backed by a styling_mechanism Kernel decision record. Positive and negative fixtures pass locally; no CI enforcement is claimed.
+      The Architect Stage Payload workflow now runs `python scripts/check-architect-stage-payload.py` on pull requests touching payload fixtures, validator inputs, or this state file. This CI step exercises the valid kernel_decision_records fixture and the scoped-CSS negative fixture before `ARCH-ESC-004` is treated as CI-enforced; no sequence, runtime, OS/harness, downstream, Project Gate, or production-readiness enforcement is claimed.
+
   - escape_route_id: ARCH-ESC-005
     rule_id: EV4-ARCH-DECISION-005
     concept: Legacy Architect output widget mapping can carry widget and semantic decisions without Kernel decision record
