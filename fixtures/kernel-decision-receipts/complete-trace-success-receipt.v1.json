@@ -1,0 +1,17 @@
+{
+  "fixture_id": "kernel-decision-receipt-complete-trace-success-v1",
+  "fixture_state": "synthetic_fixture",
+  "wave": 5,
+  "consumer_stage": "architect",
+  "machine_trace": {
+    "decision_family": "layout_structure",
+    "decision_card_ref": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=layout_structure",
+    "selected_option": "Relative Stage + SVG Connector Layer",
+    "rejected_options": ["absolute-only overlay"],
+    "evidence_refs": ["ev-rec", "ev-stage7"],
+    "evidence_state": "observed",
+    "consumer_stage": "architect"
+  },
+  "receipt_status": "success",
+  "receipt_text": "✅ تصمیم به decision card کرنل وصل شده است؛ برای layout_structure مقدار Relative Stage + SVG Connector Layer انتخاب شد چون evidence_refs معتبر وجود دارد."
+}

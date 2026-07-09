@@ -1,0 +1,16 @@
+{
+  "fixture_id": "kernel-decision-receipt-missing-trace-warning-v1",
+  "fixture_state": "synthetic_fixture",
+  "wave": 5,
+  "consumer_stage": "architect",
+  "machine_trace": {
+    "decision_family": "layout_structure",
+    "selected_option": "Relative Stage + SVG Connector Layer",
+    "rejected_options": ["absolute-only overlay"],
+    "evidence_state": "observed",
+    "consumer_stage": "architect"
+  },
+  "receipt_status": "insufficient_evidence",
+  "missing_trace_fields": ["decision_card_ref", "evidence_refs"],
+  "receipt_text": "⚠️ این تصمیم هنوز رسید معتبر کرنل ندارد؛ machine-readable trace یا evidence کافی نیست."
+}
