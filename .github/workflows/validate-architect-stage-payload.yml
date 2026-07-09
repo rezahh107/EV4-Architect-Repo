@@ -7,7 +7,9 @@ on:
       - 'schemas/ev4-architect-stage-payload.v1.schema.json'
       - 'fixtures/architect-stage-payload/**'
       - 'scripts/check-architect-stage-payload.py'
+      - 'scripts/check-architect-sequence-lineage.py'
       - 'tests/test_architect_stage_payload_validator.py'
+      - 'tests/test_architect_sequence_lineage.py'
       - 'planning/DECISION_ESCAPE_ROUTES.yml'
       - '.github/workflows/validate-architect-stage-payload.yml'
 
@@ -28,5 +30,7 @@ jobs:
           python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
       - name: Validate Architect Stage Payload fixtures
         run: python scripts/check-architect-stage-payload.py
+      - name: Validate Architect sequence lineage fixtures
+        run: python scripts/check-architect-sequence-lineage.py
       - name: Run validator regression tests
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py tests/test_architect_sequence_lineage.py

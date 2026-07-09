@@ -1,0 +1,31 @@
+{
+  "schema_id": "ev4-architect-sequence-lineage-fixture@1.0.0",
+  "purpose": "proves_lineage_break_fails",
+  "steps": [
+    {
+      "step_id": "section_plan_generation",
+      "payload_path": "../../valid/minimal-complete.v1.json"
+    },
+    {
+      "step_id": "handoff_package_generation",
+      "payload_path": "../../valid/minimal-complete.v1.json",
+      "mutations": [
+        {
+          "op": "set",
+          "path": "kernel_decision_records.0.evidence_refs",
+          "value": ["ev-rec"]
+        },
+        {
+          "op": "set",
+          "path": "kernel_decision_records.1.evidence_refs",
+          "value": ["ev-rec"]
+        },
+        {
+          "op": "set",
+          "path": "kernel_decision_records.2.evidence_refs",
+          "value": ["ev-rec"]
+        }
+      ]
+    }
+  ]
+}
