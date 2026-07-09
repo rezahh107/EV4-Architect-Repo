@@ -15,15 +15,15 @@ REQUIRED_TRACE_FIELDS = (
     "rejected_options",
     "evidence_refs",
     "evidence_state",
-    "consumer_stage",
 )
 
 
 def missing_receipt_trace_fields(trace: Any) -> list[str]:
-    """Return required receipt trace fields that are absent or empty.
+    """Return required Kernel decision record fields that are absent or empty.
 
     Receipt validation is presentation-only. It does not infer missing Kernel
-    lineage, validate decision semantics, or replace the machine-readable trace.
+    lineage, validate decision semantics, require receipt metadata, or replace
+    the machine-readable trace.
     """
     if not isinstance(trace, dict):
         return list(REQUIRED_TRACE_FIELDS)
@@ -39,8 +39,9 @@ def missing_receipt_trace_fields(trace: Any) -> list[str]:
 def format_kernel_decision_receipt(trace: Any) -> str:
     """Format a UX-safe human receipt from a complete machine-readable trace.
 
-    A success receipt is emitted only when every required trace field is present.
-    Incomplete traces always downgrade to the insufficient-evidence warning.
+    A success receipt is emitted only when every Kernel decision record field is
+    present. Incomplete traces always downgrade to the insufficient-evidence
+    warning.
     """
     missing = missing_receipt_trace_fields(trace)
     if missing:
