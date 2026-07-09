@@ -8,6 +8,7 @@ on:
       - 'fixtures/architect-stage-payload/**'
       - 'scripts/check-architect-stage-payload.py'
       - 'tests/test_architect_stage_payload_validator.py'
+      - 'planning/DECISION_ESCAPE_ROUTES.yml'
       - '.github/workflows/validate-architect-stage-payload.yml'
 
 jobs:
