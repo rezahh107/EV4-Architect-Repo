@@ -7,8 +7,7 @@
     "decision_family": "layout_structure",
     "selected_option": "Relative Stage + SVG Connector Layer",
     "rejected_options": ["absolute-only overlay"],
-    "evidence_state": "observed",
-    "consumer_stage": "architect"
+    "evidence_state": "observed"
   },
   "receipt_status": "insufficient_evidence",
   "missing_trace_fields": ["decision_card_ref", "evidence_refs"],
