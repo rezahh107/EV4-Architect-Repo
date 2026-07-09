@@ -16,4 +16,276 @@ kernel_reference:
   decision_taxonomy_version: null
   decision_cards_version: null
 
-records: []
+records:
+  - escape_route_id: ARCH-ESC-001
+    rule_id: EV4-ARCH-DECISION-001
+    concept: Architect Stage Payload architecture_family can carry container choice without Kernel decision record
+    risk: Critical
+    session_scope: per_artifact
+    recovery_action: block
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-stage-payload.v1.schema.json
+    trigger_type: payload_acceptance
+    detected_problem: >-
+      The canonical Architect Stage Payload requires architecture_identity.architecture_family and accepts a free non-empty string. A value such as Relative Stage, Flex, Grid, SVG Connector Layer, or equivalent architecture-family wording can carry container_type or positioning_mode decisions while the payload schema has no Kernel decision record field requiring decision_family, decision_card_ref, selected_option, rejected_options, evidence_refs, and evidence_state for that decision.
+    kernel_mapping:
+      mapping_status: mapped
+      decision_family: container_type
+      required_decision_card_ref_pattern: kernel/decision-cards/container-type.v1.json
+      not_applicable_reason: null
+    rule_shape:
+      trigger: An Architect Stage Payload is emitted or accepted with architecture_identity.architecture_family populated.
+      predicate: The architecture-family choice must be backed by a Kernel decision record for the applicable container_type or positioning_mode decision before the artifact can be treated as accepted Architect evidence.
+      enforcement: Current evidence is schema/prose only for Architect payload shape; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/definitions/architecture_identity/properties/architecture_family
+      validator_rule: null
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
+      invalid_fixture: null
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: schema_backed
+      evidence_state: observed
+    notes: >-
+      Wave 1 records the escape route only. Existing schema validates that a string exists, not that the string is backed by a Kernel decision card or selected/rejected options.
+
+  - escape_route_id: ARCH-ESC-002
+    rule_id: EV4-ARCH-DECISION-002
+    concept: Approved structure node kind and wrapper justification can carry container or positioning decisions without Kernel decision record
+    risk: Critical
+    session_scope: per_artifact
+    recovery_action: block
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-stage-payload.v1.schema.json
+    trigger_type: payload_acceptance
+    detected_problem: >-
+      approved_structure_model.structure_nodes[].node_kind enumerates structural choices such as structural_container, decoration_layer, overlay_stage, connector_layer, wrapper, and component_candidate, while wrapper_justification.reason can approve containment, responsive order, overlay containment, decoration isolation, and widget-native requirements. These fields can carry container_type, positioning_mode, semantic_element_choice, or responsive_strategy decisions without a required Kernel decision record.
+    kernel_mapping:
+      mapping_status: mapped
+      decision_family: positioning_mode
+      required_decision_card_ref_pattern: kernel/decision-cards/positioning-mode.v1.json
+      not_applicable_reason: null
+    rule_shape:
+      trigger: An Architect Stage Payload is emitted or accepted with approved_structure_model.structure_nodes entries or wrapper_justification values.
+      predicate: Any Kernel-governed structural or positioning choice carried by node_kind or wrapper_justification must include a valid Kernel decision record with decision lineage.
+      enforcement: Current evidence is schema/prose only for structure shape and evidence refs; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/structure_node
+      validator_rule: scripts/check-architect-stage-payload.py
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
+      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: fixture_tested
+      evidence_state: observed
+    notes: >-
+      Existing validation covers structure evidence references and wrapper justification presence, but Wave 1 found no enforcement requiring a Kernel decision card for the structural choice itself.
+
+  - escape_route_id: ARCH-ESC-003
+    rule_id: EV4-ARCH-DECISION-003
+    concept: Asset intent can carry asset representation decisions without Kernel decision record
+    risk: High
+    session_scope: per_artifact
+    recovery_action: repair_request
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-stage-payload.v1.schema.json
+    trigger_type: payload_acceptance
+    detected_problem: >-
+      architect_intent.asset_intent.asset_requirements[] records asset_id, role, state, and evidence_refs, and related legacy exports expose asset_replacement_map as object arrays. These carriers can imply whether a visual item should be native content, decorative asset, SVG, image, or unknown without a Kernel asset_representation decision record.
+    kernel_mapping:
+      mapping_status: mapped
+      decision_family: asset_representation
+      required_decision_card_ref_pattern: kernel/decision-cards/asset-representation.v1.json
+      not_applicable_reason: null
+    rule_shape:
+      trigger: Architect output is emitted or accepted with asset_intent.asset_requirements or legacy asset_replacement_map entries.
+      predicate: Any asset representation choice must be backed by a Kernel decision record or explicitly remain insufficient_evidence.
+      enforcement: Current evidence is schema/prose only for asset intent shape; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/asset_intent
+      validator_rule: null
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
+      invalid_fixture: null
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: schema_backed
+      evidence_state: observed
+    notes: >-
+      Existing schema preserves missing-asset evidence gaps but does not prove Kernel-governed asset representation selection.
+
+  - escape_route_id: ARCH-ESC-004
+    rule_id: EV4-ARCH-DECISION-004
+    concept: Scoped CSS intent can carry style scope and implementation method decisions without Kernel decision record
+    risk: Critical
+    session_scope: per_artifact
+    recovery_action: block
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-stage-payload.v1.schema.json
+    trigger_type: payload_acceptance
+    detected_problem: >-
+      architect_intent.scoped_css_intent allows css_allowed, allowed_selector_scopes, and css_need_map entries. These fields can carry style_scope and implementation_method decisions such as custom CSS versus native Elementor controls, selector scope, responsive-device styling, or media-query usage without a Kernel decision record.
+    kernel_mapping:
+      mapping_status: mapped
+      decision_family: implementation_method
+      required_decision_card_ref_pattern: kernel/decision-cards/implementation-method.v1.json
+      not_applicable_reason: null
+    rule_shape:
+      trigger: Architect output is emitted or accepted with scoped_css_intent.css_allowed true, allowed selector scopes, or css_need_map entries.
+      predicate: CSS or implementation-method selection must be backed by a Kernel decision record and evidence that the choice is Architect intent rather than proven Builder execution.
+      enforcement: Current evidence is schema/prose only for scoped CSS boundaries; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: docs/architecture/EV4_CONSUMER_DECISION_TRIGGER_ARCHITECTURE.md
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/scoped_css_intent
+      validator_rule: null
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
+      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: schema_backed
+      evidence_state: observed
+    notes: >-
+      The current payload blocks global CSS and CSS-created meaningful content, but Wave 1 found no Kernel record requirement for choosing custom CSS or selector scope.
+
+  - escape_route_id: ARCH-ESC-005
+    rule_id: EV4-ARCH-DECISION-005
+    concept: Legacy Architect output widget mapping can carry widget and semantic decisions without Kernel decision record
+    risk: High
+    session_scope: per_artifact
+    recovery_action: flag_for_review
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-output-contract.v1.schema.json
+    trigger_type: legacy_handoff_acceptance
+    detected_problem: >-
+      The legacy Architect Output Contract requires widget_mapping_table[].widget_type and content_role as non-empty strings. These can carry semantic_element_choice, implementation_method, or value_source decisions without requiring Kernel decision fields or a decision_card_ref.
+    kernel_mapping:
+      mapping_status: mapped
+      decision_family: semantic_element_choice
+      required_decision_card_ref_pattern: kernel/decision-cards/semantic-element-choice.v1.json
+      not_applicable_reason: null
+    rule_shape:
+      trigger: A legacy Architect Output Contract handoff is emitted or accepted with widget_mapping_table entries.
+      predicate: Widget or semantic element choices that are Kernel-governed must include a valid Kernel decision record or remain blocked/insufficient evidence.
+      enforcement: Current evidence is schema/prose only for legacy handoff structure; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: contracts/ARCHITECT_OUTPUT_CONTRACT_V1.md
+      schema_carrier: schemas/ev4-architect-output-contract.v1.schema.json#/$defs/widget_mapping
+      validator_rule: null
+      valid_fixture: null
+      invalid_fixture: null
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: schema_backed
+      evidence_state: observed
+    notes: >-
+      This is a legacy compatibility surface, but repository docs state legacy handoff and builder-feed contracts remain available during migration and must not be treated as retired by this Wave 1 PR.
+
+  - escape_route_id: ARCH-ESC-006
+    rule_id: EV4-ARCH-DECISION-006
+    concept: Legacy builder-feed compatibility exports expose open object maps that can carry P0 decisions without Kernel decision record
+    risk: Critical
+    session_scope: per_artifact
+    recovery_action: flag_for_review
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-builder-feed-export.schema.json
+    trigger_type: legacy_handoff_acceptance
+    detected_problem: >-
+      Architect builder-feed compatibility schemas retain object arrays and open objects for approved_structure_tree, class_creation_application_map, widget_mapping_table, editable_content_map, decoration_only_map, asset_replacement_map, scoped_css_need_map, first_suggested_builder_batch, and confirmation_request_seed. These can carry container_type, positioning_mode, asset_representation, style_scope, implementation_method, value_source, responsive_strategy, semantic_element_choice, or interaction_strategy decisions without Kernel decision-record requirements.
+    kernel_mapping:
+      mapping_status: insufficient_evidence
+      decision_family: null
+      required_decision_card_ref_pattern: null
+      not_applicable_reason: null
+    rule_shape:
+      trigger: A legacy Architect builder-feed compatibility export is emitted or accepted with open object maps or suggested Builder batch fields.
+      predicate: Any Kernel-governed decision carried by the open maps must be either backed by the applicable Kernel decision record or blocked as insufficient_evidence.
+      enforcement: Current evidence is schema/prose only for non-executable boundary claims; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: README.md
+      schema_carrier: schemas/ev4-architect-builder-feed-export.schema.json
+      validator_rule: null
+      valid_fixture: null
+      invalid_fixture: null
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: schema_backed
+      evidence_state: observed
+    notes: >-
+      Multiple P0 families may be carried by this surface. Exact family mapping per field is insufficient_evidence in Wave 1 because these compatibility schemas intentionally allow generic objects rather than typed Kernel decision carriers.
+
+  - escape_route_id: ARCH-ESC-007
+    rule_id: EV4-ARCH-DECISION-007
+    concept: Responsive risk seed can carry responsive strategy decisions without Kernel decision record
+    risk: High
+    session_scope: cross_turn
+    recovery_action: reopen_decision
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: architect
+    surface_type: schema
+    file_path: schemas/ev4-architect-stage-payload.v1.schema.json
+    trigger_type: payload_acceptance
+    detected_problem: >-
+      architect_intent.responsive_risk_seeds[] and responsive_qa_seed compatibility fields preserve responsive uncertainty, connector behavior status, breakpoint lists, and visibility rules. These fields can become responsive_strategy decisions across later turns or downstream handoff if not tied to a Kernel decision record or kept explicitly insufficient_evidence.
+    kernel_mapping:
+      mapping_status: mapped
+      decision_family: responsive_strategy
+      required_decision_card_ref_pattern: kernel/decision-cards/responsive-strategy.v1.json
+      not_applicable_reason: null
+    rule_shape:
+      trigger: Architect output is emitted, repaired, or passed downstream with responsive risk seeds or compatibility responsive_qa_seed values.
+      predicate: Responsive strategy choices must either have a valid Kernel decision record or remain unresolved evidence for downstream Responsive validation.
+      enforcement: Current evidence is schema/prose plus fixture coverage for preserving uncertainty; no Kernel decision-record enforcement was implemented in Wave 1.
+    carriers:
+      prose_source: README.md
+      schema_carrier: schemas/ev4-architect-stage-payload.v1.schema.json#/$defs/responsive_risk_seed
+      validator_rule: scripts/check-architect-stage-payload.py
+      valid_fixture: fixtures/architect-stage-payload/valid/minimal-complete.v1.json
+      invalid_fixture: fixtures/architect-stage-payload/invalid/cases.v1.json
+      CI_step: null
+      sequence_CI_step: null
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: fixture_tested
+      evidence_state: observed
+    notes: >-
+      Existing validation catches silent removal of responsive uncertainty, but Wave 1 found no Kernel decision-record requirement for any responsive strategy that may be asserted.
