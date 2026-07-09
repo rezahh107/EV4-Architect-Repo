@@ -111,7 +111,11 @@ class ArchitectPayloadValidator:
     def _kernel_decisions(self, v: dict[str, Any], evidence: dict[str, Any]):
         out = []
         records = _as_list(v.get("kernel_decision_records"))
-        by_family = {r.get("decision_family"): r for r in records if isinstance(r, dict) and isinstance(r.get("decision_family"), str)}
+        by_family = {
+            r.get("decision_family"): (i, r)
+            for i, r in enumerate(records)
+            if isinstance(r, dict) and isinstance(r.get("decision_family"), str)
+        }
         required = []
         architecture_identity = _as_dict(v.get("architecture_identity"))
         if architecture_identity.get("architecture_family"):
@@ -124,14 +128,15 @@ class ArchitectPayloadValidator:
         if css.get("css_allowed") is True or _as_list(css.get("css_need_map")):
             required.append(("styling_mechanism", "$.architect_intent.scoped_css_intent", "ARCH-KERNEL-DECISION-003", "Scoped CSS/styling choices must be backed by a Kernel styling_mechanism decision record."))
         for family, path, code, message in required:
-            record = by_family.get(family)
-            if not record:
+            record_item = by_family.get(family)
+            if not record_item:
                 out.append(D(code, "error", message, path, "A-R12", decision_family=family))
                 continue
+            record_index, record = record_item
             if record.get("decision_card_ref") != KERNEL_DECISION_CARD_REFS[family]:
-                out.append(D(code, "error", "Kernel decision record must reference the required decision card for its family.", f"$.kernel_decision_records[{records.index(record)}].decision_card_ref", "A-R12", decision_family=family, expected=KERNEL_DECISION_CARD_REFS[family]))
+                out.append(D(code, "error", "Kernel decision record must reference the required decision card for its family.", f"$.kernel_decision_records[{record_index}].decision_card_ref", "A-R12", decision_family=family, expected=KERNEL_DECISION_CARD_REFS[family]))
             if record.get("evidence_state") not in {"observed", "validated", "resolved", "derived", "proposed", "unverified", "insufficient_evidence"}:
-                out.append(D(code, "error", "Kernel decision record evidence_state is invalid.", f"$.kernel_decision_records[{records.index(record)}].evidence_state", "A-R12", decision_family=family))
+                out.append(D(code, "error", "Kernel decision record evidence_state is invalid.", f"$.kernel_decision_records[{record_index}].evidence_state", "A-R12", decision_family=family))
         for i, record in enumerate(records):
             if not isinstance(record, dict):
                 continue

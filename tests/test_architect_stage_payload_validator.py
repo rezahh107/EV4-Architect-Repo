@@ -65,6 +65,26 @@ def test_kernel_decision_escape_route_fixtures_have_stable_diagnostics():
         assert diagnostic in report["diagnostic_codes"]
 
 
+def test_kernel_decision_diagnostic_path_uses_selected_duplicate_record_index():
+    validator = validator_module.ArchitectPayloadValidator(ROOT)
+    payload = load_minimal_payload()
+    wrong_layout_record = copy.deepcopy(payload["kernel_decision_records"][0])
+    wrong_layout_record["decision_card_ref"] = "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=media_choice"
+    payload["kernel_decision_records"][0] = copy.deepcopy(wrong_layout_record)
+    payload["kernel_decision_records"].append(copy.deepcopy(wrong_layout_record))
+
+    result = validator.validate_value(payload)
+
+    assert result["status"] == "invalid"
+    layout_card_diagnostic = next(
+        item
+        for item in result["diagnostics"]
+        if item["code"] == "ARCH-KERNEL-DECISION-001"
+        and item["path"].endswith(".decision_card_ref")
+    )
+    assert layout_card_diagnostic["path"] == "$.kernel_decision_records[3].decision_card_ref"
+
+
 def test_invalid_fixture_rejected_with_stable_rule_code():
     failures, reports = validator_module.validate_fixture_suite(ROOT)
     assert failures == 0
