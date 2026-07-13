@@ -1,0 +1,316 @@
++    if not isinstance(step, dict):
++        return False
++    allowed = {"name", "shell", "run"}
++    if allow_controls:
++        allowed |= {"if", "continue-on-error", "working-directory"}
++    return (
++        set(step).issubset(allowed)
++        and {"name", "shell", "run"}.issubset(step)
++        and step.get("name") == name
++        and step.get("shell") == CANONICAL_PROOF_SHELL
++        and step.get("run") == run
++        and _proof_node_is_blocking(step)
++        and not _value_references_persistent_runner_state(step)
++    )
++
++
++def _canonical_guard_step(
++    step: Any,
++    *,
++    name: str,
++    guard_lines: tuple[str, ...],
+     job: dict[str, Any],
+     document: dict[str, Any],
+ ) -> bool:
+-    if carrier_index < 2:
+-        return False
++    if not isinstance(step, dict):
++        return False
++    allowed = {
++        "name",
++        "shell",
++        "run",
++        "if",
++        "continue-on-error",
++        "working-directory",
++    }
+     return (
+-        _is_exact_checkout_step(steps[carrier_index - 2])
+-        and _contains_workspace_guard(
+-            steps[carrier_index - 1], job, document
++        set(step).issubset(allowed)
++        and {"name", "shell", "run"}.issubset(step)
++        and step.get("name") == name
++        and step.get("shell") == CANONICAL_PROOF_SHELL
++        and tuple(_meaningful_command_lines(step.get("run"))) == guard_lines
++        and _proof_node_is_blocking(step)
++        and not _value_references_persistent_runner_state(step)
++        and _proof_working_directory_is_root(step, job, document)
++        and _proof_yaml_environment_is_empty(step, job, document)
++    )
++
++
++def _canonical_carrier_step(
++    step: Any,
++    *,
++    names: set[str],
++    run: str,
++    job: dict[str, Any],
++    document: dict[str, Any],
++) -> bool:
++    if not isinstance(step, dict) or step.get("name") not in names:
++        return False
++    return (
++        _canonical_run_step(
++            step,
++            name=step["name"],
++            run=run,
++            allow_controls=True,
++        )
++        and _proof_working_directory_is_root(step, job, document)
++        and _proof_yaml_environment_is_empty(step, job, document)
++    )
++
++
++def _canonical_checkout_named(step: Any, name: str) -> bool:
++    return _is_exact_checkout_step(step) and step.get("name") == name
++
++
++def _canonical_proof_job_is_valid(
++    job: Any,
++    document: dict[str, Any],
++    validator_file: str,
++) -> bool:
++    if not isinstance(job, dict) or not _proof_node_is_blocking(job):
++        return False
++    if not _proof_job_execution_context_is_trusted(job):
++        return False
++    if set(job) - {"runs-on", "steps", "if", "continue-on-error"}:
++        return False
++    if document.get("env") is not None or document.get("defaults") is not None:
++        return False
++    if job.get("env") is not None or job.get("defaults") is not None:
++        return False
++    steps = job.get("steps")
++    if not isinstance(steps, list) or len(steps) != 10:
++        return False
++    if _value_references_persistent_runner_state(steps):
++        return False
++    return all(
++        (
++            _canonical_setup_step(
++                steps[0],
++                setup_id=VALIDATOR_SETUP_ID,
++                name="Set up trusted Python for validator",
++            ),
++            _canonical_run_step(
++                steps[1],
++                name="Install validation dependencies for validator",
++                run=VALIDATOR_INSTALL_COMMAND,
++            ),
++            _canonical_checkout_named(
++                steps[2], "Checkout exact pull request head"
++            ),
++            _canonical_guard_step(
++                steps[3],
++                name="Assert exact pull request head",
++                guard_lines=VALIDATOR_WORKSPACE_GUARD_LINES,
++                job=job,
++                document=document,
++            ),
++            _canonical_carrier_step(
++                steps[4],
++                names={"Validate", "Validate AI governance coverage and fixtures"},
++                run=f'"{VALIDATOR_PYTHON_REF}" -I -P {validator_file}',
++                job=job,
++                document=document,
++            ),
++            _canonical_setup_step(
++                steps[5],
++                setup_id=TEST_SETUP_ID,
++                name="Set up trusted Python for tests",
++            ),
++            _canonical_run_step(
++                steps[6],
++                name="Install validation dependencies for tests",
++                run=TEST_INSTALL_COMMAND,
++            ),
++            _canonical_checkout_named(
++                steps[7], "Checkout exact pull request head for tests"
++            ),
++            _canonical_guard_step(
++                steps[8],
++                name="Assert exact pull request head for tests",
++                guard_lines=TEST_WORKSPACE_GUARD_LINES,
++                job=job,
++                document=document,
++            ),
++            _canonical_carrier_step(
++                steps[9],
++                names={"Run AI governance regression tests"},
++                run=TEST_CARRIER_COMMAND,
++                job=job,
++                document=document,
++            ),
+         )
+     )
+ 
+@@ -1538,6 +1767,22 @@
+             )
+         ]
+ 
++    if "pull_request" not in workflow_events(document):
++        return False, [
++            Diagnostic(
++                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
++                "$",
++                "CI workflow must have a pull_request trigger",
++            )
++        ]
++    if not _pull_request_trigger_is_unrestricted_for_ci(document):
++        return False, [
++            Diagnostic(
++                "AIGOV-COVERAGE-001_CI_TRIGGER_RESTRICTED",
++                "$",
++                "CI proof workflow must not use paths, paths-ignore, branches, or branches-ignore and must include required pull_request activity types",
++            )
++        ]
+     if validate_workflow_document(workflow_name, document, root):
+         return False, [
+             Diagnostic(
+@@ -1546,77 +1791,23 @@
+                 "CI workflow fails structural security validation",
+             )
+         ]
+-    if "pull_request" not in workflow_events(document):
++
++    jobs = document.get("jobs") or {}
++    if not isinstance(jobs, dict) or set(jobs) != {"validate"}:
+         return False, [
+             Diagnostic(
+                 "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                 "$",
+-                "CI workflow must have a pull_request trigger",
+-            )
+-        ]
+-
+-    jobs = document.get("jobs") or {}
+-    job = jobs.get(job_name) if isinstance(jobs, dict) else None
+-    if not isinstance(job, dict):
++                "CI proof workflow must contain only the dedicated validate proof job",
++            )
++        ]
++    job = jobs.get(job_name)
++    if job_name != "validate" or not isinstance(job, dict):
+         return False, [
+             Diagnostic(
+                 "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                 "$",
+                 f"job not found: {job_name}",
+-            )
+-        ]
+-    if not _proof_node_is_blocking(job):
+-        return False, [
+-            Diagnostic(
+-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+-                "$",
+-                "CI carrier job must be unconditionally active and blocking",
+-            )
+-        ]
+-
+-    steps = job.get("steps")
+-    step_index = next(
+-        (
+-            index
+-            for index, item in enumerate(steps or [])
+-            if isinstance(item, dict) and item.get("name") == step_name
+-        ),
+-        None,
+-    )
+-    step = (
+-        steps[step_index]
+-        if isinstance(steps, list) and step_index is not None
+-        else None
+-    )
+-    if not isinstance(step, dict):
+-        return False, [
+-            Diagnostic(
+-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+-                "$",
+-                f"step not found: {step_name}",
+-            )
+-        ]
+-    if not _proof_node_is_blocking(step):
+-        return False, [
+-            Diagnostic(
+-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+-                "$",
+-                "CI carrier step must be unconditionally active and blocking",
+-            )
+-        ]
+-
+-    if (
+-        not isinstance(steps, list)
+-        or step_index is None
+-        or not _carrier_has_fresh_checkout_guard(
+-            steps, step_index, job, document
+-        )
+-    ):
+-        return False, [
+-            Diagnostic(
+-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+-                "$",
+-                "CI carrier must be immediately preceded by a clean-worktree exact-head guard and a fresh exact-head checkout",
+             )
+         ]
+ 
+@@ -1626,14 +1817,41 @@
+         if isinstance(validator_reference, str)
+         else ""
+     )
+-    if not validator_file or not _step_executes_applicable_command(
+-        step, validator_file, job, document
++    if not validator_file or not _canonical_proof_job_is_valid(
++        job, document, validator_file
+     ):
+         return False, [
+             Diagnostic(
+                 "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                 "$",
+-                "named CI step does not execute an allowed blocking validator or test command",
++                "CI proof job does not match the complete canonical proof sequence",
++            )
++        ]
++
++    steps = job["steps"]
++    step_index = next(
++        (
++            index
++            for index, item in enumerate(steps)
++            if isinstance(item, dict) and item.get("name") == step_name
++        ),
++        None,
++    )
++    if step_index not in {4, 9}:
++        return False, [
++            Diagnostic(
++                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
++                "$",
++                f"step not found or not a canonical proof carrier: {step_name}",
++            )
++        ]
++    step = steps[step_index]
++    if not _step_executes_applicable_command(step, validator_file, job, document):
++        return False, [
++            Diagnostic(
++                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
++                "$",
++                "named CI step does not execute the exact trusted-interpreter validator or test command",
+             )
+         ]
+ 
+@@ -1656,7 +1874,7 @@
+             Diagnostic(
+                 "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING",
+                 "$",
+-                f"CI path filters do not cover: {sorted(missed)}",
