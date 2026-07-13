@@ -48,6 +48,51 @@
       }
     },
     {
+      "case_id": "external-repository-merge-outcome",
+      "fixture_type": "evidence_claim",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-MERGE-EXTERNAL-001",
+        "claim_kind": "merge_status",
+        "claim_text": "The pull request is merged.",
+        "evidence_state": "REPOSITORY_CONFIRMED",
+        "source_type": "repository",
+        "source_reference": "github/pr/26/merge-event",
+        "unknown_input": false,
+        "self_asserted_outcome": false
+      }
+    },
+    {
+      "case_id": "external-ci-green-outcome",
+      "fixture_type": "evidence_claim",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-CI-EXTERNAL-001",
+        "claim_kind": "ci_status",
+        "claim_text": "The required workflow concluded successfully.",
+        "evidence_state": "CI_CONFIRMED",
+        "source_type": "ci",
+        "source_reference": "github/actions/runs/29253561744",
+        "unknown_input": false,
+        "self_asserted_outcome": false
+      }
+    },
+    {
+      "case_id": "external-runtime-completion-outcome",
+      "fixture_type": "evidence_claim",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-RUNTIME-EXTERNAL-001",
+        "claim_kind": "runtime_status",
+        "claim_text": "The runtime operation completed.",
+        "evidence_state": "RUNTIME_CONFIRMED",
+        "source_type": "runtime",
+        "source_reference": "runtime/receipt/complete-001",
+        "unknown_input": false,
+        "self_asserted_outcome": false
+      }
+    },
+    {
       "case_id": "public-security-profile-active",
       "fixture_type": "security_profile_fixture",
       "payload": {
