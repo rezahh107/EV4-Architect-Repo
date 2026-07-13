@@ -1,0 +1,439 @@
+name: apply-pr26-proof-context-hardening
+
+on:
+  push:
+    branches:
+      - governance/arch-gov-artifact-001-enforcement
+    paths:
+      - '.github/workflows/apply-pr26-proof-context-hardening.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: governance/arch-gov-artifact-001-enforcement
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Apply exact bounded patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          script_path = Path('scripts/check-ai-governance.py')
+          tests_path = Path('tests/test_ai_governance.py')
+          script = script_path.read_text(encoding='utf-8')
+          tests = tests_path.read_text(encoding='utf-8')
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one source block, found {count}')
+              return text.replace(old, new, 1)
+
+          old_constants = '''ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", re.DOTALL)
+          SECRET_REFERENCE = re.compile(
+          '''
+          new_constants = '''ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", re.DOTALL)
+          SAFE_PROOF_SHELLS = {"bash", "sh"}
+          GITHUB_WORKSPACE_REF = "$" + "{{ github.workspace }}"
+          SAFE_ROOT_WORKING_DIRECTORIES = {".", "./", GITHUB_WORKSPACE_REF}
+          SAFE_TEST_INLINE_ENV = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+          FORBIDDEN_PROOF_ENV_KEYS = {
+              "PYTEST_ADDOPTS",
+              "PATH",
+              "PYTHONPATH",
+              "BASH_ENV",
+              "ENV",
+          }
+          SECRET_REFERENCE = re.compile(
+          '''
+          script = replace_once(script, old_constants, new_constants, 'constants')
+
+          old_shell = '''def _shell_is_posix(value: Any) -> bool:
+              if not isinstance(value, str) or not value.strip():
+                  return False
+              words = _shell_words(value)
+              return bool(words) and Path(words[0]).name in {"bash", "sh"}
+
+
+          def _proof_step_shell_is_supported(
+              step: Any, job: dict[str, Any], document: dict[str, Any]
+          ) -> bool:
+              if not isinstance(step, dict):
+                  return False
+              explicit = step.get("shell")
+              if explicit is not None:
+                  return _shell_is_posix(explicit)
+              job_defaults = (
+                  job.get("defaults") if isinstance(job.get("defaults"), dict) else {}
+              )
+              job_run = (
+                  job_defaults.get("run")
+                  if isinstance(job_defaults.get("run"), dict)
+                  else {}
+              )
+              workflow_defaults = (
+                  document.get("defaults")
+                  if isinstance(document.get("defaults"), dict)
+                  else {}
+              )
+              workflow_run = (
+                  workflow_defaults.get("run")
+                  if isinstance(workflow_defaults.get("run"), dict)
+                  else {}
+              )
+              inherited = job_run.get("shell", workflow_run.get("shell"))
+              if inherited is not None:
+                  return _shell_is_posix(inherited)
+              runs_on = job.get("runs-on")
+              return isinstance(runs_on, str) and runs_on.startswith("ubuntu-")
+          '''
+          new_shell = '''def _shell_is_posix(value: Any) -> bool:
+              if not isinstance(value, str):
+                  return False
+              normalized = " ".join(value.strip().split())
+              return normalized in SAFE_PROOF_SHELLS
+
+
+          def _run_defaults(node: Any) -> dict[str, Any]:
+              if not isinstance(node, dict):
+                  return {}
+              defaults = node.get("defaults")
+              if not isinstance(defaults, dict):
+                  return {}
+              run = defaults.get("run")
+              return run if isinstance(run, dict) else {}
+
+
+          def _proof_step_shell_is_supported(
+              step: Any, job: dict[str, Any], document: dict[str, Any]
+          ) -> bool:
+              if not isinstance(step, dict):
+                  return False
+              explicit = step.get("shell")
+              if explicit is not None:
+                  return _shell_is_posix(explicit)
+              inherited = _run_defaults(job).get(
+                  "shell", _run_defaults(document).get("shell")
+              )
+              if inherited is not None:
+                  return _shell_is_posix(inherited)
+              runs_on = job.get("runs-on")
+              return isinstance(runs_on, str) and runs_on.startswith("ubuntu-")
+
+
+          def _proof_working_directory_is_root(
+              step: Any, job: dict[str, Any], document: dict[str, Any]
+          ) -> bool:
+              if not isinstance(step, dict):
+                  return False
+              inherited = _run_defaults(job).get(
+                  "working-directory",
+                  _run_defaults(document).get("working-directory"),
+              )
+              effective = step.get("working-directory", inherited)
+              if effective is None:
+                  return True
+              return (
+                  isinstance(effective, str)
+                  and effective.strip() in SAFE_ROOT_WORKING_DIRECTORIES
+              )
+
+
+          def _normalized_env_mapping(value: Any) -> dict[str, str] | None:
+              if value is None:
+                  return {}
+              if not isinstance(value, dict):
+                  return None
+              output: dict[str, str] = {}
+              for key, item in value.items():
+                  if not isinstance(key, str) or not isinstance(
+                      item, (str, int, float, bool)
+                  ):
+                      return None
+                  output[key] = str(item)
+              return output
+
+
+          def _proof_yaml_environment_is_empty(
+              step: Any, job: dict[str, Any], document: dict[str, Any]
+          ) -> bool:
+              for node in (document, job, step):
+                  if not isinstance(node, dict):
+                      return False
+                  environment = _normalized_env_mapping(node.get("env"))
+                  if environment is None or environment:
+                      return False
+              return True
+          '''
+          script = replace_once(script, old_shell, new_shell, 'shell-context')
+
+          old_assertion = '''def _contains_exact_head_assertion(
+              step: Any, job: dict[str, Any], document: dict[str, Any]
+          ) -> bool:
+              return (
+                  _proof_node_is_blocking(step)
+                  and isinstance(step, dict)
+                  and _proof_step_shell_is_supported(step, job, document)
+                  and _is_fail_closed_exact_head_command(step.get("run"))
+              )
+          '''
+          new_assertion = '''def _contains_exact_head_assertion(
+              step: Any, job: dict[str, Any], document: dict[str, Any]
+          ) -> bool:
+              return (
+                  _proof_node_is_blocking(step)
+                  and isinstance(step, dict)
+                  and _proof_step_shell_is_supported(step, job, document)
+                  and _proof_working_directory_is_root(step, job, document)
+                  and _proof_yaml_environment_is_empty(step, job, document)
+                  and _is_fail_closed_exact_head_command(step.get("run"))
+              )
+          '''
+          script = replace_once(script, old_assertion, new_assertion, 'assertion-proof')
+
+          old_command = '''def _strip_environment_assignments(words: list[str]) -> list[str]:
+              index = 0
+              while index < len(words) and ENV_ASSIGNMENT.fullmatch(words[index]):
+                  index += 1
+              return words[index:]
+
+
+          def _simple_shell_words(run: Any) -> list[str]:
+              line = _single_command_line(run)
+              if line is None:
+                  return []
+              if any(token in line for token in FORBIDDEN_SHELL_SYNTAX):
+                  return []
+              return _strip_environment_assignments(_shell_words(line))
+          '''
+          new_command = '''def _split_environment_assignments(
+              words: list[str],
+          ) -> tuple[dict[str, str] | None, list[str]]:
+              assignments: dict[str, str] = {}
+              index = 0
+              while index < len(words) and ENV_ASSIGNMENT.fullmatch(words[index]):
+                  key, value = words[index].split("=", 1)
+                  if key in assignments:
+                      return None, []
+                  assignments[key] = value
+                  index += 1
+              return assignments, words[index:]
+
+
+          def _simple_shell_command(
+              run: Any,
+          ) -> tuple[dict[str, str] | None, list[str]]:
+              line = _single_command_line(run)
+              if line is None:
+                  return None, []
+              if any(token in line for token in FORBIDDEN_SHELL_SYNTAX):
+                  return None, []
+              return _split_environment_assignments(_shell_words(line))
+
+
+          def _inline_environment_is_safe(
+              assignments: dict[str, str] | None, *, for_tests: bool
+          ) -> bool:
+              if assignments is None:
+                  return False
+              if FORBIDDEN_PROOF_ENV_KEYS & set(assignments):
+                  return False
+              if not assignments:
+                  return True
+              return for_tests and assignments == SAFE_TEST_INLINE_ENV
+          '''
+          script = replace_once(script, old_command, new_command, 'command-environment')
+
+          old_step = '''def _step_executes_applicable_command(
+              step: dict[str, Any],
+              validator_file: str,
+              job: dict[str, Any] | None = None,
+              document: dict[str, Any] | None = None,
+          ) -> bool:
+              if not _proof_node_is_blocking(step):
+                  return False
+              if job is not None and document is not None:
+                  if not _proof_step_shell_is_supported(step, job, document):
+                      return False
+              words = _simple_shell_words(step.get("run"))
+              return _words_execute_validator(
+                  words, validator_file
+              ) or _words_execute_tests(words)
+          '''
+          new_step = '''def _step_executes_applicable_command(
+              step: dict[str, Any],
+              validator_file: str,
+              job: dict[str, Any] | None = None,
+              document: dict[str, Any] | None = None,
+          ) -> bool:
+              if not _proof_node_is_blocking(step):
+                  return False
+              if job is None or document is None:
+                  return False
+              if not _proof_step_shell_is_supported(step, job, document):
+                  return False
+              if not _proof_working_directory_is_root(step, job, document):
+                  return False
+              if not _proof_yaml_environment_is_empty(step, job, document):
+                  return False
+              assignments, words = _simple_shell_command(step.get("run"))
+              if _words_execute_validator(words, validator_file):
+                  return _inline_environment_is_safe(assignments, for_tests=False)
+              if _words_execute_tests(words):
+                  return _inline_environment_is_safe(assignments, for_tests=True)
+              return False
+          '''
+          script = replace_once(script, old_step, new_step, 'ci-proof-step')
+
+          marker = '# PRF-002/003 proof-context hardening regressions'
+          if marker in tests:
+              raise SystemExit('regression marker already present')
+          tests += r'''
+
+
+          # PRF-002/003 proof-context hardening regressions
+          def test_custom_shell_cannot_bypass_exact_head_assertion():
+              text = workflow().replace(
+                  "        shell: bash",
+                  "        shell: bash -c 'exit 0' -- {0}",
+              )
+              assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
+                  ai_governance.validate_workflow_text("workflow.yml", text)
+              )
+
+
+          def test_custom_shell_cannot_bypass_ci_carrier(tmp_path):
+              text = workflow().replace(
+                  '      - name: Validate\n        run: "python scripts/check-ai-governance.py"',
+                  "      - name: Validate\n        shell: bash -c 'exit 0' -- {0}\n"
+                  '        run: "python scripts/check-ai-governance.py"',
+              )
+              passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+              assert passed is False
+              assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+          def test_pytest_addopts_collect_only_assignment_is_rejected(tmp_path):
+              text = workflow(
+                  validation_run=(
+                      "PYTEST_ADDOPTS=--collect-only pytest -q "
+                      "tests/test_ai_governance.py"
+                  )
+              )
+              passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+              assert passed is False
+              assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+          @pytest.mark.parametrize(
+              "variable",
+              ["PATH", "PYTHONPATH", "BASH_ENV", "ENV"],
+          )
+          def test_dangerous_inline_environment_assignment_is_rejected(
+              tmp_path, variable
+          ):
+              text = workflow(
+                  validation_run=(
+                      f"{variable}=attacker python scripts/check-ai-governance.py"
+                  )
+              )
+              passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+              assert passed is False
+              assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+          @pytest.mark.parametrize("scope", ["workflow", "job", "step"])
+          def test_effective_yaml_environment_is_rejected_for_ci_proof(tmp_path, scope):
+              text = workflow()
+              if scope == "workflow":
+                  text = text.replace(
+                      "permissions:\n  contents: read\n",
+                      "permissions:\n  contents: read\n"
+                      "env:\n  PYTEST_ADDOPTS: --collect-only\n",
+                  )
+              elif scope == "job":
+                  text = text.replace(
+                      "  validate:\n    runs-on:",
+                      "  validate:\n    env:\n"
+                      "      PYTEST_ADDOPTS: --collect-only\n    runs-on:",
+                  )
+              else:
+                  text = text.replace(
+                      "      - name: Validate\n",
+                      "      - name: Validate\n        env:\n"
+                      "          PYTEST_ADDOPTS: --collect-only\n",
+                  )
+              passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+              assert passed is False
+              assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+          @pytest.mark.parametrize("scope", ["workflow", "job", "step"])
+          def test_non_root_working_directory_is_rejected_for_ci_proof(tmp_path, scope):
+              text = workflow()
+              if scope == "workflow":
+                  text = text.replace(
+                      "permissions:\n  contents: read\n",
+                      "permissions:\n  contents: read\n"
+                      "defaults:\n  run:\n    working-directory: subdir\n",
+                  )
+              elif scope == "job":
+                  text = text.replace(
+                      "  validate:\n    runs-on:",
+                      "  validate:\n    defaults:\n      run:\n"
+                      "        working-directory: subdir\n    runs-on:",
+                  )
+              else:
+                  text = text.replace(
+                      "      - name: Validate\n",
+                      "      - name: Validate\n"
+                      "        working-directory: subdir\n",
+                  )
+              passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+              assert passed is False
+              assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+          def test_non_root_working_directory_invalidates_head_assertion():
+              text = workflow().replace(
+                  "        shell: bash",
+                  "        working-directory: subdir\n        shell: bash",
+              )
+              assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
+                  ai_governance.validate_workflow_text("workflow.yml", text)
+              )
+
+
+          def test_repository_root_working_directory_is_accepted(tmp_path):
+              text = workflow().replace(
+                  "      - name: Validate\n",
+                  "      - name: Validate\n        working-directory: .\n",
+              )
+              passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+              assert passed is True, diagnostics
+              assert diagnostics == []
+          '''
+
+          script_path.write_text(script, encoding='utf-8')
+          tests_path.write_text(tests, encoding='utf-8')
+          PY
+
+      - name: Commit bounded repair and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/apply-pr26-proof-context-hardening.yml
+          git add scripts/check-ai-governance.py tests/test_ai_governance.py
+          git diff --cached --check
+          git commit -m 'Harden proof shell environment and working directory'
+          git push origin HEAD:governance/arch-gov-artifact-001-enforcement
