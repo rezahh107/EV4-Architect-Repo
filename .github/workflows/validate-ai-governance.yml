@@ -23,6 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf /tmp/repository /tmp/pr26-venv
           mkdir -p /tmp/repository
           curl --fail --silent --show-error --location \
             -H "Authorization: Bearer ${GH_TOKEN}" \
@@ -37,21 +38,18 @@ jobs:
           python3 -m venv /tmp/pr26-venv
           /tmp/pr26-venv/bin/python -m pip install -q \
             'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'
-          set +e
-          {
-            echo '--- validator ---'
-            /tmp/pr26-venv/bin/python -I -P scripts/check-ai-governance.py
-            validator_status=$?
-            echo "validator_status=${validator_status}"
-            echo '--- tests ---'
-            PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= \
-              /tmp/pr26-venv/bin/python -I -P -m pytest \
-              -c /dev/null --noconftest -q tests/test_ai_governance.py
-            test_status=$?
-            echo "test_status=${test_status}"
-            exit $((validator_status || test_status))
-          } > /tmp/validation-output.txt 2>&1
-          status=$?
-          set -e
+          validator_status=0
+          test_status=0
+          echo '--- validator ---' > /tmp/validation-output.txt
+          /tmp/pr26-venv/bin/python -I -P scripts/check-ai-governance.py \
+            >> /tmp/validation-output.txt 2>&1 || validator_status=$?
+          echo "validator_status=${validator_status}" >> /tmp/validation-output.txt
+          echo '--- tests ---' >> /tmp/validation-output.txt
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= \
+            /tmp/pr26-venv/bin/python -I -P -m pytest \
+            -c /dev/null --noconftest -q tests/test_ai_governance.py \
+            >> /tmp/validation-output.txt 2>&1 || test_status=$?
+          echo "test_status=${test_status}" >> /tmp/validation-output.txt
           cat /tmp/validation-output.txt
-          exit "${status}"
+          test "${validator_status}" -eq 0
+          test "${test_status}" -eq 0
