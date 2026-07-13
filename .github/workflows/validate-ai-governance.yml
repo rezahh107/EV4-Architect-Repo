@@ -56,6 +56,7 @@ jobs:
           import hashlib
           import json
           import os
+          import subprocess
           import urllib.request
           from pathlib import Path
 
@@ -68,6 +69,10 @@ jobs:
           ]
           manifest = {
               "source_head_sha": os.environ["SOURCE_HEAD_SHA"],
+              "base_tree_sha": subprocess.check_output(
+                  ["git", "rev-parse", "HEAD^{tree}"],
+                  text=True,
+              ).strip(),
               "files": {},
           }
           for path in paths:
