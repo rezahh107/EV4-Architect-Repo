@@ -1,0 +1,90 @@
+{
+  "cases": [
+    {
+      "case_id": "startup-complete",
+      "fixture_type": "startup_session",
+      "payload": {
+        "artifact_type": "startup_session",
+        "repository": "rezahh107/EV4-Architect-Repo",
+        "default_branch": "main",
+        "authority_files_inspected": [
+          "README.md",
+          "STATUS.md",
+          "docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md",
+          "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md"
+        ],
+        "authorized_work": "ARCH-GOV-ARTIFACT-001",
+        "dependencies_checked": true
+      }
+    },
+    {
+      "case_id": "unknown-remains-unknown",
+      "fixture_type": "evidence_claim",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-UNKNOWN-001",
+        "claim_kind": "material_claim",
+        "claim_text": "Runtime behavior is not known.",
+        "evidence_state": "UNKNOWN",
+        "source_type": "unknown",
+        "source_reference": null,
+        "unknown_input": true,
+        "self_asserted_outcome": false
+      }
+    },
+    {
+      "case_id": "ai-critique-remains-signal",
+      "fixture_type": "evidence_claim",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-COACH-001",
+        "claim_kind": "material_claim",
+        "claim_text": "The critic flags possible ambiguity.",
+        "evidence_state": "AI_REVIEW_SIGNAL",
+        "source_type": "coach_critique",
+        "source_reference": "review/critic-output",
+        "unknown_input": false,
+        "self_asserted_outcome": false
+      }
+    },
+    {
+      "case_id": "public-security-profile-active",
+      "fixture_type": "security_profile_fixture",
+      "payload": {
+        "artifact_type": "security_profile",
+        "repository_visibility": "public",
+        "active_profile": "personal_public_repository_minimum",
+        "minimum_controls": [
+          "immutable_action_pins",
+          "minimum_explicit_permissions",
+          "exact_head_checkout_when_repository_is_checked_out",
+          "persist_credentials_false",
+          "fail_closed_head_identity",
+          "no_pull_request_secret_exposure"
+        ],
+        "enterprise_controls_status": "intentionally_out_of_scope"
+      }
+    },
+    {
+      "case_id": "no-human-technical-approval",
+      "fixture_type": "approval_contract",
+      "payload": {
+        "artifact_type": "approval_contract",
+        "human_technical_approval_required": false,
+        "owner_acknowledgement_used_as_evidence": false,
+        "user_merge_action_role": "administrative_action"
+      }
+    },
+    {
+      "case_id": "coach-critique-bounded",
+      "fixture_type": "coach_critique",
+      "payload": {
+        "artifact_type": "coach_critique",
+        "critique_id": "COACH-001",
+        "evidence_state": "AI_REVIEW_SIGNAL",
+        "claims_technical_truth": false,
+        "claims_real_world_outcome": false
+      }
+    }
+  ]
+}
