@@ -28,7 +28,7 @@ When sources conflict, follow the highest-authority current contract or explicit
 Apply `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md` to repository work.
 
 - AI is the technical decision authority; repository evidence is factual authority.
-- Do not create human technical approval or owner acknowledgement as a substitute for evidence.
+- Human technical approval and owner acknowledgement must not be treated, accepted, or used as substitutes for repository evidence.
 - Keep the Scope Gate and Progress Gate separate.
 - Bind validation and independent review claims to the exact current revision.
 - Any head change makes an earlier review stale.
