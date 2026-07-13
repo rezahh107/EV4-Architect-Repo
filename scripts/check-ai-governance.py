@@ -6,6 +6,7 @@ import ast
 import fnmatch
 import json
 import re
+import shlex
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -92,8 +93,14 @@ MERGE_INVARIANT = (
     "recommendation; that action is not technical approval and does not prove correctness."
 )
 EXACT_HEAD_REF = "${{ github.event.pull_request.head.sha }}"
-EXACT_HEAD_ASSERTION = 'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"'
+EXACT_HEAD_WORDS = [
+    "test",
+    "$(git rev-parse HEAD)",
+    "=",
+    EXACT_HEAD_REF,
+]
 REMOTE_ACTION_SHA = re.compile(r"^[^@\s]+@[0-9a-fA-F]{40}$")
+ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", re.DOTALL)
 SECRET_REFERENCE = re.compile(
     r"(?:\bsecrets\.[A-Za-z_][A-Za-z0-9_]*"
     r"|\bsecrets\s*\[\s*['\"][^'\"]+['\"]\s*\]"
@@ -103,7 +110,7 @@ SECRET_REFERENCE = re.compile(
 
 
 class GitHubActionsLoader(yaml.SafeLoader):
-    """YAML loader that keeps GitHub Actions keys such as `on` as strings."""
+    """YAML loader that preserves GitHub Actions keys such as `on` as strings."""
 
 
 GitHubActionsLoader.yaml_implicit_resolvers = {
@@ -174,144 +181,112 @@ def validate_startup_session(payload: dict[str, Any], path: str = "$") -> list[D
         "docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md",
         "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
     }
-    output = []
+    output: list[Diagnostic] = []
     if not required.issubset(set(payload.get("authority_files_inspected") or [])):
-        output.append(
-            Diagnostic(
-                "AIGOV-START-001_MISSING_AUTHORITY_EVIDENCE",
-                path,
-                "startup evidence must include the required repository authorities",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-START-001_MISSING_AUTHORITY_EVIDENCE",
+            path,
+            "startup evidence must include the required repository authorities",
+        ))
     if not payload.get("authorized_work") or payload.get("dependencies_checked") is not True:
-        output.append(
-            Diagnostic(
-                "AIGOV-START-001_INCOMPLETE_STARTUP_GATE",
-                path,
-                "authorized work and dependency verification are required",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-START-001_INCOMPLETE_STARTUP_GATE",
+            path,
+            "authorized work and dependency verification are required",
+        ))
     return output
 
 
 def validate_evidence_claim(payload: dict[str, Any], path: str = "$") -> list[Diagnostic]:
-    output = []
+    output: list[Diagnostic] = []
     state = payload.get("evidence_state")
     source = payload.get("source_type")
     source_reference = payload.get("source_reference")
     self_asserted = payload.get("self_asserted_outcome") is True
 
     if payload.get("unknown_input") is True and state not in {
-        "UNKNOWN",
-        "BLOCKED_INSUFFICIENT_EVIDENCE",
+        "UNKNOWN", "BLOCKED_INSUFFICIENT_EVIDENCE"
     }:
-        output.append(
-            Diagnostic(
-                "AIGOV-EVIDENCE-001_UNKNOWN_AS_FACT",
-                path,
-                "unknown input must remain unknown",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-EVIDENCE-001_UNKNOWN_AS_FACT", path, "unknown input must remain unknown"
+        ))
     if source in {"ai_review_signal", "coach_critique"} and state in FACTUAL:
-        output.append(
-            Diagnostic(
-                "AIGOV-EVIDENCE-001_AI_SIGNAL_AS_FACT",
-                path,
-                "AI critique cannot be factual proof",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-EVIDENCE-001_AI_SIGNAL_AS_FACT",
+            path,
+            "AI critique cannot be factual proof",
+        ))
     if self_asserted:
-        output.append(
-            Diagnostic(
-                "AIGOV-EVIDENCE-001_SELF_ASSERTED_OUTCOME",
-                path,
-                "self-authored outcomes are invalid regardless of source label",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-EVIDENCE-001_SELF_ASSERTED_OUTCOME",
+            path,
+            "self-authored outcomes are invalid regardless of source label",
+        ))
 
     expected_state = STATE_FOR_SOURCE.get(source)
     if expected_state and state not in {
-        expected_state,
-        "BLOCKED_INSUFFICIENT_EVIDENCE",
-        "NOT_APPLICABLE",
+        expected_state, "BLOCKED_INSUFFICIENT_EVIDENCE", "NOT_APPLICABLE"
     }:
-        output.append(
-            Diagnostic(
-                "AIGOV-EVIDENCE-001_SOURCE_STATE_MISMATCH",
-                path,
-                f"{source!r} is incompatible with {state!r}",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-EVIDENCE-001_SOURCE_STATE_MISMATCH",
+            path,
+            f"{source!r} is incompatible with {state!r}",
+        ))
 
-    if state in FACTUAL and not (
-        isinstance(source_reference, str) and source_reference.strip()
-    ):
-        output.append(
-            Diagnostic(
-                "AIGOV-EVIDENCE-001_MISSING_SOURCE_REFERENCE",
-                path,
-                "factual states require a non-empty source reference",
-            )
-        )
+    has_reference = isinstance(source_reference, str) and bool(source_reference.strip())
+    if state in FACTUAL and not has_reference:
+        output.append(Diagnostic(
+            "AIGOV-EVIDENCE-001_MISSING_SOURCE_REFERENCE",
+            path,
+            "factual states require a non-empty source reference",
+        ))
 
     if payload.get("claim_kind") in OUTCOME_KINDS and not self_asserted:
         if state not in FACTUAL:
-            output.append(
-                Diagnostic(
-                    "AIGOV-EVIDENCE-001_OUTCOME_NOT_FACTUAL",
-                    path,
-                    "externally evidenced outcomes require a compatible factual evidence state",
-                )
-            )
-        if not (isinstance(source_reference, str) and source_reference.strip()):
-            code = "AIGOV-EVIDENCE-001_MISSING_SOURCE_REFERENCE"
-            if not any(item.code == code for item in output):
-                output.append(
-                    Diagnostic(
-                        code,
-                        path,
-                        "externally evidenced outcomes require a non-empty source reference",
-                    )
-                )
+            output.append(Diagnostic(
+                "AIGOV-EVIDENCE-001_OUTCOME_NOT_FACTUAL",
+                path,
+                "externally evidenced outcomes require a compatible factual evidence state",
+            ))
+        if not has_reference and not any(
+            item.code == "AIGOV-EVIDENCE-001_MISSING_SOURCE_REFERENCE" for item in output
+        ):
+            output.append(Diagnostic(
+                "AIGOV-EVIDENCE-001_MISSING_SOURCE_REFERENCE",
+                path,
+                "externally evidenced outcomes require a non-empty source reference",
+            ))
     return output
 
 
 def validate_security_profile(payload: dict[str, Any], path: str = "$") -> list[Diagnostic]:
-    output = []
+    output: list[Diagnostic] = []
     if payload.get("repository_visibility") == "public":
         profile = payload.get("active_profile")
         if not profile:
-            return [
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_MISSING_PROFILE",
-                    path,
-                    "public repository requires an active profile",
-                )
-            ]
+            return [Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_MISSING_PROFILE",
+                path,
+                "public repository requires an active profile",
+            )]
         if profile != ACCEPTED_PUBLIC_PROFILE:
-            return [
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_UNSUPPORTED_PROFILE",
-                    path,
-                    f"unsupported public-repository profile: {profile!r}",
-                )
-            ]
+            return [Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_UNSUPPORTED_PROFILE",
+                path,
+                f"unsupported public-repository profile: {profile!r}",
+            )]
         if not MIN_CONTROLS.issubset(set(payload.get("minimum_controls") or [])):
-            output.append(
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_MINIMUM_CONTROL_MISSING",
-                    path,
-                    "minimum control missing",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_MINIMUM_CONTROL_MISSING",
+                path,
+                "minimum control missing",
+            ))
         if payload.get("enterprise_controls_status") != "intentionally_out_of_scope":
-            output.append(
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_ENTERPRISE_SCOPE_AMBIGUOUS",
-                    path,
-                    "enterprise scope must be explicit",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_ENTERPRISE_SCOPE_AMBIGUOUS",
+                path,
+                "enterprise scope must be explicit",
+            ))
     return output
 
 
@@ -321,15 +296,11 @@ def validate_approval_contract(payload: dict[str, Any], path: str = "$") -> list
         or payload.get("owner_acknowledgement_used_as_evidence") is True
         or payload.get("user_merge_action_role") != "administrative_action"
     )
-    if invalid:
-        return [
-            Diagnostic(
-                "AIGOV-HUMAN-001_APPROVAL_AS_EVIDENCE",
-                path,
-                "human approval cannot substitute for evidence",
-            )
-        ]
-    return []
+    return [Diagnostic(
+        "AIGOV-HUMAN-001_APPROVAL_AS_EVIDENCE",
+        path,
+        "human approval cannot substitute for evidence",
+    )] if invalid else []
 
 
 def validate_coach_critique(payload: dict[str, Any], path: str = "$") -> list[Diagnostic]:
@@ -338,15 +309,11 @@ def validate_coach_critique(payload: dict[str, Any], path: str = "$") -> list[Di
         or payload.get("claims_technical_truth") is True
         or payload.get("claims_real_world_outcome") is True
     )
-    if invalid:
-        return [
-            Diagnostic(
-                "AIGOV-COACH-001_CRITIQUE_AS_FACT",
-                path,
-                "coach critique must remain an AI_REVIEW_SIGNAL",
-            )
-        ]
-    return []
+    return [Diagnostic(
+        "AIGOV-COACH-001_CRITIQUE_AS_FACT",
+        path,
+        "coach critique must remain an AI_REVIEW_SIGNAL",
+    )] if invalid else []
 
 
 FIXTURE_VALIDATORS = {
@@ -382,9 +349,7 @@ def workflow_events(document: dict[str, Any]) -> set[str]:
     return set()
 
 
-def workflow_event_configuration(
-    document: dict[str, Any], event: str
-) -> dict[str, Any] | None:
+def workflow_event_configuration(document: dict[str, Any], event: str) -> dict[str, Any] | None:
     trigger = document.get("on")
     if not isinstance(trigger, dict) or event not in trigger:
         return None
@@ -413,15 +378,31 @@ def _is_checkout(target: str) -> bool:
 
 
 def _persist_credentials_disabled(value: Any) -> bool:
-    return value is False or (
-        isinstance(value, str) and value.strip().lower() == "false"
-    )
+    return value is False or (isinstance(value, str) and value.strip().lower() == "false")
+
+
+def _shell_words(line: str) -> list[str]:
+    try:
+        return shlex.split(line, comments=True, posix=True)
+    except ValueError:
+        return []
+
+
+def _is_fail_closed_exact_head_command(line: str) -> bool:
+    words = _shell_words(line.strip())
+    if words == EXACT_HEAD_WORDS:
+        return True
+    if words == ["[", *EXACT_HEAD_WORDS[1:], "]"]:
+        return True
+    if words == ["[[", *EXACT_HEAD_WORDS[1:], "]]" ]:
+        return True
+    return False
 
 
 def _contains_exact_head_assertion(step: Any) -> bool:
-    return isinstance(step, dict) and isinstance(step.get("run"), str) and (
-        EXACT_HEAD_ASSERTION in step["run"]
-    )
+    if not isinstance(step, dict) or not isinstance(step.get("run"), str):
+        return False
+    return any(_is_fail_closed_exact_head_command(line) for line in step["run"].splitlines())
 
 
 def _secret_exposure_paths(value: Any, path: str = "$") -> list[str]:
@@ -441,122 +422,172 @@ def _secret_exposure_paths(value: Any, path: str = "$") -> list[str]:
     return output
 
 
-def validate_workflow_document(path: str, document: dict[str, Any]) -> list[Diagnostic]:
+def _resolve_local_workflow(target: str, root: Path) -> tuple[Path, str] | None:
+    if not target.startswith("./") or "@" in target:
+        return None
+    candidate = (root / target[2:]).resolve()
+    root_resolved = root.resolve()
+    try:
+        relative = candidate.relative_to(root_resolved).as_posix()
+    except ValueError:
+        return None
+    if not relative.startswith(".github/workflows/") or candidate.suffix not in {".yml", ".yaml"}:
+        return None
+    return candidate, relative
+
+
+def validate_workflow_document(
+    path: str,
+    document: dict[str, Any],
+    root: Path = ROOT,
+    *,
+    inherited_pr_context: bool = False,
+    inherited_permissions: Any = None,
+    stack: tuple[str, ...] = (),
+) -> list[Diagnostic]:
     events = workflow_events(document)
-    if not ({"pull_request", "pull_request_target"} & events):
+    pr_context = inherited_pr_context or bool({"pull_request", "pull_request_target"} & events)
+    if not pr_context:
         return []
 
+    normalized_path = Path(path).as_posix()
+    if normalized_path in stack:
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_REUSABLE_WORKFLOW_CYCLE",
+            normalized_path,
+            f"local reusable workflow cycle detected: {' -> '.join((*stack, normalized_path))}",
+        )]
+    current_stack = (*stack, normalized_path)
     output: list[Diagnostic] = []
+
+    if inherited_pr_context and "workflow_call" not in events:
+        output.append(Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_LOCAL_REUSABLE_WORKFLOW_INVALID",
+            normalized_path,
+            "a local reusable workflow reached from a PR job must declare workflow_call",
+        ))
     if "pull_request_target" in events:
-        output.append(
-            Diagnostic(
-                "AIGOV-SECURITY-PROFILE-001_PULL_REQUEST_TARGET_FORBIDDEN",
-                path,
-                "pull_request_target is unsupported by the active public-repository profile",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_PULL_REQUEST_TARGET_FORBIDDEN",
+            normalized_path,
+            "pull_request_target is unsupported by the active public-repository profile",
+        ))
 
     jobs = document.get("jobs")
     if not isinstance(jobs, dict) or not jobs:
-        return output + [
-            Diagnostic(
-                "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
-                path,
-                "PR workflow must define jobs",
-            )
-        ]
+        return output + [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
+            normalized_path,
+            "PR-context workflow must define jobs",
+        )]
 
-    workflow_permissions = document.get("permissions")
+    workflow_permissions = document.get("permissions", inherited_permissions)
     for job_id, job in jobs.items():
-        job_path = f"{path}::jobs.{job_id}"
+        job_path = f"{normalized_path}::jobs.{job_id}"
         if not isinstance(job, dict):
-            output.append(
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
-                    job_path,
-                    "job must be a mapping",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
+                job_path,
+                "job must be a mapping",
+            ))
             continue
 
         effective_permissions = job.get("permissions", workflow_permissions)
         if not _permission_is_minimal(effective_permissions):
-            output.append(
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_PERMISSIONS_NOT_MINIMAL",
-                    job_path,
-                    "effective permissions must be exactly contents: read",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_PERMISSIONS_NOT_MINIMAL",
+                job_path,
+                "effective permissions must be exactly contents: read",
+            ))
 
         reusable_target = job.get("uses")
-        if isinstance(reusable_target, str) and _is_remote_action(reusable_target):
-            if not REMOTE_ACTION_SHA.fullmatch(reusable_target):
-                output.append(
-                    Diagnostic(
+        if isinstance(reusable_target, str):
+            if _is_remote_action(reusable_target):
+                if not REMOTE_ACTION_SHA.fullmatch(reusable_target):
+                    output.append(Diagnostic(
                         "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF",
                         f"{job_path}.uses",
                         f"mutable reusable workflow ref: {reusable_target}",
-                    )
-                )
+                    ))
+            else:
+                resolved = _resolve_local_workflow(reusable_target, root)
+                if resolved is None:
+                    output.append(Diagnostic(
+                        "AIGOV-SECURITY-PROFILE-001_LOCAL_REUSABLE_WORKFLOW_INVALID",
+                        f"{job_path}.uses",
+                        f"unsupported local reusable workflow target: {reusable_target}",
+                    ))
+                else:
+                    local_path, relative = resolved
+                    if not local_path.is_file():
+                        output.append(Diagnostic(
+                            "AIGOV-SECURITY-PROFILE-001_LOCAL_REUSABLE_WORKFLOW_INVALID",
+                            f"{job_path}.uses",
+                            f"local reusable workflow not found: {relative}",
+                        ))
+                    else:
+                        try:
+                            local_document = load_actions_yaml(local_path.read_text(encoding="utf-8"))
+                        except (OSError, yaml.YAMLError, ValueError) as exc:
+                            output.append(Diagnostic(
+                                "AIGOV-SECURITY-PROFILE-001_LOCAL_REUSABLE_WORKFLOW_INVALID",
+                                f"{job_path}.uses",
+                                f"local reusable workflow cannot be parsed: {exc}",
+                            ))
+                        else:
+                            output.extend(validate_workflow_document(
+                                relative,
+                                local_document,
+                                root,
+                                inherited_pr_context=True,
+                                inherited_permissions=effective_permissions,
+                                stack=current_stack,
+                            ))
 
         steps = job.get("steps")
         if steps is None:
             continue
         if not isinstance(steps, list):
-            output.append(
-                Diagnostic(
-                    "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
-                    f"{job_path}.steps",
-                    "steps must be a list",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
+                f"{job_path}.steps",
+                "steps must be a list",
+            ))
             continue
 
         checkout_indexes: list[int] = []
         for index, step in enumerate(steps):
             step_path = f"{job_path}.steps[{index}]"
             if not isinstance(step, dict):
-                output.append(
-                    Diagnostic(
-                        "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
-                        step_path,
-                        "step must be a mapping",
-                    )
-                )
+                output.append(Diagnostic(
+                    "AIGOV-SECURITY-PROFILE-001_WORKFLOW_STRUCTURE_INVALID",
+                    step_path,
+                    "step must be a mapping",
+                ))
                 continue
             target = step.get("uses")
             if isinstance(target, str):
                 if _is_remote_action(target) and not REMOTE_ACTION_SHA.fullmatch(target):
-                    output.append(
-                        Diagnostic(
-                            "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF",
-                            f"{step_path}.uses",
-                            f"mutable action ref: {target}",
-                        )
-                    )
+                    output.append(Diagnostic(
+                        "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF",
+                        f"{step_path}.uses",
+                        f"mutable action ref: {target}",
+                    ))
                 if _is_checkout(target):
                     checkout_indexes.append(index)
-                    with_values = step.get("with")
-                    with_values = with_values if isinstance(with_values, dict) else {}
+                    with_values = step.get("with") if isinstance(step.get("with"), dict) else {}
                     if with_values.get("ref") != EXACT_HEAD_REF:
-                        output.append(
-                            Diagnostic(
-                                "AIGOV-SECURITY-PROFILE-001_NOT_EXACT_HEAD",
-                                step_path,
-                                "every repository checkout must use the exact PR head",
-                            )
-                        )
-                    if not _persist_credentials_disabled(
-                        with_values.get("persist-credentials")
-                    ):
-                        output.append(
-                            Diagnostic(
-                                "AIGOV-SECURITY-PROFILE-001_CREDENTIAL_PERSISTENCE",
-                                step_path,
-                                "every repository checkout must disable credential persistence",
-                            )
-                        )
+                        output.append(Diagnostic(
+                            "AIGOV-SECURITY-PROFILE-001_NOT_EXACT_HEAD",
+                            step_path,
+                            "every repository checkout must use the exact PR head",
+                        ))
+                    if not _persist_credentials_disabled(with_values.get("persist-credentials")):
+                        output.append(Diagnostic(
+                            "AIGOV-SECURITY-PROFILE-001_CREDENTIAL_PERSISTENCE",
+                            step_path,
+                            "every repository checkout must disable credential persistence",
+                        ))
 
         for position, checkout_index in enumerate(checkout_indexes):
             next_checkout = (
@@ -566,56 +597,46 @@ def validate_workflow_document(path: str, document: dict[str, Any]) -> list[Diag
             )
             if not any(
                 _contains_exact_head_assertion(step)
-                for step in steps[checkout_index + 1 : next_checkout]
+                for step in steps[checkout_index + 1:next_checkout]
             ):
-                output.append(
-                    Diagnostic(
-                        "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING",
-                        f"{job_path}.steps[{checkout_index}]",
-                        "each checkout requires a later exact-head assertion before another checkout",
-                    )
-                )
+                output.append(Diagnostic(
+                    "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING",
+                    f"{job_path}.steps[{checkout_index}]",
+                    "each checkout requires a later executable fail-closed exact-head assertion before another checkout",
+                ))
 
     for secret_path in _secret_exposure_paths(document):
-        output.append(
-            Diagnostic(
-                "AIGOV-SECURITY-PROFILE-001_PR_SECRET_EXPOSURE",
-                f"{path}:{secret_path}",
-                "direct PR secret exposure is forbidden",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_PR_SECRET_EXPOSURE",
+            f"{normalized_path}:{secret_path}",
+            "direct PR secret exposure is forbidden",
+        ))
     return output
 
 
-def validate_workflow_text(path: str, text: str) -> list[Diagnostic]:
+def validate_workflow_text(path: str, text: str, root: Path = ROOT) -> list[Diagnostic]:
     try:
         document = load_actions_yaml(text)
     except (yaml.YAMLError, ValueError) as exc:
-        return [
-            Diagnostic(
-                "AIGOV-SECURITY-PROFILE-001_WORKFLOW_YAML_INVALID",
-                path,
-                str(exc),
-            )
-        ]
-    return validate_workflow_document(path, document)
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_WORKFLOW_YAML_INVALID", path, str(exc)
+        )]
+    return validate_workflow_document(path, document, root)
 
 
 def validate_workflows(root: Path = ROOT) -> list[Diagnostic]:
     workflows = root / ".github/workflows"
     if not workflows.exists():
-        return [
-            Diagnostic(
-                "AIGOV-SECURITY-PROFILE-001_WORKFLOW_DIRECTORY_MISSING",
-                str(workflows.relative_to(root)),
-                "workflow directory missing",
-            )
-        ]
-    output = []
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_WORKFLOW_DIRECTORY_MISSING",
+            str(workflows.relative_to(root)),
+            "workflow directory missing",
+        )]
+    output: list[Diagnostic] = []
     for path in sorted(workflows.glob("*.y*ml")):
-        output += validate_workflow_text(
-            str(path.relative_to(root)), path.read_text(encoding="utf-8")
-        )
+        output.extend(validate_workflow_text(
+            str(path.relative_to(root)), path.read_text(encoding="utf-8"), root
+        ))
     return output
 
 
@@ -638,32 +659,25 @@ def _resolve_json_pointer(document: Any, pointer: str) -> Any:
 
 def _verify_schema_carrier(value: Any, root: Path) -> tuple[bool, list[Diagnostic]]:
     if not isinstance(value, str) or "#" not in value:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_SCHEMA_POINTER_INVALID",
-                "$",
-                "schema carrier must include a JSON Pointer",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_SCHEMA_POINTER_INVALID",
+            "$",
+            "schema carrier must include a JSON Pointer",
+        )]
     file_name, pointer = value.split("#", 1)
     path = root / file_name
     if not path.is_file():
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_MISSING_CARRIER", "$", f"missing {file_name}"
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_MISSING_CARRIER", "$", f"missing {file_name}"
+        )]
     try:
-        document = j(path)
-        _resolve_json_pointer(document, pointer)
+        _resolve_json_pointer(j(path), pointer)
     except (OSError, ValueError, TypeError, KeyError, IndexError, json.JSONDecodeError) as exc:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_SCHEMA_POINTER_INVALID",
-                "$",
-                f"invalid schema carrier {value!r}: {exc}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_SCHEMA_POINTER_INVALID",
+            "$",
+            f"invalid schema carrier {value!r}: {exc}",
+        )]
     return True, []
 
 
@@ -696,41 +710,33 @@ def _symbol_exists(tree: ast.AST, symbol: str) -> bool:
 
 def _verify_validator_rule(value: Any, root: Path) -> tuple[bool, list[Diagnostic]]:
     if not isinstance(value, str) or "::" not in value:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
-                "$",
-                "validator rule must use path::symbol",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
+            "$",
+            "validator rule must use path::symbol",
+        )]
     file_name, symbol = value.split("::", 1)
     path = root / file_name
     if path.suffix != ".py" or not path.is_file():
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
-                "$",
-                f"validator Python file missing: {file_name}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
+            "$",
+            f"validator Python file missing: {file_name}",
+        )]
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     except (OSError, SyntaxError) as exc:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
-                "$",
-                f"validator cannot be inspected: {exc}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
+            "$",
+            f"validator cannot be inspected: {exc}",
+        )]
     if not symbol or not _symbol_exists(tree, symbol):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
-                "$",
-                f"validator symbol not found: {value}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_VALIDATOR_SYMBOL_MISSING",
+            "$",
+            f"validator symbol not found: {value}",
+        )]
     return True, []
 
 
@@ -765,30 +771,22 @@ def _verify_fixture_carrier(
     expect_invalid: bool,
 ) -> tuple[bool, list[Diagnostic]]:
     if not isinstance(value, str):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_FIXTURE_CASE_MISSING",
-                "$",
-                "fixture carrier is missing",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_FIXTURE_CASE_MISSING", "$", "fixture carrier is missing"
+        )]
     path = root / value
     if not path.is_file():
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_MISSING_CARRIER", "$", f"missing {value}"
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_MISSING_CARRIER", "$", f"missing {value}"
+        )]
     try:
         cases = j(path).get("cases")
     except (OSError, AttributeError, json.JSONDecodeError) as exc:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_FIXTURE_CASE_MISSING",
-                "$",
-                f"fixture file cannot be inspected: {exc}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_FIXTURE_CASE_MISSING",
+            "$",
+            f"fixture file cannot be inspected: {exc}",
+        )]
     fixture_type = RULE_FIXTURE_TYPES[rule_id]
     applicable = [
         (index, case)
@@ -812,13 +810,11 @@ def _verify_fixture_carrier(
             for index, case in applicable
         )
     if not verified:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_FIXTURE_CASE_MISSING",
-                "$",
-                f"{value} lacks an applicable {'invalid' if expect_invalid else 'valid'} case for {rule_id}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_FIXTURE_CASE_MISSING",
+            "$",
+            f"{value} lacks an applicable {'invalid' if expect_invalid else 'valid'} case for {rule_id}",
+        )]
     return True, []
 
 
@@ -830,9 +826,7 @@ def _workflow_paths_cover(
         return True, set()
     raw_paths = configuration.get("paths")
     ignored = configuration.get("paths-ignore")
-    ignored_patterns = (
-        [ignored] if isinstance(ignored, str) else list(ignored or [])
-    )
+    ignored_patterns = [ignored] if isinstance(ignored, str) else list(ignored or [])
     if raw_paths is None:
         missed = {
             path
@@ -849,75 +843,96 @@ def _workflow_paths_cover(
     return not missed, missed
 
 
+def _strip_environment_assignments(words: list[str]) -> list[str]:
+    index = 0
+    while index < len(words) and ENV_ASSIGNMENT.fullmatch(words[index]):
+        index += 1
+    return words[index:]
+
+
+def _line_executes_applicable_command(
+    line: str, validator_file: str, test_file: str = "tests/test_ai_governance.py"
+) -> bool:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    if any(operator in stripped for operator in ("&&", "||", ";", "|", "`")):
+        return False
+    words = _strip_environment_assignments(_shell_words(stripped))
+    if not words:
+        return False
+    executable = Path(words[0]).name
+    if executable in {"python", "python3"}:
+        if len(words) >= 2 and words[1] == validator_file:
+            return True
+        if len(words) >= 4 and words[1:3] == ["-m", "pytest"]:
+            return test_file in words[3:]
+        return False
+    if executable == "pytest":
+        return test_file in words[1:]
+    return False
+
+
+def _step_executes_applicable_command(
+    step: dict[str, Any], validator_file: str
+) -> bool:
+    command = step.get("run")
+    return isinstance(command, str) and any(
+        _line_executes_applicable_command(line, validator_file)
+        for line in command.splitlines()
+    )
+
+
 def _verify_ci_step(
     value: Any,
     root: Path,
     rule: dict[str, Any],
 ) -> tuple[bool, list[Diagnostic]]:
     if not isinstance(value, str):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID", "$", "CI step is missing"
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID", "$", "CI step is missing"
+        )]
     parts = value.split(" / ")
     if len(parts) != 3:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI step must use workflow / job / step",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+            "$",
+            "CI step must use workflow / job / step",
+        )]
     workflow_name, job_name, step_name = parts
     workflow_path = root / workflow_name
     if not workflow_path.is_file():
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                f"workflow missing: {workflow_name}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID", "$", f"workflow missing: {workflow_name}"
+        )]
     try:
         document = load_actions_yaml(workflow_path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError, ValueError) as exc:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                f"workflow cannot be parsed: {exc}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+            "$",
+            f"workflow cannot be parsed: {exc}",
+        )]
 
-    security_diagnostics = validate_workflow_document(workflow_name, document)
-    if security_diagnostics:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI workflow fails structural security validation",
-            )
-        ]
-
+    if validate_workflow_document(workflow_name, document, root):
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+            "$",
+            "CI workflow fails structural security validation",
+        )]
     if "pull_request" not in workflow_events(document):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI workflow must have a pull_request trigger",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+            "$",
+            "CI workflow must have a pull_request trigger",
+        )]
+
     jobs = document.get("jobs") or {}
     job = jobs.get(job_name) if isinstance(jobs, dict) else None
     if not isinstance(job, dict):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                f"job not found: {job_name}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID", "$", f"job not found: {job_name}"
+        )]
     steps = job.get("steps")
     step = next(
         (
@@ -928,34 +943,22 @@ def _verify_ci_step(
         None,
     )
     if not isinstance(step, dict):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                f"step not found: {step_name}",
-            )
-        ]
-    command = step.get("run")
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID", "$", f"step not found: {step_name}"
+        )]
+
     validator_reference = (rule.get("carriers") or {}).get("validator_rule")
     validator_file = (
         validator_reference.split("::", 1)[0]
         if isinstance(validator_reference, str)
         else ""
     )
-    applicable_commands = {
-        validator_file,
-        "tests/test_ai_governance.py",
-    } - {""}
-    if not isinstance(command, str) or not any(
-        token in command for token in applicable_commands
-    ):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "named CI step does not execute the applicable validator or tests",
-            )
-        ]
+    if not validator_file or not _step_executes_applicable_command(step, validator_file):
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+            "$",
+            "named CI step does not execute an allowed applicable validator or test command",
+        )]
 
     carriers = rule.get("carriers") or {}
     authoritative_paths = {
@@ -966,17 +969,13 @@ def _verify_ci_step(
         path_value = carrier_path(carrier_value)
         if path_value:
             authoritative_paths.add(path_value)
-    covered, missed = _workflow_paths_cover(
-        document, "pull_request", authoritative_paths
-    )
+    covered, missed = _workflow_paths_cover(document, "pull_request", authoritative_paths)
     if not covered:
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING",
-                "$",
-                f"CI path filters do not cover: {sorted(missed)}",
-            )
-        ]
+        return False, [Diagnostic(
+            "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING",
+            "$",
+            f"CI path filters do not cover: {sorted(missed)}",
+        )]
     return True, []
 
 
@@ -984,13 +983,9 @@ def _verify_prose_source(value: Any, root: Path) -> tuple[bool, list[Diagnostic]
     path_value = carrier_path(value) if isinstance(value, str) else None
     if path_value and (root / path_value).is_file():
         return True, []
-    return False, [
-        Diagnostic(
-            "AIGOV-COVERAGE-001_MISSING_CARRIER",
-            "$",
-            f"missing {path_value or value}",
-        )
-    ]
+    return False, [Diagnostic(
+        "AIGOV-COVERAGE-001_MISSING_CARRIER", "$", f"missing {path_value or value}"
+    )]
 
 
 def verify_rule_carriers(
@@ -1022,9 +1017,8 @@ def verify_rule_carriers(
         if passed:
             verified.add(name)
         else:
-            carrier_path_value = f"$.carriers.{name}"
             diagnostics.extend(
-                Diagnostic(item.code, carrier_path_value, item.message)
+                Diagnostic(item.code, f"$.carriers.{name}", item.message)
                 for item in found
             )
     return verified, diagnostics
@@ -1059,13 +1053,9 @@ def validate_coverage_semantics(
         if isinstance(rule, dict)
     }
     if set(by_id) != set(EXPECTED):
-        output.append(
-            Diagnostic(
-                "AIGOV-COVERAGE-001_RULE_SET_MISMATCH",
-                "$.rules",
-                "required rule set mismatch",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-COVERAGE-001_RULE_SET_MISMATCH", "$.rules", "required rule set mismatch"
+        ))
     if schema is None:
         schema = j(root / "planning/ai-governance-coverage.schema.json")
 
@@ -1081,23 +1071,17 @@ def validate_coverage_semantics(
             ("minimum_required_status", minimum),
         ):
             if rule.get(field) != expected_value:
-                output.append(
-                    Diagnostic(
-                        "AIGOV-COVERAGE-001_RULE_IDENTITY_MISMATCH",
-                        path,
-                        f"{field} must be {expected_value!r}",
-                    )
-                )
+                output.append(Diagnostic(
+                    "AIGOV-COVERAGE-001_RULE_IDENTITY_MISMATCH",
+                    path,
+                    f"{field} must be {expected_value!r}",
+                ))
 
         status = (rule.get("status") or {}).get("enforcement_status")
         if status in LADDER and LADDER.index(status) < LADDER.index(minimum):
-            output.append(
-                Diagnostic(
-                    "AIGOV-COVERAGE-001_BELOW_MINIMUM",
-                    path,
-                    f"{status} below {minimum}",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-COVERAGE-001_BELOW_MINIMUM", path, f"{status} below {minimum}"
+            ))
 
         verified, carrier_diagnostics = verify_rule_carriers(rule, schema, root)
         output.extend(
@@ -1110,16 +1094,14 @@ def validate_coverage_semantics(
         )
         proven = max_status(rule.get("carriers") or {}, verified)
         if status in LADDER and LADDER.index(status) > LADDER.index(proven):
-            output.append(
-                Diagnostic(
-                    "AIGOV-COVERAGE-001_OVERCLAIMED_STATUS",
-                    path,
-                    f"{status} exceeds verified carrier status {proven}",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-COVERAGE-001_OVERCLAIMED_STATUS",
+                path,
+                f"{status} exceeds verified carrier status {proven}",
+            ))
 
     profile = coverage.get("security_profile") or {}
-    output += validate_security_profile(
+    output.extend(validate_security_profile(
         {
             "repository_visibility": profile.get("repository_visibility"),
             "active_profile": profile.get("profile_id"),
@@ -1129,7 +1111,7 @@ def validate_coverage_semantics(
             ).get("status"),
         },
         "$.security_profile",
-    )
+    ))
     return output
 
 
@@ -1145,94 +1127,76 @@ def validate_authority_sources(root: Path = ROOT) -> list[Diagnostic]:
         "`02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`",
     ]
     positions = [agents.find(item) for item in order]
-    output = []
+    output: list[Diagnostic] = []
     if any(position < 0 for position in positions) or positions != sorted(positions):
-        output.append(
-            Diagnostic(
-                "AIGOV-START-001_AUTHORITY_ORDER_INVALID",
-                "AGENTS.md#Read First",
-                "authority startup order invalid",
-            )
-        )
-    for path, text in ((agents_path, agents), (policy_path, policy)):
+        output.append(Diagnostic(
+            "AIGOV-START-001_AUTHORITY_ORDER_INVALID",
+            "AGENTS.md#Read First",
+            "authority startup order invalid",
+        ))
+    for source_path, text in ((agents_path, agents), (policy_path, policy)):
         if HUMAN_INVARIANT not in text:
-            output.append(
-                Diagnostic(
-                    "AIGOV-HUMAN-001_INVARIANT_MISSING",
-                    str(path.relative_to(root)),
-                    "human evidence invariant missing",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-HUMAN-001_INVARIANT_MISSING",
+                str(source_path.relative_to(root)),
+                "human evidence invariant missing",
+            ))
     if MERGE_INVARIANT not in policy:
-        output.append(
-            Diagnostic(
-                "AIGOV-HUMAN-001_MERGE_BOUNDARY_MISSING",
-                str(policy_path.relative_to(root)),
-                "administrative Merge boundary missing",
-            )
-        )
+        output.append(Diagnostic(
+            "AIGOV-HUMAN-001_MERGE_BOUNDARY_MISSING",
+            str(policy_path.relative_to(root)),
+            "administrative Merge boundary missing",
+        ))
     return output
 
 
 def validate_fixtures(schema: dict[str, Any], root: Path = ROOT) -> list[Diagnostic]:
-    output = []
     valid_path = root / "fixtures/ai-governance/valid/cases.json"
     invalid_path = root / "fixtures/ai-governance/invalid/cases.json"
+    output: list[Diagnostic] = []
     for index, case in enumerate(j(valid_path).get("cases", [])):
         found = validate_fixture_case(schema, case, index)
         if found:
-            output.append(
-                Diagnostic(
-                    "AIGOV-FIXTURE-001_VALID_CASE_REJECTED",
-                    f"{valid_path.relative_to(root)}::{case.get('case_id')}",
-                    "; ".join(item.code for item in found),
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-FIXTURE-001_VALID_CASE_REJECTED",
+                f"{valid_path.relative_to(root)}::{case.get('case_id')}",
+                "; ".join(item.code for item in found),
+            ))
     for index, case in enumerate(j(invalid_path).get("cases", [])):
-        found_codes = {
-            item.code for item in validate_fixture_case(schema, case, index)
-        }
+        found_codes = {item.code for item in validate_fixture_case(schema, case, index)}
         if case.get("expected_diagnostic") not in found_codes:
-            output.append(
-                Diagnostic(
-                    "AIGOV-FIXTURE-001_INVALID_CASE_NOT_REJECTED",
-                    f"{invalid_path.relative_to(root)}::{case.get('case_id')}",
-                    f"got {sorted(found_codes)}",
-                )
-            )
+            output.append(Diagnostic(
+                "AIGOV-FIXTURE-001_INVALID_CASE_NOT_REJECTED",
+                f"{invalid_path.relative_to(root)}::{case.get('case_id')}",
+                f"got {sorted(found_codes)}",
+            ))
     return output
 
 
 def validate_repository(root: Path = ROOT) -> dict[str, Any]:
     schema_path = root / "planning/ai-governance-coverage.schema.json"
     coverage_path = root / "planning/AI_GOVERNANCE_COVERAGE.yml"
-    workflows = root / ".github/workflows"
     schema = j(schema_path)
     coverage = y(coverage_path)
     Draft202012Validator.check_schema(schema)
     output = [
-        Diagnostic(
-            "AIGOV-COVERAGE-001_SCHEMA_INVALID", ep(error), error.message
-        )
+        Diagnostic("AIGOV-COVERAGE-001_SCHEMA_INVALID", ep(error), error.message)
         for error in sorted(
             Draft202012Validator(schema).iter_errors(coverage),
             key=lambda item: (ep(item), item.message),
         )
     ]
     if not output:
-        output += validate_coverage_semantics(coverage, schema, root)
-    output += (
-        validate_authority_sources(root)
-        + validate_workflows(root)
-        + validate_fixtures(schema, root)
-    )
+        output.extend(validate_coverage_semantics(coverage, schema, root))
+    output.extend(validate_authority_sources(root))
+    output.extend(validate_workflows(root))
+    output.extend(validate_fixtures(schema, root))
+    workflows = root / ".github/workflows"
     return {
         "status": "passed" if not output else "failed",
         "diagnostics": [asdict(item) for item in output],
         "validated_rules": sorted(EXPECTED),
-        "workflow_count": (
-            len(list(workflows.glob("*.y*ml"))) if workflows.exists() else 0
-        ),
+        "workflow_count": len(list(workflows.glob("*.y*ml"))) if workflows.exists() else 0,
     }
 
 
@@ -1250,10 +1214,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         print("fixture_failures: 0")
     else:
         for item in result["diagnostics"]:
-            print(
-                f"{item['code']}: {item['path']}: {item['message']}",
-                file=sys.stderr,
-            )
+            print(f"{item['code']}: {item['path']}: {item['message']}", file=sys.stderr)
     return 0 if result["status"] == "passed" else 1
 
 
