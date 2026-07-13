@@ -14,21 +14,29 @@ jobs:
     if: github.event.pull_request.number == 26
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: '3.11'
-      - name: Diagnose bounded repair locally
+      - name: Run isolated repair diagnostic
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p /tmp/repository
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${REPOSITORY}/tarball/${HEAD_SHA}" \
+            -o /tmp/repository.tar.gz
+          tar -xzf /tmp/repository.tar.gz --strip-components=1 -C /tmp/repository
+          cd /tmp/repository
           sed -n '34,719p' .github/workflows/pr26-repair-proof-surface.yml \
             | sed 's/^          //' > /tmp/pr26-repair.py
           echo "extracted_lines=$(wc -l < /tmp/pr26-repair.py)"
           python -m py_compile /tmp/pr26-repair.py
-          python /tmp/pr26-repair.py
-          git status --short
+          set +e
+          python /tmp/pr26-repair.py > /tmp/repair-output.txt 2>&1
+          status=$?
+          set -e
+          cat /tmp/repair-output.txt
+          exit "${status}"
