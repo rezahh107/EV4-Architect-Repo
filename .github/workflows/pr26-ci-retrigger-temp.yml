@@ -1,0 +1,14 @@
+name: pr26-ci-retrigger-temp
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-op:
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op
+        run: 'true'
