@@ -1,9 +1,9 @@
-name: stage-pr26-bounded-repair
+name: diagnose-and-stage-pr26-bounded-repair
 
 on:
   push:
     branches:
-      - staging/pr26-ci-proof-repair-20260713
+      - staging/pr26-ci-proof-repair-20260713-b
     paths:
       - '.github/staging/run-pr26-repair'
 
@@ -25,58 +25,65 @@ jobs:
           python-version: '3.11'
       - name: Install validation dependencies
         run: python -I -P -m pip install 'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'
-      - name: Apply, validate, commit, and push bounded repair
+      - name: Apply and validate bounded repair
+        id: repair
         env:
           INITIAL_SHA: ea46e401adccd8b3103c8f021a3d5d155653f869
           TARGET_BRANCH: governance/arch-gov-artifact-001-enforcement
-          STAGING_BRANCH: staging/pr26-ci-proof-repair-20260713
+        shell: bash
+        run: |
+          set +e
+          (
+            set -euo pipefail
+            remote_head="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+            test "$remote_head" = "$INITIAL_SHA"
+            cat .github/staging/pr26.patch.part.* > /tmp/pr26.patch
+            rm -rf /tmp/pr26-repair
+            git worktree add --detach /tmp/pr26-repair "$INITIAL_SHA"
+            cd /tmp/pr26-repair
+            git apply --check /tmp/pr26.patch
+            git apply /tmp/pr26.patch
+            expected=$'.github/workflows/validate-ai-governance.yml\nscripts/check-ai-governance.py\ntests/test_ai_governance.py'
+            actual="$(git diff --name-only | sort)"
+            test "$actual" = "$expected"
+            python -I -P -m py_compile scripts/check-ai-governance.py
+            python -I -P scripts/check-ai-governance.py
+            PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= \
+              python -I -P -m pytest -c /dev/null --noconftest -q tests/test_ai_governance.py
+            git diff --check
+            test -z "$(git status --short | grep '^??' || true)"
+            git config user.name 'OpenAI bounded repair maintainer'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- .github/workflows/validate-ai-governance.yml scripts/check-ai-governance.py tests/test_ai_governance.py
+            test "$(git diff --cached --name-only | sort)" = "$expected"
+            git commit -m 'Close remaining CI proof bypasses'
+            final_sha="$(git rev-parse HEAD)"
+            test "$(git rev-parse HEAD^)" = "$INITIAL_SHA"
+            remote_head="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+            test "$remote_head" = "$INITIAL_SHA"
+            git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+            echo "FINAL_SHA=$final_sha"
+          ) > /tmp/pr26-result.txt 2>&1
+          status=$?
+          cat /tmp/pr26-result.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - name: Persist failure diagnostics on staging ref
+        if: steps.repair.outputs.status != '0'
+        env:
+          STAGING_BRANCH: staging/pr26-ci-proof-repair-20260713-b
         shell: bash
         run: |
           set -euo pipefail
-          cleanup() {
-            git -C "$GITHUB_WORKSPACE" push origin --delete "$STAGING_BRANCH" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-
-          remote_head="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
-          test "$remote_head" = "$INITIAL_SHA"
-
-          cat .github/staging/pr26.patch.part.* > /tmp/pr26.patch
-          rm -rf /tmp/pr26-repair
-          git worktree add --detach /tmp/pr26-repair "$INITIAL_SHA"
-          cd /tmp/pr26-repair
-
-          git apply --check /tmp/pr26.patch
-          git apply /tmp/pr26.patch
-
-          expected=$'.github/workflows/validate-ai-governance.yml\nscripts/check-ai-governance.py\ntests/test_ai_governance.py'
-          actual="$(git diff --name-only | sort)"
-          test "$actual" = "$expected"
-
-          python -I -P -m py_compile scripts/check-ai-governance.py
-          python -I -P scripts/check-ai-governance.py
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
-          PYTEST_ADDOPTS= \
-          PYTEST_PLUGINS= \
-          python -I -P -m pytest \
-            -c /dev/null \
-            --noconftest \
-            -q tests/test_ai_governance.py
-          git diff --check
-          test -z "$(git status --short | grep '^??' || true)"
-
+          cp /tmp/pr26-result.txt .github/staging/result.txt
           git config user.name 'OpenAI bounded repair maintainer'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- \
-            .github/workflows/validate-ai-governance.yml \
-            scripts/check-ai-governance.py \
-            tests/test_ai_governance.py
-          test "$(git diff --cached --name-only | sort)" = "$expected"
-          git commit -m 'Close remaining CI proof bypasses'
-          final_sha="$(git rev-parse HEAD)"
-          test "$(git rev-parse HEAD^)" = "$INITIAL_SHA"
-
-          remote_head="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
-          test "$remote_head" = "$INITIAL_SHA"
-          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
-          echo "FINAL_SHA=$final_sha"
+          git add .github/staging/result.txt
+          git commit -m 'Record PR26 staging diagnostics'
+          git push origin "HEAD:refs/heads/$STAGING_BRANCH"
+          exit 1
+      - name: Delete staging ref after success
+        if: steps.repair.outputs.status == '0'
+        env:
+          STAGING_BRANCH: staging/pr26-ci-proof-repair-20260713-b
+        shell: bash
+        run: git push origin --delete "$STAGING_BRANCH"
