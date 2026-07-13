@@ -11,19 +11,13 @@ def rep(old: str, new: str) -> None:
         raise SystemExit(f"core replacement mismatch: {count}: {old[:100]!r}")
     P.write_text(text.replace(old, new, 1), encoding="utf-8")
 
-def sub(pattern: str, new: str) -> None:
-    text = P.read_text(encoding="utf-8")
-    updated, count = re.subn(pattern, new, text, count=1, flags=re.DOTALL)
-    if count != 1:
-        raise SystemExit(f"core regex mismatch: {count}: {pattern[:100]!r}")
-    P.write_text(updated, encoding="utf-8")
-
 rep(
 '''EXACT_HEAD_REF = "${{ github.event.pull_request.head.sha }}"
 EXACT_HEAD_WORDS = ["test", "$(git rev-parse HEAD)", "=", EXACT_HEAD_REF]
 REMOTE_ACTION_SHA = re.compile(r"^[^@\\s]+@[0-9a-fA-F]{40}$")
 ''',
 '''EXACT_HEAD_REF = "${{ github.event.pull_request.head.sha }}"
+EXACT_HEAD_WORDS = ["test", "$(git rev-parse HEAD)", "=", EXACT_HEAD_REF]
 WORKSPACE_GUARD_LINES = (
     "set -eu",
     'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"',
@@ -113,15 +107,52 @@ rep(
     return runs_on in SAFE_PROOF_RUNNERS
 ''')
 
-sub(
-r'''def _is_fail_closed_exact_head_command\(run: Any\) -> bool:
-.*?
-(?=def _contains_exact_head_assertion)''',
-'''def _is_fail_closed_exact_head_command(run: Any) -> bool:
-    return tuple(_meaningful_command_lines(run)) == WORKSPACE_GUARD_LINES
+rep(
+'''def _contains_exact_head_assertion(
+    step: Any, job: dict[str, Any], document: dict[str, Any]
+) -> bool:
+    return (
+        _proof_node_is_blocking(step)
+        and _proof_job_execution_context_is_trusted(job)
+        and isinstance(step, dict)
+        and _proof_step_shell_is_supported(step, job, document)
+        and _proof_working_directory_is_root(step, job, document)
+        and _proof_yaml_environment_is_empty(step, job, document)
+        and _is_fail_closed_exact_head_command(step.get("run"))
+    )
 
 
-''')
+def _secret_exposure_paths''',
+'''def _contains_exact_head_assertion(
+    step: Any, job: dict[str, Any], document: dict[str, Any]
+) -> bool:
+    return (
+        _proof_node_is_blocking(step)
+        and _proof_job_execution_context_is_trusted(job)
+        and isinstance(step, dict)
+        and _proof_step_shell_is_supported(step, job, document)
+        and _proof_working_directory_is_root(step, job, document)
+        and _proof_yaml_environment_is_empty(step, job, document)
+        and _is_fail_closed_exact_head_command(step.get("run"))
+    )
+
+
+def _contains_workspace_guard(
+    step: Any, job: dict[str, Any], document: dict[str, Any]
+) -> bool:
+    return (
+        _proof_node_is_blocking(step)
+        and _proof_job_execution_context_is_trusted(job)
+        and isinstance(step, dict)
+        and _proof_step_shell_is_supported(step, job, document)
+        and _proof_working_directory_is_root(step, job, document)
+        and _proof_yaml_environment_is_empty(step, job, document)
+        and tuple(_meaningful_command_lines(step.get("run")))
+        == WORKSPACE_GUARD_LINES
+    )
+
+
+def _secret_exposure_paths''')
 
 rep(
 '''    if "pull_request_target" in events:
@@ -164,28 +195,6 @@ rep(
 ''',
 '''                "AIGOV-SECURITY-PROFILE-001_UNTRUSTED_JOB_RUNTIME", job_path,
                 "PR proof jobs must use an allowlisted runner and must not declare container or services",
-''')
-
-sub(
-r'''        for position, checkout_index in enumerate\(checkout_indexes\):
-.*?
-(?=    for secret_path in _secret_exposure_paths\(document\):)''',
-'''        for checkout_index in checkout_indexes:
-            guard_index = checkout_index + 1
-            if (
-                guard_index >= len(steps)
-                or not _contains_exact_head_assertion(
-                    steps[guard_index], job, document
-                )
-            ):
-                output.append(
-                    Diagnostic(
-                        "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING",
-                        f"{job_path}.steps[{checkout_index}]",
-                        "each checkout must be immediately followed by an unconditional clean-worktree exact-head guard",
-                    )
-                )
-
 ''')
 
 rep(
@@ -245,7 +254,7 @@ def _carrier_has_fresh_checkout_guard(
         return False
     return (
         _is_exact_checkout_step(steps[carrier_index - 2])
-        and _contains_exact_head_assertion(
+        and _contains_workspace_guard(
             steps[carrier_index - 1], job, document
         )
     )
