@@ -16,26 +16,22 @@ assert spec.loader is not None
 sys.modules[spec.name] = ai_governance
 spec.loader.exec_module(ai_governance)
 
+EXACT_REF = "${{ github.event.pull_request.head.sha }}"
+EXACT_ASSERTION = 'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"'
+CHECKOUT_SHA = "34e114876b0b11c390a56381ad16ebd13914f8d5"
+
 
 def codes(diagnostics):
     return {item.code for item in diagnostics}
 
 
-def secure_checkout_steps() -> str:
-    return """
-      - name: Checkout exact pull request head
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-      - name: Assert exact pull request head
-        shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-"""
-
-
-def workflow(trigger: str = "pull_request", permissions: str = "  contents: read") -> str:
-    return f"""name: test
+def workflow(
+    trigger: str = "pull_request",
+    permissions: str = "  contents: read",
+    assertion_run: str = EXACT_ASSERTION,
+    validation_run: str = "python scripts/check-ai-governance.py",
+) -> str:
+    return f'''name: test
 on: {trigger}
 permissions:
 {permissions}
@@ -43,10 +39,26 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-{secure_checkout_steps()}
+      - name: Checkout exact pull request head
+        uses: actions/checkout@{CHECKOUT_SHA}
+        with:
+          ref: {EXACT_REF}
+          persist-credentials: false
+      - name: Assert exact pull request head
+        shell: bash
+        run: {json.dumps(assertion_run)}
       - name: Validate
-        run: python scripts/check-ai-governance.py
-"""
+        run: {json.dumps(validation_run)}
+'''
+
+
+def evidence_rule():
+    coverage = copy.deepcopy(
+        ai_governance.read_yaml(ROOT / "planning" / "AI_GOVERNANCE_COVERAGE.yml")
+    )
+    return next(
+        item for item in coverage["rules"] if item["rule_id"] == "AIGOV-EVIDENCE-001"
+    )
 
 
 def test_repository_validation_passes():
@@ -167,13 +179,7 @@ def test_github_actions_loader_preserves_yaml_11_boolean_words():
     }
 
 
-@pytest.mark.parametrize(
-    "trigger",
-    [
-        "pull_request",
-        "[pull_request]",
-    ],
-)
+@pytest.mark.parametrize("trigger", ["pull_request", "[pull_request]"])
 def test_scalar_and_list_pr_triggers_are_inspected(trigger):
     text = workflow(
         trigger=trigger,
@@ -186,28 +192,23 @@ def test_scalar_and_list_pr_triggers_are_inspected(trigger):
 
 def test_mapping_pr_trigger_is_inspected():
     text = workflow().replace(
-        "on: pull_request",
-        "on:\n  pull_request:",
-    ).replace(
-        "  contents: read",
-        "  contents: write",
-    )
+        "on: pull_request", "on:\n  pull_request:"
+    ).replace("  contents: read", "  contents: write")
     assert "AIGOV-SECURITY-PROFILE-001_PERMISSIONS_NOT_MINIMAL" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
 
 
 def test_pull_request_target_is_rejected_fail_closed():
-    text = workflow(trigger="pull_request_target")
     assert "AIGOV-SECURITY-PROFILE-001_PULL_REQUEST_TARGET_FORBIDDEN" in codes(
-        ai_governance.validate_workflow_text("workflow.yml", text)
+        ai_governance.validate_workflow_text(
+            "workflow.yml", workflow(trigger="pull_request_target")
+        )
     )
 
 
 def test_extra_write_permission_is_rejected():
-    text = workflow(
-        permissions="  contents: read\n  pull-requests: write",
-    )
+    text = workflow(permissions="  contents: read\n  pull-requests: write")
     assert "AIGOV-SECURITY-PROFILE-001_PERMISSIONS_NOT_MINIMAL" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
@@ -215,11 +216,11 @@ def test_extra_write_permission_is_rejected():
 
 def test_secure_checkout_does_not_mask_later_insecure_checkout():
     text = workflow().replace(
-        "      - name: Validate\n        run: python scripts/check-ai-governance.py",
-        """      - name: Insecure second checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        "      - name: Validate\n        run: \"python scripts/check-ai-governance.py\"",
+        f'''      - name: Insecure second checkout
+        uses: actions/checkout@{CHECKOUT_SHA}
       - name: Validate
-        run: python scripts/check-ai-governance.py""",
+        run: "python scripts/check-ai-governance.py"''',
     )
     found = codes(ai_governance.validate_workflow_text("workflow.yml", text))
     assert "AIGOV-SECURITY-PROFILE-001_NOT_EXACT_HEAD" in found
@@ -228,37 +229,34 @@ def test_secure_checkout_does_not_mask_later_insecure_checkout():
 
 
 def test_inline_yaml_checkout_mapping_is_inspected():
-    text = """name: inline
+    text = f'''name: inline
 on: [pull_request]
-permissions: {contents: read}
+permissions: {{contents: read}}
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - {name: Inline checkout, uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5, with: {ref: "${{ github.event.pull_request.head.sha }}", persist-credentials: true}}
-      - {name: Assert, shell: bash, run: 'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"'}
-"""
+      - {{name: Inline checkout, uses: actions/checkout@{CHECKOUT_SHA}, with: {{ref: "{EXACT_REF}", persist-credentials: true}}}}
+      - {{name: Assert, shell: bash, run: '{EXACT_ASSERTION}'}}
+'''
     assert "AIGOV-SECURITY-PROFILE-001_CREDENTIAL_PERSISTENCE" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
 
 
-def test_mutable_step_and_reusable_workflow_actions_are_rejected():
-    step_text = workflow().replace(
-        "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-        "actions/checkout@v4",
-    )
+def test_mutable_step_and_remote_reusable_workflow_actions_are_rejected():
+    step_text = workflow().replace(f"actions/checkout@{CHECKOUT_SHA}", "actions/checkout@v4")
     assert "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF" in codes(
         ai_governance.validate_workflow_text("step.yml", step_text)
     )
-    reusable = """name: reusable
+    reusable = '''name: reusable
 on: pull_request
 permissions:
   contents: read
 jobs:
   call:
     uses: owner/repo/.github/workflows/check.yml@main
-"""
+'''
     assert "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF" in codes(
         ai_governance.validate_workflow_text("reusable.yml", reusable)
     )
@@ -274,12 +272,12 @@ jobs:
     ],
 )
 def test_direct_secret_reference_forms_are_rejected(secret_value):
-    text = workflow().replace(
-        "      - name: Validate\n        run: python scripts/check-ai-governance.py",
-        f"""      - name: Validate
+    text = workflow(validation_run="python scripts/check-ai-governance.py").replace(
+        '      - name: Validate\n        run: "python scripts/check-ai-governance.py"',
+        f'''      - name: Validate
         env:
           TOKEN: {json.dumps(secret_value)}
-        run: python scripts/check-ai-governance.py""",
+        run: "python scripts/check-ai-governance.py"''',
     )
     assert "AIGOV-SECURITY-PROFILE-001_PR_SECRET_EXPOSURE" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
@@ -287,7 +285,7 @@ def test_direct_secret_reference_forms_are_rejected(secret_value):
 
 
 def test_secrets_inherit_is_rejected():
-    text = """name: reusable
+    text = '''name: reusable
 on: pull_request
 permissions:
   contents: read
@@ -295,7 +293,7 @@ jobs:
   call:
     uses: owner/repo/.github/workflows/check.yml@0123456789abcdef0123456789abcdef01234567
     secrets: inherit
-"""
+'''
     assert "AIGOV-SECURITY-PROFILE-001_PR_SECRET_EXPOSURE" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
@@ -313,6 +311,115 @@ def test_unsupported_public_profile_is_rejected():
     )
 
 
+@pytest.mark.parametrize(
+    "fake_assertion",
+    [
+        f"echo {json.dumps(EXACT_ASSERTION)}",
+        f"# {EXACT_ASSERTION}",
+        f"ASSERTION={json.dumps(EXACT_ASSERTION)}",
+        f"printf '%s\\n' {json.dumps(EXACT_ASSERTION)}",
+    ],
+)
+def test_non_executing_exact_head_assertion_text_is_rejected(fake_assertion):
+    found = codes(
+        ai_governance.validate_workflow_text(
+            "workflow.yml", workflow(assertion_run=fake_assertion)
+        )
+    )
+    assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in found
+
+
+def test_local_reusable_workflow_is_inspected_recursively(tmp_path):
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "caller.yml").write_text(
+        '''name: caller
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  call:
+    uses: ./.github/workflows/insecure.yml
+''',
+        encoding="utf-8",
+    )
+    (workflows / "insecure.yml").write_text(
+        f'''name: insecure
+on: workflow_call
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{CHECKOUT_SHA}
+''',
+        encoding="utf-8",
+    )
+    found = codes(ai_governance.validate_workflows(tmp_path))
+    assert "AIGOV-SECURITY-PROFILE-001_NOT_EXACT_HEAD" in found
+    assert "AIGOV-SECURITY-PROFILE-001_CREDENTIAL_PERSISTENCE" in found
+    assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in found
+
+
+def test_secure_local_reusable_workflow_is_accepted(tmp_path):
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "caller.yml").write_text(
+        '''name: caller
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  call:
+    uses: ./.github/workflows/secure.yml
+''',
+        encoding="utf-8",
+    )
+    (workflows / "secure.yml").write_text(
+        f'''name: secure
+on: workflow_call
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{CHECKOUT_SHA}
+        with:
+          ref: {EXACT_REF}
+          persist-credentials: false
+      - run: {json.dumps(EXACT_ASSERTION)}
+''',
+        encoding="utf-8",
+    )
+    assert ai_governance.validate_workflows(tmp_path) == []
+
+
+def test_local_reusable_workflow_cycle_is_rejected(tmp_path):
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "caller.yml").write_text(
+        '''name: caller
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  call:
+    uses: ./.github/workflows/a.yml
+''',
+        encoding="utf-8",
+    )
+    (workflows / "a.yml").write_text(
+        '''name: a
+on: workflow_call
+jobs:
+  call:
+    uses: ./.github/workflows/caller.yml
+''',
+        encoding="utf-8",
+    )
+    assert "AIGOV-SECURITY-PROFILE-001_REUSABLE_WORKFLOW_CYCLE" in codes(
+        ai_governance.validate_workflows(tmp_path)
+    )
+
+
 def test_coverage_rule_set_is_fail_closed():
     coverage = copy.deepcopy(
         ai_governance.read_yaml(ROOT / "planning" / "AI_GOVERNANCE_COVERAGE.yml")
@@ -327,10 +434,10 @@ def test_coverage_status_cannot_exceed_verified_carriers():
     coverage = copy.deepcopy(
         ai_governance.read_yaml(ROOT / "planning" / "AI_GOVERNANCE_COVERAGE.yml")
     )
-    evidence_rule = next(
+    rule = next(
         item for item in coverage["rules"] if item["rule_id"] == "AIGOV-EVIDENCE-001"
     )
-    evidence_rule["carriers"]["CI_step"] = None
+    rule["carriers"]["CI_step"] = None
     assert "AIGOV-COVERAGE-001_OVERCLAIMED_STATUS" in codes(
         ai_governance.validate_coverage_semantics(coverage)
     )
@@ -356,9 +463,7 @@ def test_nonexistent_ci_job_and_step_are_not_verified_carriers():
     rule = next(
         item for item in coverage["rules"] if item["rule_id"] == "AIGOV-EVIDENCE-001"
     )
-    rule["carriers"]["CI_step"] = (
-        "README.md / nonexistent_job / nonexistent_step"
-    )
+    rule["carriers"]["CI_step"] = "README.md / nonexistent_job / nonexistent_step"
     assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(
         ai_governance.validate_coverage_semantics(coverage)
     )
@@ -389,22 +494,42 @@ def test_ci_path_filters_must_cover_authoritative_carriers(tmp_path):
         ),
         encoding="utf-8",
     )
-    rule = {
-        "rule_id": "AIGOV-EVIDENCE-001",
-        "carriers": {
-            "prose_source": "docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md#Evidence States",
-            "schema_carrier": "planning/ai-governance-coverage.schema.json#/$defs/evidence_claim",
-            "validator_rule": "scripts/check-ai-governance.py::validate_evidence_claim",
-            "valid_fixture": "fixtures/ai-governance/valid/cases.json",
-            "invalid_fixture": "fixtures/ai-governance/invalid/cases.json",
-            "CI_step": ".github/workflows/validate.yml / validate / Validate",
-        },
-    }
+    rule = evidence_rule()
+    rule["carriers"]["CI_step"] = ".github/workflows/validate.yml / validate / Validate"
     passed, diagnostics = ai_governance._verify_ci_step(
         rule["carriers"]["CI_step"], tmp_path, rule
     )
     assert passed is False
     assert "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING" in codes(diagnostics)
+
+
+def test_ci_step_must_execute_validator_not_echo_its_path(tmp_path):
+    workflow_path = tmp_path / ".github" / "workflows" / "validate.yml"
+    workflow_path.parent.mkdir(parents=True)
+    workflow_path.write_text(
+        workflow(validation_run="echo scripts/check-ai-governance.py"),
+        encoding="utf-8",
+    )
+    rule = evidence_rule()
+    rule["carriers"]["CI_step"] = ".github/workflows/validate.yml / validate / Validate"
+    passed, diagnostics = ai_governance._verify_ci_step(
+        rule["carriers"]["CI_step"], tmp_path, rule
+    )
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+def test_ci_step_accepts_actual_validator_command(tmp_path):
+    workflow_path = tmp_path / ".github" / "workflows" / "validate.yml"
+    workflow_path.parent.mkdir(parents=True)
+    workflow_path.write_text(workflow(), encoding="utf-8")
+    rule = evidence_rule()
+    rule["carriers"]["CI_step"] = ".github/workflows/validate.yml / validate / Validate"
+    passed, diagnostics = ai_governance._verify_ci_step(
+        rule["carriers"]["CI_step"], tmp_path, rule
+    )
+    assert passed is True
+    assert diagnostics == []
 
 
 def test_human_approval_and_coach_truth_are_rejected():
