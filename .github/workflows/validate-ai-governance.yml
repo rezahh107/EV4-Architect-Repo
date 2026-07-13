@@ -46,9 +46,16 @@ jobs:
               '\n"""\ncurrent_tests = TESTS.read_text(encoding="utf-8")',
               1,
           )
+          old_message = 'f"expected {expected}, found {actual}"'
+          new_message = (
+              'f"expected {expected}, found {actual}; "'
+              'f"old={old[:180]!r}"'
+          )
+          if text.count(old_message) != 1:
+              raise SystemExit('fail-closed diagnostic message mismatch')
+          text = text.replace(old_message, new_message, 1)
           path.write_text(text, encoding='utf-8')
           PY
-          echo "extracted_lines=$(wc -l < /tmp/pr26-repair.py)"
           python -m py_compile /tmp/pr26-repair.py
           set +e
           python /tmp/pr26-repair.py > /tmp/repair-output.txt 2>&1
