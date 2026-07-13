@@ -34,8 +34,20 @@ jobs:
             | sed 's/^          //' > /tmp/pr26-repair.py
           python - <<'PY'
           from pathlib import Path
+
           path = Path('/tmp/pr26-repair.py')
           text = path.read_text(encoding='utf-8')
+
+          def splice(start: str, end: str, replacement: str) -> None:
+              global text
+              if text.count(start) != 1 or text.count(end) != 1:
+                  raise SystemExit(
+                      f'fail-closed section mismatch: {start!r} / {end!r}'
+                  )
+              before, remainder = text.split(start, 1)
+              _, after = remainder.split(end, 1)
+              text = before + replacement + after
+
           opening = "additions = r'''"
           closing = "\n'''\ncurrent_tests = TESTS.read_text(encoding=\"utf-8\")"
           if text.count(opening) != 1 or text.count(closing) != 1:
@@ -46,6 +58,166 @@ jobs:
               '\n"""\ncurrent_tests = TESTS.read_text(encoding="utf-8")',
               1,
           )
+
+          permissions_old = '''        effective_permissions = job.get("permissions", workflow_permissions)
+          if not _permission_is_minimal(effective_permissions):
+              output.append(
+                  Diagnostic(
+                      "AIGOV-SECURITY-PROFILE-001_PERMISSIONS_NOT_MINIMAL",
+                      job_path,
+                      "effective permissions must be exactly contents: read",
+                  )
+              )
+
+          reusable_target = job.get("uses")
+          '''.replace('          if ', '        if ', 1).replace(
+              '              output.append', '            output.append', 1
+          ).replace('                  Diagnostic', '                Diagnostic', 1).replace(
+              '                      "AIGOV', '                    "AIGOV', 1
+          ).replace('                      job_path', '                    job_path', 1).replace(
+              '                      "effective', '                    "effective', 1
+          ).replace('                  )\n              )', '                )\n            )', 1).replace(
+              '\n          reusable_target', '\n        reusable_target', 1
+          ).replace('\n          ', '\n')
+          permissions_new = permissions_old.replace(
+              '\n        reusable_target = job.get("uses")\n',
+              '\n        if not _proof_job_execution_context_is_trusted(job):\n'
+              '            output.append(\n'
+              '                Diagnostic(\n'
+              '                    "AIGOV-SECURITY-PROFILE-001_UNTRUSTED_JOB_RUNTIME",\n'
+              '                    job_path,\n'
+              '                    "PR proof jobs must not declare container or services",\n'
+              '                )\n'
+              '            )\n\n'
+              '        reusable_target = job.get("uses")\n',
+          )
+          splice(
+              'permissions_block = ',
+              'replace_exact(SCRIPT, permissions_block, hardened_permissions_block)\n',
+              f'permissions_block = {permissions_old!r}\n'
+              f'hardened_permissions_block = {permissions_new!r}\n'
+              'replace_exact(SCRIPT, permissions_block, hardened_permissions_block)\n',
+          )
+
+          action_old = '''            if isinstance(target, str):
+                if _is_remote_action(target) and not REMOTE_ACTION_SHA.fullmatch(target):
+                    output.append(
+                        Diagnostic(
+                            "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF",
+                            f"{step_path}.uses",
+                            f"mutable action ref: {target}",
+                        )
+                    )
+                if _is_checkout(target):
+'''
+          action_new = '''            if isinstance(target, str):
+                output.extend(
+                    _validate_action_reference(target, f"{step_path}.uses", root)
+                )
+                if _is_checkout(target):
+'''
+          splice(
+              'old_action_loop = ',
+              'replace_exact(SCRIPT, old_action_loop, new_action_loop)\n',
+              f'old_action_loop = {action_old!r}\n'
+              f'new_action_loop = {action_new!r}\n'
+              'replace_exact(SCRIPT, old_action_loop, new_action_loop)\n',
+          )
+
+          exec_old = '''def _words_execute_validator(words: list[str], validator_file: str) -> bool:
+    return (
+        len(words) == 2
+        and Path(words[0]).name in {"python", "python3"}
+        and words[1] == validator_file
+    )
+
+
+def _words_execute_tests(
+    words: list[str], test_file: str = "tests/test_ai_governance.py"
+) -> bool:
+    if not words:
+        return False
+    executable = Path(words[0]).name
+    if executable in {"python", "python3"}:
+        if len(words) < 4 or words[1:3] != ["-m", "pytest"]:
+            return False
+        arguments = words[3:]
+    elif executable == "pytest":
+        arguments = words[1:]
+    else:
+        return False
+
+    allowed_options = {"-q", "--quiet"}
+    positional = [item for item in arguments if not item.startswith("-")]
+    options = [item for item in arguments if item.startswith("-")]
+    return positional == [test_file] and all(
+        item in allowed_options for item in options
+    )
+'''
+          exec_new = '''def _words_execute_validator(words: list[str], validator_file: str) -> bool:
+    return (
+        len(words) == 4
+        and Path(words[0]).name in {"python", "python3"}
+        and words[1:3] == ["-I", "-P"]
+        and words[3] == validator_file
+    )
+
+
+def _words_execute_tests(
+    words: list[str], test_file: str = "tests/test_ai_governance.py"
+) -> bool:
+    if not words or Path(words[0]).name not in {"python", "python3"}:
+        return False
+    return tuple(words[1:]) in {
+        (
+            "-I", "-P", "-m", "pytest", "-c", "/dev/null",
+            "--noconftest", "-q", test_file,
+        ),
+        (
+            "-I", "-P", "-m", "pytest", "-c", "/dev/null",
+            "--noconftest", "--quiet", test_file,
+        ),
+    }
+'''
+          splice(
+              'old_exec = ',
+              'replace_exact(SCRIPT, old_exec, new_exec)\n',
+              f'old_exec = {exec_old!r}\n'
+              f'new_exec = {exec_new!r}\n'
+              'replace_exact(SCRIPT, old_exec, new_exec)\n',
+          )
+
+          accepted_old = '''    [
+        "python scripts/check-ai-governance.py",
+        "python3 scripts/check-ai-governance.py",
+        "pytest -q tests/test_ai_governance.py",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_ai_governance.py",
+        "python -m pytest --quiet tests/test_ai_governance.py",
+    ],
+'''
+          accepted_new = '''    [
+        "python -I -P scripts/check-ai-governance.py",
+        "python3 -I -P scripts/check-ai-governance.py",
+        (
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= "
+            "PYTEST_PLUGINS= python -I -P -m pytest -c /dev/null "
+            "--noconftest -q tests/test_ai_governance.py"
+        ),
+        (
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= "
+            "PYTEST_PLUGINS= python3 -I -P -m pytest -c /dev/null "
+            "--noconftest --quiet tests/test_ai_governance.py"
+        ),
+    ],
+'''
+          splice(
+              'old_accepted = ',
+              'replace_exact(TESTS, old_accepted, new_accepted)\n',
+              f'old_accepted = {accepted_old!r}\n'
+              f'new_accepted = {accepted_new!r}\n'
+              'replace_exact(TESTS, old_accepted, new_accepted)\n',
+          )
+
           old_message = 'f"expected {expected}, found {actual}"'
           new_message = (
               'f"expected {expected}, found {actual}; "'
