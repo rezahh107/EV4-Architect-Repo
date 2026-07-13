@@ -1,0 +1,170 @@
+schema_version: 1
+repository: rezahh107/EV4-Architect-Repo
+
+standard:
+  title: AI Authority Deterministic Governance — Source of Truth
+  version: 1.0.2
+  sha256: ba74929aa39a2b375b058b33783d4f5a0abf70e27ffde4297a58750fff7fd320
+
+adoption:
+  plan_id: GOV-ADOPTION-EV4-ARCHITECT-REPO-C9109F9-V1
+  plan_version: 1
+  increment_id: ARCH-GOV-ARTIFACT-001
+
+security_profile:
+  profile_id: personal_public_repository_minimum
+  repository_visibility: public
+  activation_trigger: repository_is_public
+  minimum_controls:
+    - immutable_action_pins
+    - minimum_explicit_permissions
+    - exact_head_checkout_when_repository_is_checked_out
+    - persist_credentials_false
+    - fail_closed_head_identity
+    - no_pull_request_secret_exposure
+  enterprise_controls:
+    status: intentionally_out_of_scope
+    reason: personal_repository_minimum_security_profile
+    does_not_block:
+      - implementation
+      - independent_ai_review
+      - GREEN_merge_recommendation
+
+rules:
+  - rule_id: AIGOV-START-001
+    risk: Critical
+    session_scope: per_session
+    trigger: before repository analysis or modification
+    predicate:
+      - live repository identified
+      - default branch identified
+      - authority files inspected
+      - current authorized work identified
+      - dependencies checked
+    enforcement_action: block execution
+    recovery_action: repair_request
+    minimum_required_status: validator_backed
+    carriers:
+      prose_source: AGENTS.md#Read First
+      schema_carrier: planning/ai-governance-coverage.schema.json#/$defs/startup_session
+      validator_rule: scripts/check-ai-governance.py::validate_startup_session
+      valid_fixture: fixtures/ai-governance/valid/cases.json
+      invalid_fixture: fixtures/ai-governance/invalid/cases.json
+      CI_step: .github/workflows/validate-ai-governance.yml / validate / Validate AI governance coverage and fixtures
+      sequence_test: null
+      downstream_contract: null
+    status:
+      enforcement_status: validator_backed
+      evidence_state: REPOSITORY_CONFIRMED
+    enforcement_scope: repository startup evidence artifacts validated by the repository checker
+    limitations:
+      - no runtime agent harness or pre-analysis execution hook exists
+
+  - rule_id: AIGOV-EVIDENCE-001
+    risk: Critical
+    session_scope: per_artifact
+    trigger: when a material claim or readiness conclusion is emitted
+    predicate:
+      - claim has evidence state
+      - source supports exact claim scope
+      - AI signal is not represented as factual proof
+      - unknown remains unknown
+    enforcement_action: reject or downgrade claim
+    recovery_action: repair_request
+    minimum_required_status: ci_enforced
+    carriers:
+      prose_source: docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md#Evidence States
+      schema_carrier: planning/ai-governance-coverage.schema.json#/$defs/evidence_claim
+      validator_rule: scripts/check-ai-governance.py::validate_evidence_claim
+      valid_fixture: fixtures/ai-governance/valid/cases.json
+      invalid_fixture: fixtures/ai-governance/invalid/cases.json
+      CI_step: .github/workflows/validate-ai-governance.yml / validate / Validate AI governance coverage and fixtures
+      sequence_test: null
+      downstream_contract: null
+    status:
+      enforcement_status: ci_enforced
+      evidence_state: REPOSITORY_CONFIRMED
+    enforcement_scope: AI governance evidence artifacts and evidence-classification fixtures
+    limitations:
+      - downstream product artifacts are not yet bound to this evidence contract
+
+  - rule_id: AIGOV-SECURITY-PROFILE-001
+    risk: High
+    session_scope: cross_turn
+    trigger: repository bootstrap, governance adoption, or security activation trigger
+    predicate:
+      - active security profile is explicit
+      - intentionally omitted enterprise controls are recorded
+      - minimum security controls remain active
+      - activation triggers are evaluated
+      - out-of-scope enterprise controls do not create a false blocking gap
+    enforcement_action: repair missing profile or block minimum-control violation
+    recovery_action: repair_or_activate_bounded_security_increment
+    minimum_required_status: validator_backed
+    carriers:
+      prose_source: docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md#Minimum Security Profile
+      schema_carrier: planning/ai-governance-coverage.schema.json#/$defs/security_profile_definition
+      validator_rule: scripts/check-ai-governance.py::validate_security_profile
+      valid_fixture: fixtures/ai-governance/valid/cases.json
+      invalid_fixture: fixtures/ai-governance/invalid/cases.json
+      CI_step: .github/workflows/validate-ai-governance.yml / validate / Validate AI governance coverage and fixtures
+      sequence_test: null
+      downstream_contract: null
+    status:
+      enforcement_status: ci_enforced
+      evidence_state: REPOSITORY_CONFIRMED
+    enforcement_scope: active pull-request workflows and the explicit public-repository profile
+    limitations:
+      - enterprise and industrial security controls remain intentionally out of scope
+
+  - rule_id: AIGOV-HUMAN-001
+    risk: High
+    session_scope: per_artifact
+    trigger: when governance contracts or status transitions are defined
+    predicate:
+      - no human technical approval is required
+      - user action is not labeled technical evidence
+      - external legal or contractual human requirement is evidence-linked when applicable
+    enforcement_action: reject ambiguous approval contract
+    recovery_action: repair_request
+    minimum_required_status: validator_backed
+    carriers:
+      prose_source: docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md#Technical Decision and Evidence Authority
+      schema_carrier: planning/ai-governance-coverage.schema.json#/$defs/approval_contract
+      validator_rule: scripts/check-ai-governance.py::validate_approval_contract
+      valid_fixture: fixtures/ai-governance/valid/cases.json
+      invalid_fixture: fixtures/ai-governance/invalid/cases.json
+      CI_step: .github/workflows/validate-ai-governance.yml / validate / Validate AI governance coverage and fixtures
+      sequence_test: null
+      downstream_contract: null
+    status:
+      enforcement_status: ci_enforced
+      evidence_state: REPOSITORY_CONFIRMED
+    enforcement_scope: AGENTS.md, the repository governance policy, and approval-contract fixtures
+    limitations: []
+
+  - rule_id: AIGOV-COACH-001
+    risk: High
+    session_scope: per_artifact
+    trigger: when AI critique is recorded
+    predicate:
+      - evidence type is AI_REVIEW_SIGNAL or coach_critique
+      - critique does not claim technical truth or real-world outcome
+    enforcement_action: downgrade or reject evidence classification
+    recovery_action: repair_request
+    minimum_required_status: validator_backed
+    carriers:
+      prose_source: docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md#Technical Decision and Evidence Authority
+      schema_carrier: planning/ai-governance-coverage.schema.json#/$defs/coach_critique
+      validator_rule: scripts/check-ai-governance.py::validate_coach_critique
+      valid_fixture: fixtures/ai-governance/valid/cases.json
+      invalid_fixture: fixtures/ai-governance/invalid/cases.json
+      CI_step: .github/workflows/validate-ai-governance.yml / validate / Run AI governance regression tests
+      sequence_test: null
+      downstream_contract: null
+    status:
+      enforcement_status: fixture_tested
+      evidence_state: REPOSITORY_CONFIRMED
+    enforcement_scope: coach-critique artifact fixtures
+    limitations:
+      - no canonical runtime coach-critique artifact is bound to this validator
