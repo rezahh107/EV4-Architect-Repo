@@ -32,6 +32,22 @@ jobs:
           cd /tmp/repository
           sed -n '34,719p' .github/workflows/pr26-repair-proof-surface.yml \
             | sed 's/^          //' > /tmp/pr26-repair.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/pr26-repair.py')
+          text = path.read_text(encoding='utf-8')
+          opening = "additions = r'''"
+          closing = "\n'''\ncurrent_tests = TESTS.read_text(encoding=\"utf-8\")"
+          if text.count(opening) != 1 or text.count(closing) != 1:
+              raise SystemExit('fail-closed additions delimiter mismatch')
+          text = text.replace(opening, 'additions = r"""', 1)
+          text = text.replace(
+              closing,
+              '\n"""\ncurrent_tests = TESTS.read_text(encoding="utf-8")',
+              1,
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
           echo "extracted_lines=$(wc -l < /tmp/pr26-repair.py)"
           python -m py_compile /tmp/pr26-repair.py
           set +e
@@ -39,4 +55,5 @@ jobs:
           status=$?
           set -e
           cat /tmp/repair-output.txt
+          git status --short
           exit "${status}"
