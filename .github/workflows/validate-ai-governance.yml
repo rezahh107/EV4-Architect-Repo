@@ -30,7 +30,7 @@ jobs:
             -o /tmp/repository.tar.gz
           tar -xzf /tmp/repository.tar.gz --strip-components=1 -C /tmp/repository
           cd /tmp/repository
-          sed -n '34,719p' .github/workflows/pr26-repair-proof-surface.yml \
+          sed -n '32,719p' .github/workflows/pr26-repair-proof-surface.yml \
             | sed 's/^          //' > /tmp/pr26-repair.py
           python - <<'PY'
           from pathlib import Path
@@ -55,5 +55,4 @@ jobs:
           status=$?
           set -e
           cat /tmp/repair-output.txt
-          git status --short
           exit "${status}"
