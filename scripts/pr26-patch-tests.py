@@ -26,16 +26,16 @@ text = text.rstrip() + r'''
 
 # PRF-002/003 trigger, dependency, runner, and workspace regressions
 
-def test_legacy_head_only_assertion_is_rejected():
+def test_legacy_head_only_assertion_is_not_ci_enforced(tmp_path):
     weak = (
         'test "$(git rev-parse HEAD)" = '
         '"${{ github.event.pull_request.head.sha }}"'
     )
-    assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
-        ai_governance.validate_workflow_text(
-            "workflow.yml", workflow(assertion_run=weak)
-        )
+    passed, diagnostics = verify_temp_ci_step(
+        tmp_path, workflow(assertion_run=weak)
     )
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
 
 
 def test_workspace_tamper_between_guard_and_carrier_invalidates_ci_proof(
@@ -53,7 +53,9 @@ def test_workspace_tamper_between_guard_and_carrier_invalidates_ci_proof(
     assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
 
 
-def test_workspace_tamper_between_checkout_and_guard_is_rejected():
+def test_workspace_tamper_between_checkout_and_guard_invalidates_ci_proof(
+    tmp_path,
+):
     text = workflow().replace(
         "      - name: Assert exact pull request head\n",
         "      - name: Tamper before guard\n"
@@ -61,9 +63,9 @@ def test_workspace_tamper_between_checkout_and_guard_is_rejected():
         "        run: echo '# tampered' >> scripts/check-ai-governance.py\n"
         "      - name: Assert exact pull request head\n",
     )
-    assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
-        ai_governance.validate_workflow_text("workflow.yml", text)
-    )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
 
 
 @pytest.mark.parametrize(
