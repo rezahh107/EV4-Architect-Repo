@@ -30,6 +30,20 @@ jobs:
             -o /tmp/repository.tar.gz
           tar -xzf /tmp/repository.tar.gz --strip-components=1 -C /tmp/repository
           cd /tmp/repository
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/pr26_repair.py')
+          text = path.read_text(encoding='utf-8')
+          block = '''rep(
+              tests,
+              '        run: "python scripts/check-ai-governance.py"\\n',
+              '        run: "python -I -P scripts/check-ai-governance.py"\\n',
+          )
+          '''
+          if text.count(block) != 1:
+              raise SystemExit('fail-closed idempotence block mismatch')
+          path.write_text(text.replace(block, '', 1), encoding='utf-8')
+          PY
           set +e
           python .github/pr26_repair.py > /tmp/repair-output.txt 2>&1
           status=$?
