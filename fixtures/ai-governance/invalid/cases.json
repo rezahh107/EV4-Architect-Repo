@@ -67,6 +67,54 @@
       }
     },
     {
+      "case_id": "repository-labeled-self-asserted-merge",
+      "fixture_type": "evidence_claim",
+      "expected_diagnostic": "AIGOV-EVIDENCE-001_SELF_ASSERTED_OUTCOME",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-BAD-REPOSITORY-MERGE",
+        "claim_kind": "merge_status",
+        "claim_text": "The implementation claims the PR is merged.",
+        "evidence_state": "REPOSITORY_CONFIRMED",
+        "source_type": "repository",
+        "source_reference": "self-authored/repository-label",
+        "unknown_input": false,
+        "self_asserted_outcome": true
+      }
+    },
+    {
+      "case_id": "ci-labeled-self-asserted-green",
+      "fixture_type": "evidence_claim",
+      "expected_diagnostic": "AIGOV-EVIDENCE-001_SELF_ASSERTED_OUTCOME",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-BAD-CI-GREEN",
+        "claim_kind": "ci_status",
+        "claim_text": "The implementation claims CI is green.",
+        "evidence_state": "CI_CONFIRMED",
+        "source_type": "ci",
+        "source_reference": "self-authored/ci-label",
+        "unknown_input": false,
+        "self_asserted_outcome": true
+      }
+    },
+    {
+      "case_id": "runtime-labeled-self-asserted-completion",
+      "fixture_type": "evidence_claim",
+      "expected_diagnostic": "AIGOV-EVIDENCE-001_SELF_ASSERTED_OUTCOME",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-BAD-RUNTIME-COMPLETE",
+        "claim_kind": "runtime_status",
+        "claim_text": "The implementation claims runtime completion.",
+        "evidence_state": "RUNTIME_CONFIRMED",
+        "source_type": "runtime",
+        "source_reference": "self-authored/runtime-label",
+        "unknown_input": false,
+        "self_asserted_outcome": true
+      }
+    },
+    {
       "case_id": "public-repository-without-profile",
       "fixture_type": "security_profile_fixture",
       "expected_diagnostic": "AIGOV-SECURITY-PROFILE-001_MISSING_PROFILE",
@@ -76,6 +124,25 @@
         "active_profile": null,
         "minimum_controls": [],
         "enterprise_controls_status": "unknown"
+      }
+    },
+    {
+      "case_id": "public-repository-with-unsupported-profile",
+      "fixture_type": "security_profile_fixture",
+      "expected_diagnostic": "AIGOV-SECURITY-PROFILE-001_UNSUPPORTED_PROFILE",
+      "payload": {
+        "artifact_type": "security_profile",
+        "repository_visibility": "public",
+        "active_profile": "unsupported_public_profile",
+        "minimum_controls": [
+          "immutable_action_pins",
+          "minimum_explicit_permissions",
+          "exact_head_checkout_when_repository_is_checked_out",
+          "persist_credentials_false",
+          "fail_closed_head_identity",
+          "no_pull_request_secret_exposure"
+        ],
+        "enterprise_controls_status": "intentionally_out_of_scope"
       }
     },
     {
