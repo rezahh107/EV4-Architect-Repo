@@ -17,14 +17,42 @@ sys.modules[spec.name] = ai_governance
 spec.loader.exec_module(ai_governance)
 
 EXACT_REF = "${{ github.event.pull_request.head.sha }}"
+SETUP_PYTHON_SHA = "a26af69be951a213d495a4c3e4e4022e16d87065"
+CHECKOUT_SHA = "34e114876b0b11c390a56381ad16ebd13914f8d5"
+CANONICAL_SHELL = "/usr/bin/sh -e {0}"
+VALIDATOR_PYTHON_REF = "${{ steps.setup-validator-python.outputs.python-path }}"
+TEST_PYTHON_REF = "${{ steps.setup-test-python.outputs.python-path }}"
+DEPENDENCIES = "'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'"
+VALIDATOR_INSTALL = (
+    f'"{VALIDATOR_PYTHON_REF}" -I -P -m pip install {DEPENDENCIES}'
+)
+TEST_INSTALL = f'"{TEST_PYTHON_REF}" -I -P -m pip install {DEPENDENCIES}'
+VALIDATOR_COMMAND = (
+    f'"{VALIDATOR_PYTHON_REF}" -I -P scripts/check-ai-governance.py'
+)
+TEST_COMMAND = (
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= "
+    f'"{TEST_PYTHON_REF}" -I -P -m pytest -c /dev/null '
+    "--noconftest -q tests/test_ai_governance.py"
+)
 EXACT_ASSERTION = (
     "set -eu\n"
-    'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"\n'
-    "git diff --exit-code -- .\n"
-    "git diff --cached --exit-code -- .\n"
-    'test -z "$(git status --porcelain=v1 --untracked-files=all)"\n'
+    f'test -x "{VALIDATOR_PYTHON_REF}"\n'
+    'test "$(/usr/bin/git rev-parse HEAD)" = '
+    '"${{ github.event.pull_request.head.sha }}"\n'
+    "/usr/bin/git diff --exit-code -- .\n"
+    "/usr/bin/git diff --cached --exit-code -- .\n"
+    'test -z "$(/usr/bin/git status --porcelain=v1 --untracked-files=all)"\n'
 )
-CHECKOUT_SHA = "34e114876b0b11c390a56381ad16ebd13914f8d5"
+TEST_ASSERTION = (
+    "set -eu\n"
+    f'test -x "{TEST_PYTHON_REF}"\n'
+    'test "$(/usr/bin/git rev-parse HEAD)" = '
+    '"${{ github.event.pull_request.head.sha }}"\n'
+    "/usr/bin/git diff --exit-code -- .\n"
+    "/usr/bin/git diff --cached --exit-code -- .\n"
+    'test -z "$(/usr/bin/git status --porcelain=v1 --untracked-files=all)"\n'
+)
 
 
 def codes(diagnostics):
@@ -35,7 +63,7 @@ def workflow(
     trigger: str = "pull_request",
     permissions: str = "  contents: read",
     assertion_run: str = EXACT_ASSERTION,
-    validation_run: str = "python -I -P scripts/check-ai-governance.py",
+    validation_run: str = VALIDATOR_COMMAND,
     *,
     job_if=None,
     job_continue=None,
@@ -74,17 +102,59 @@ jobs:
   validate:
 {job_controls}    runs-on: ubuntu-latest
     steps:
+      - name: Set up trusted Python for validator
+        id: setup-validator-python
+        uses: actions/setup-python@{SETUP_PYTHON_SHA}
+        with:
+          python-version: '3.11'
+      - name: Install validation dependencies for validator
+        shell: {CANONICAL_SHELL}
+        run: {json.dumps(VALIDATOR_INSTALL)}
       - name: Checkout exact pull request head
         uses: actions/checkout@{CHECKOUT_SHA}
         with:
           ref: {EXACT_REF}
           persist-credentials: false
       - name: Assert exact pull request head
-{assertion_controls}        shell: bash
+{assertion_controls}        shell: {CANONICAL_SHELL}
         run: {json.dumps(assertion_run)}
       - name: Validate
-{validation_controls}        run: {json.dumps(validation_run)}
+{validation_controls}        shell: {CANONICAL_SHELL}
+        run: {json.dumps(validation_run)}
+      - name: Set up trusted Python for tests
+        id: setup-test-python
+        uses: actions/setup-python@{SETUP_PYTHON_SHA}
+        with:
+          python-version: '3.11'
+      - name: Install validation dependencies for tests
+        shell: {CANONICAL_SHELL}
+        run: {json.dumps(TEST_INSTALL)}
+      - name: Checkout exact pull request head for tests
+        uses: actions/checkout@{CHECKOUT_SHA}
+        with:
+          ref: {EXACT_REF}
+          persist-credentials: false
+      - name: Assert exact pull request head for tests
+        shell: {CANONICAL_SHELL}
+        run: {json.dumps(TEST_ASSERTION)}
+      - name: Run AI governance regression tests
+        shell: {CANONICAL_SHELL}
+        run: {json.dumps(TEST_COMMAND)}
 '''
+
+
+def workflow_document(text: str | None = None):
+    return ai_governance.load_actions_yaml(text or workflow())
+
+
+def render_workflow(document) -> str:
+    return ai_governance.yaml.safe_dump(document, sort_keys=False)
+
+
+def mutate_workflow(mutator, text: str | None = None) -> str:
+    document = workflow_document(text)
+    mutator(document)
+    return render_workflow(document)
 
 
 def write_ci_workflow(tmp_path: Path, text: str) -> Path:
@@ -94,7 +164,12 @@ def write_ci_workflow(tmp_path: Path, text: str) -> Path:
     return path
 
 
-def verify_temp_ci_step(tmp_path: Path, text: str):
+def verify_temp_ci_step(
+    tmp_path: Path,
+    text: str,
+    *,
+    step_name: str = "Validate",
+):
     write_ci_workflow(tmp_path, text)
     rule = {
         "rule_id": "AIGOV-EVIDENCE-001",
@@ -103,7 +178,7 @@ def verify_temp_ci_step(tmp_path: Path, text: str):
                 "scripts/check-ai-governance.py::validate_evidence_claim"
             ),
             "CI_step": (
-                ".github/workflows/validate.yml / validate / Validate"
+                f".github/workflows/validate.yml / validate / {step_name}"
             ),
         },
     }
@@ -269,18 +344,17 @@ def test_extra_write_permission_is_rejected():
 
 
 def test_secure_checkout_does_not_mask_later_insecure_checkout():
-    text = workflow().replace(
-        '      - name: Validate\n        run: "python -I -P scripts/check-ai-governance.py"',
-        f'''      - name: Insecure second checkout
-        uses: actions/checkout@{CHECKOUT_SHA}
-      - name: Validate
-        run: "python -I -P scripts/check-ai-governance.py"''',
-    )
+    def mutate(document):
+        steps = document["jobs"]["validate"]["steps"]
+        steps.insert(4, {
+            "name": "Insecure second checkout",
+            "uses": f"actions/checkout@{CHECKOUT_SHA}",
+        })
+    text = mutate_workflow(mutate)
     found = codes(ai_governance.validate_workflow_text("workflow.yml", text))
     assert "AIGOV-SECURITY-PROFILE-001_NOT_EXACT_HEAD" in found
     assert "AIGOV-SECURITY-PROFILE-001_CREDENTIAL_PERSISTENCE" in found
     assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in found
-
 
 def test_inline_yaml_checkout_mapping_is_inspected():
     text = f'''name: inline
@@ -328,13 +402,9 @@ jobs:
     ],
 )
 def test_direct_secret_reference_forms_are_rejected(secret_value):
-    text = workflow().replace(
-        '      - name: Validate\n        run: "python -I -P scripts/check-ai-governance.py"',
-        f'''      - name: Validate
-        env:
-          TOKEN: {json.dumps(secret_value)}
-        run: "python -I -P scripts/check-ai-governance.py"''',
-    )
+    def mutate(document):
+        document["jobs"]["validate"]["steps"][4]["env"] = {"TOKEN": secret_value}
+    text = mutate_workflow(mutate)
     assert "AIGOV-SECURITY-PROFILE-001_PR_SECRET_EXPOSURE" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
@@ -405,14 +475,12 @@ def test_assertion_step_must_be_unconditional_and_blocking(controls):
 
 
 def test_assertion_requires_supported_shell():
-    text = workflow().replace(
-        "        shell: bash",
-        "        shell: python",
-    )
+    def mutate(document):
+        document["jobs"]["validate"]["steps"][3]["shell"] = "python"
+    text = mutate_workflow(mutate)
     assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
-
 
 def test_literal_true_and_false_controls_are_accepted():
     assert ai_governance.validate_workflow_text(
@@ -595,71 +663,20 @@ def test_nonexistent_schema_pointer_is_not_a_verified_carrier():
 
 
 def test_ci_path_filters_must_cover_authoritative_carriers(tmp_path):
-    text = workflow().replace(
-        "on: pull_request",
-        "on:\n  pull_request:\n    paths:\n      - 'README.md'",
-    )
-    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    def mutate(document):
+        document["on"] = {"pull_request": {"paths": ["README.md"]}}
+    passed, diagnostics = verify_temp_ci_step(tmp_path, mutate_workflow(mutate))
     assert passed is False
-    assert "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING" in codes(diagnostics)
+    assert "AIGOV-COVERAGE-001_CI_TRIGGER_RESTRICTED" in codes(diagnostics)
 
-
-@pytest.mark.parametrize(
-    "validation_run",
-    [
-        "echo scripts/check-ai-governance.py",
-        "python -I -P scripts/check-ai-governance.py --help",
-        "pytest --collect-only tests/test_ai_governance.py",
-        "if false; then\n  python -I -P scripts/check-ai-governance.py\nfi",
-    ],
-)
-def test_ci_step_must_execute_validator_or_tests_for_real(
-    tmp_path, validation_run
-):
+def test_ci_step_accepts_only_canonical_validator_and_test_carriers(tmp_path):
+    passed, diagnostics = verify_temp_ci_step(tmp_path, workflow())
+    assert passed is True, diagnostics
+    assert diagnostics == []
     passed, diagnostics = verify_temp_ci_step(
         tmp_path,
-        workflow(validation_run=validation_run),
-    )
-    assert passed is False
-    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
-
-
-@pytest.mark.parametrize(
-    "controls",
-    [
-        {"validation_if": False},
-        {"validation_continue": True},
-        {"job_if": False},
-        {"job_continue": True},
-    ],
-)
-def test_ci_carrier_job_and_step_must_be_active_and_blocking(tmp_path, controls):
-    passed, diagnostics = verify_temp_ci_step(tmp_path, workflow(**controls))
-    assert passed is False
-    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
-
-
-@pytest.mark.parametrize(
-    "validation_run",
-    [
-        "python -I -P scripts/check-ai-governance.py",
-        "python3 -I -P scripts/check-ai-governance.py",
-        (
-            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= "
-            "PYTEST_PLUGINS= python -I -P -m pytest -c /dev/null "
-            "--noconftest -q tests/test_ai_governance.py"
-        ),
-        (
-            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= "
-            "PYTEST_PLUGINS= python3 -I -P -m pytest -c /dev/null "
-            "--noconftest --quiet tests/test_ai_governance.py"
-        ),
-    ],
-)
-def test_ci_step_accepts_bounded_real_commands(tmp_path, validation_run):
-    passed, diagnostics = verify_temp_ci_step(
-        tmp_path,
-        workflow(validation_run=validation_run),
+        workflow(),
+        step_name="Run AI governance regression tests",
     )
     assert passed is True, diagnostics
     assert diagnostics == []
@@ -687,25 +704,19 @@ def test_human_approval_and_coach_truth_are_rejected():
 
 # PRF-002/003 proof-context hardening regressions
 def test_custom_shell_cannot_bypass_exact_head_assertion():
-    text = workflow().replace(
-        "        shell: bash",
-        "        shell: bash -c 'exit 0' -- {0}",
-    )
+    def mutate(document):
+        document["jobs"]["validate"]["steps"][3]["shell"] = "bash -c 'exit 0' -- {0}"
+    text = mutate_workflow(mutate)
     assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
 
-
 def test_custom_shell_cannot_bypass_ci_carrier(tmp_path):
-    text = workflow().replace(
-        '      - name: Validate\n        run: "python -I -P scripts/check-ai-governance.py"',
-        "      - name: Validate\n        shell: bash -c 'exit 0' -- {0}\n"
-        '        run: "python -I -P scripts/check-ai-governance.py"',
-    )
-    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    def mutate(document):
+        document["jobs"]["validate"]["steps"][4]["shell"] = "bash -c 'exit 0' -- {0}"
+    passed, diagnostics = verify_temp_ci_step(tmp_path, mutate_workflow(mutate))
     assert passed is False
     assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
-
 
 def test_pytest_addopts_collect_only_assignment_is_rejected(tmp_path):
     text = workflow(
@@ -789,26 +800,19 @@ def test_non_root_working_directory_is_rejected_for_ci_proof(tmp_path, scope):
 
 
 def test_non_root_working_directory_invalidates_head_assertion():
-    text = workflow().replace(
-        "        shell: bash",
-        "        working-directory: subdir\n        shell: bash",
-    )
+    def mutate(document):
+        document["jobs"]["validate"]["steps"][3]["working-directory"] = "subdir"
+    text = mutate_workflow(mutate)
     assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
         ai_governance.validate_workflow_text("workflow.yml", text)
     )
 
-
 def test_repository_root_working_directory_is_accepted(tmp_path):
-    text = workflow().replace(
-        "      - name: Validate\n",
-        "      - name: Validate\n        working-directory: .\n",
-    )
-    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    def mutate(document):
+        document["jobs"]["validate"]["steps"][4]["working-directory"] = "."
+    passed, diagnostics = verify_temp_ci_step(tmp_path, mutate_workflow(mutate))
     assert passed is True, diagnostics
     assert diagnostics == []
-
-
-# PRF-002/003/004 execution-image and proof-surface regressions
 
 def test_job_container_and_services_are_rejected(tmp_path):
     for fragment in (
@@ -899,19 +903,13 @@ def test_local_action_mutable_nested_use_and_run_are_rejected(tmp_path):
 
 
 def test_ci_filters_must_cover_all_proof_surfaces(tmp_path):
-    text = workflow().replace(
-        "on: pull_request",
-        "on:\n  pull_request:\n    paths:\n"
-        "      - 'scripts/**'\n"
-        "      - 'tests/**'\n"
-        "      - '.github/workflows/**'",
-    )
-    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    def mutate(document):
+        document["on"] = {
+            "pull_request": {"paths": ["scripts/**", "tests/**", ".github/workflows/**"]}
+        }
+    passed, diagnostics = verify_temp_ci_step(tmp_path, mutate_workflow(mutate))
     assert passed is False
-    assert "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING" in codes(diagnostics)
-
-
-# PRF-002/003 trigger, dependency, runner, and workspace regressions
+    assert "AIGOV-COVERAGE-001_CI_TRIGGER_RESTRICTED" in codes(diagnostics)
 
 def test_legacy_head_only_assertion_is_not_ci_enforced(tmp_path):
     weak = (
@@ -972,7 +970,7 @@ def test_restricted_pull_request_trigger_is_not_ci_enforced(
     )
     passed, diagnostics = verify_temp_ci_step(tmp_path, text)
     assert passed is False
-    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+    assert "AIGOV-COVERAGE-001_CI_TRIGGER_RESTRICTED" in codes(diagnostics)
 
 
 def test_required_pull_request_activity_types_are_accepted(tmp_path):
@@ -1012,3 +1010,134 @@ def test_non_allowlisted_ubuntu_prefix_runner_is_rejected(tmp_path):
     assert passed is False
     assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
 
+# PRF-002/003 final runner-state and trigger-semantics regressions
+
+def _insert_step(index: int, step: dict) -> str:
+    def mutate(document):
+        document["jobs"]["validate"]["steps"].insert(index, step)
+    return mutate_workflow(mutate)
+
+
+def _assert_ci_rejected(tmp_path, text: str, *, step_name: str = "Validate"):
+    passed, diagnostics = verify_temp_ci_step(
+        tmp_path, text, step_name=step_name
+    )
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+@pytest.mark.parametrize(
+    ("name", "run"),
+    [
+        (
+            "Poison GITHUB_PATH with fake python",
+            "mkdir -p /tmp/fake && printf '#!/bin/sh\\nexit 0\\n' > /tmp/fake/python && "
+            "chmod +x /tmp/fake/python && echo /tmp/fake >> $GITHUB_PATH",
+        ),
+        (
+            "Poison GITHUB_PATH with fake python3",
+            "mkdir -p /tmp/fake && printf '#!/bin/sh\\nexit 0\\n' > /tmp/fake/python3 && "
+            "chmod +x /tmp/fake/python3 && echo /tmp/fake >> $GITHUB_PATH",
+        ),
+        (
+            "Poison GITHUB_PATH with fake git",
+            "mkdir -p /tmp/fake && printf '#!/bin/sh\\nexit 0\\n' > /tmp/fake/git && "
+            "chmod +x /tmp/fake/git && echo /tmp/fake >> $GITHUB_PATH",
+        ),
+        ("Persist PATH", "echo PATH=/tmp/fake >> $GITHUB_ENV"),
+        ("Persist PYTHONHOME", "echo PYTHONHOME=/tmp/fake >> $GITHUB_ENV"),
+        ("Persist PYTHONPATH", "echo PYTHONPATH=/tmp/fake >> $GITHUB_ENV"),
+        ("Persist BASH_ENV", "echo BASH_ENV=/tmp/fake-env >> $GITHUB_ENV"),
+        ("Persist ENV", "echo ENV=/tmp/fake-env >> $GITHUB_ENV"),
+        ("Use GITHUB_OUTPUT for resolution", "echo PATH=/tmp/fake >> $GITHUB_OUTPUT"),
+        ("Arbitrary shell wrapper", "function python() { return 0; }; export -f python"),
+        ("Arbitrary pre-carrier run", "echo unexpected"),
+    ],
+)
+def test_runner_state_poisoning_and_arbitrary_pre_steps_are_rejected(
+    tmp_path, name, run
+):
+    text = _insert_step(
+        2,
+        {"name": name, "shell": CANONICAL_SHELL, "run": run},
+    )
+    _assert_ci_rejected(tmp_path, text)
+
+
+def test_local_action_before_proof_carrier_is_rejected(tmp_path):
+    text = _insert_step(2, {"name": "Local action", "uses": "./.github/actions/untrusted"})
+    _assert_ci_rejected(tmp_path, text)
+
+
+def test_docker_action_before_proof_carrier_is_rejected(tmp_path):
+    target = "docker://registry.example/tool@sha256:" + ("a" * 64)
+    text = _insert_step(2, {"name": "Docker action", "uses": target})
+    _assert_ci_rejected(tmp_path, text)
+
+
+@pytest.mark.parametrize("index", [3, 4])
+def test_extra_step_around_validator_guard_is_rejected(tmp_path, index):
+    text = _insert_step(
+        index,
+        {"name": "Unexpected", "shell": CANONICAL_SHELL, "run": "true"},
+    )
+    _assert_ci_rejected(tmp_path, text)
+
+
+@pytest.mark.parametrize("index", [8, 9])
+def test_extra_step_around_test_guard_is_rejected(tmp_path, index):
+    text = _insert_step(
+        index,
+        {"name": "Unexpected", "shell": CANONICAL_SHELL, "run": "true"},
+    )
+    _assert_ci_rejected(
+        tmp_path, text, step_name="Run AI governance regression tests"
+    )
+
+
+def test_validator_and_test_carriers_are_independently_protected(tmp_path):
+    validator_text = _insert_step(
+        4, {"name": "Validator gap", "shell": CANONICAL_SHELL, "run": "true"}
+    )
+    _assert_ci_rejected(tmp_path, validator_text)
+    test_text = _insert_step(
+        9, {"name": "Test gap", "shell": CANONICAL_SHELL, "run": "true"}
+    )
+    _assert_ci_rejected(
+        tmp_path, test_text, step_name="Run AI governance regression tests"
+    )
+
+
+@pytest.mark.parametrize(
+    "pull_request_config",
+    [
+        {"paths": ["**", "!scripts/**"]},
+        {"paths": ["tests/**"]},
+        {"paths-ignore": ["scripts/**"]},
+        {"branches": ["invalid"]},
+        {"branches-ignore": ["main"]},
+        {"types": ["closed"]},
+    ],
+)
+def test_restricted_trigger_forms_are_rejected(tmp_path, pull_request_config):
+    def mutate(document):
+        document["on"] = {"pull_request": pull_request_config}
+    text = mutate_workflow(mutate)
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_TRIGGER_RESTRICTED" in codes(diagnostics)
+
+
+@pytest.mark.parametrize(
+    "trigger",
+    [
+        "pull_request",
+        {"pull_request": {"types": ["opened", "reopened", "synchronize"]}},
+    ],
+)
+def test_unrestricted_and_required_activity_triggers_are_accepted(tmp_path, trigger):
+    def mutate(document):
+        document["on"] = trigger
+    passed, diagnostics = verify_temp_ci_step(tmp_path, mutate_workflow(mutate))
+    assert passed is True, diagnostics
+    assert diagnostics == []

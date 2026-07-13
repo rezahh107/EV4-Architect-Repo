@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import ast
-import fnmatch
 import json
 import re
 import shlex
@@ -100,15 +99,60 @@ MERGE_INVARIANT = (
 )
 EXACT_HEAD_REF = "${{ github.event.pull_request.head.sha }}"
 EXACT_HEAD_WORDS = ["test", "$(git rev-parse HEAD)", "=", EXACT_HEAD_REF]
-WORKSPACE_GUARD_LINES = (
-    "set -eu",
-    'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"',
-    "git diff --exit-code -- .",
-    "git diff --cached --exit-code -- .",
-    'test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+SETUP_PYTHON_ACTION = (
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
 )
+CHECKOUT_ACTION = (
+    "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
+)
+CANONICAL_PROOF_SHELL = "/usr/bin/sh -e {0}"
+VALIDATOR_SETUP_ID = "setup-validator-python"
+TEST_SETUP_ID = "setup-test-python"
+VALIDATOR_PYTHON_REF = "${{ steps.setup-validator-python.outputs.python-path }}"
+TEST_PYTHON_REF = "${{ steps.setup-test-python.outputs.python-path }}"
+TRUSTED_PYTHON_REFS = {VALIDATOR_PYTHON_REF, TEST_PYTHON_REF}
+DEPENDENCY_ARGUMENTS = (
+    "'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'"
+)
+VALIDATOR_INSTALL_COMMAND = (
+    f'"{VALIDATOR_PYTHON_REF}" -I -P -m pip install {DEPENDENCY_ARGUMENTS}'
+)
+TEST_INSTALL_COMMAND = (
+    f'"{TEST_PYTHON_REF}" -I -P -m pip install {DEPENDENCY_ARGUMENTS}'
+)
+VALIDATOR_CARRIER_COMMAND = (
+    f'"{VALIDATOR_PYTHON_REF}" -I -P scripts/check-ai-governance.py'
+)
+TEST_CARRIER_COMMAND = (
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= "
+    f'"{TEST_PYTHON_REF}" -I -P -m pytest -c /dev/null '
+    "--noconftest -q tests/test_ai_governance.py"
+)
+
+def _workspace_guard_lines(python_ref: str) -> tuple[str, ...]:
+    return (
+        "set -eu",
+        f'test -x "{python_ref}"',
+        'test "$(/usr/bin/git rev-parse HEAD)" = '
+        '"${{ github.event.pull_request.head.sha }}"',
+        "/usr/bin/git diff --exit-code -- .",
+        "/usr/bin/git diff --cached --exit-code -- .",
+        'test -z "$(/usr/bin/git status --porcelain=v1 --untracked-files=all)"',
+    )
+
+VALIDATOR_WORKSPACE_GUARD_LINES = _workspace_guard_lines(VALIDATOR_PYTHON_REF)
+TEST_WORKSPACE_GUARD_LINES = _workspace_guard_lines(TEST_PYTHON_REF)
+WORKSPACE_GUARD_VARIANTS = {
+    VALIDATOR_WORKSPACE_GUARD_LINES,
+    TEST_WORKSPACE_GUARD_LINES,
+}
 SAFE_PROOF_RUNNERS = {"ubuntu-latest"}
 REQUIRED_PR_ACTIVITY_TYPES = {"opened", "reopened", "synchronize"}
+PERSISTENT_RUNNER_STATE_REFERENCES = {
+    "GITHUB_PATH",
+    "GITHUB_ENV",
+    "GITHUB_OUTPUT",
+}
 REMOTE_ACTION_SHA = re.compile(r"^[^@\s]+@[0-9a-fA-F]{40}$")
 DOCKER_ACTION_DIGEST = re.compile(r"^docker://[^@\s]+@sha256:[0-9a-fA-F]{64}$")
 ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", re.DOTALL)
@@ -128,6 +172,7 @@ CI_PROOF_SURFACE_PATHS = {
 }
 FORBIDDEN_PROOF_ENV_KEYS = {
     "PATH",
+    "PYTHONHOME",
     "PYTHONPATH",
     "BASH_ENV",
     "ENV",
@@ -466,13 +511,36 @@ def _normalized_string_set(value: Any) -> set[str] | None:
     return None
 
 
-def _pull_request_trigger_is_proof_capable(
+def _pull_request_trigger_has_required_activity(
     document: dict[str, Any],
 ) -> bool:
     configuration = workflow_event_configuration(document, "pull_request")
     if configuration is None:
         return True
     if "branches" in configuration or "branches-ignore" in configuration:
+        return False
+    raw_types = configuration.get("types")
+    if raw_types is None:
+        return True
+    activity_types = _normalized_string_set(raw_types)
+    return (
+        activity_types is not None
+        and REQUIRED_PR_ACTIVITY_TYPES.issubset(activity_types)
+    )
+
+
+def _pull_request_trigger_is_unrestricted_for_ci(
+    document: dict[str, Any],
+) -> bool:
+    configuration = workflow_event_configuration(document, "pull_request")
+    if configuration is None:
+        return True
+    if {
+        "paths",
+        "paths-ignore",
+        "branches",
+        "branches-ignore",
+    } & set(configuration):
         return False
     raw_types = configuration.get("types")
     if raw_types is None:
@@ -556,7 +624,7 @@ def _shell_is_posix(value: Any) -> bool:
     if not isinstance(value, str):
         return False
     normalized = " ".join(value.strip().split())
-    return normalized in SAFE_PROOF_SHELLS
+    return normalized in SAFE_PROOF_SHELLS | {CANONICAL_PROOF_SHELL}
 
 
 def _run_defaults(node: Any) -> dict[str, Any]:
@@ -657,7 +725,7 @@ def _single_command_line(run: Any) -> str | None:
 
 def _is_fail_closed_exact_head_command(run: Any) -> bool:
     lines = tuple(_meaningful_command_lines(run))
-    if lines == WORKSPACE_GUARD_LINES:
+    if lines in WORKSPACE_GUARD_VARIANTS:
         return True
     if len(lines) != 1:
         return False
@@ -694,7 +762,7 @@ def _contains_workspace_guard(
         and _proof_working_directory_is_root(step, job, document)
         and _proof_yaml_environment_is_empty(step, job, document)
         and tuple(_meaningful_command_lines(step.get("run")))
-        == WORKSPACE_GUARD_LINES
+        in WORKSPACE_GUARD_VARIANTS
     )
 
 
@@ -879,7 +947,7 @@ def validate_workflow_document(
         )
     if (
         "pull_request" in events
-        and not _pull_request_trigger_is_proof_capable(document)
+        and not _pull_request_trigger_has_required_activity(document)
     ):
         output.append(
             Diagnostic(
@@ -1348,33 +1416,11 @@ def _workflow_paths_cover(
     event: str,
     authoritative_paths: set[str],
 ) -> tuple[bool, set[str]]:
-    if (
-        event == "pull_request"
-        and not _pull_request_trigger_is_proof_capable(document)
-    ):
-        return False, set(authoritative_paths)
-    configuration = workflow_event_configuration(document, event)
-    if configuration is None:
+    if event != "pull_request":
         return True, set()
-    raw_paths = configuration.get("paths")
-    ignored = configuration.get("paths-ignore")
-    ignored_patterns = (
-        [ignored] if isinstance(ignored, str) else list(ignored or [])
-    )
-    if raw_paths is None:
-        missed = {
-            path
-            for path in authoritative_paths
-            if any(fnmatch.fnmatch(path, pattern) for pattern in ignored_patterns)
-        }
-        return not missed, missed
-    patterns = [raw_paths] if isinstance(raw_paths, str) else list(raw_paths or [])
-    missed = {
-        path
-        for path in authoritative_paths
-        if not any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
-    }
-    return not missed, missed
+    if not _pull_request_trigger_is_unrestricted_for_ci(document):
+        return False, set(authoritative_paths)
+    return True, set()
 
 
 def _split_environment_assignments(
@@ -1397,7 +1443,15 @@ def _simple_shell_command(
     line = _single_command_line(run)
     if line is None:
         return None, []
-    if any(token in line for token in FORBIDDEN_SHELL_SYNTAX):
+    sanitized = line
+    for python_ref in TRUSTED_PYTHON_REFS:
+        quoted = f'"{python_ref}"'
+        if python_ref in sanitized and quoted not in sanitized:
+            return None, []
+        sanitized = sanitized.replace(quoted, "TRUSTED_PYTHON")
+    if "${{" in sanitized or any(
+        token in sanitized for token in FORBIDDEN_SHELL_SYNTAX
+    ):
         return None, []
     return _split_environment_assignments(_shell_words(line))
 
@@ -1417,7 +1471,7 @@ def _inline_environment_is_safe(
 def _words_execute_validator(words: list[str], validator_file: str) -> bool:
     return (
         len(words) == 4
-        and Path(words[0]).name in {"python", "python3"}
+        and words[0] == VALIDATOR_PYTHON_REF
         and words[1:3] == ["-I", "-P"]
         and words[3] == validator_file
     )
@@ -1426,7 +1480,7 @@ def _words_execute_validator(words: list[str], validator_file: str) -> bool:
 def _words_execute_tests(
     words: list[str], test_file: str = "tests/test_ai_governance.py"
 ) -> bool:
-    if not words or Path(words[0]).name not in {"python", "python3"}:
+    if not words or words[0] != TEST_PYTHON_REF:
         return False
     return tuple(words[1:]) in {
         ("-I", "-P", "-m", "pytest", "-c", "/dev/null", "--noconftest", "-q", test_file),
@@ -1446,7 +1500,7 @@ def _step_executes_applicable_command(
         return False
     if not _proof_job_execution_context_is_trusted(job):
         return False
-    if not _proof_step_shell_is_supported(step, job, document):
+    if step.get("shell") != CANONICAL_PROOF_SHELL:
         return False
     if not _proof_working_directory_is_root(step, job, document):
         return False
@@ -1463,34 +1517,209 @@ def _step_executes_applicable_command(
 def _is_exact_checkout_step(step: Any) -> bool:
     if not isinstance(step, dict) or not _proof_node_is_blocking(step):
         return False
-    target = step.get("uses")
-    if not isinstance(target, str) or not _is_checkout(target):
+    if set(step) != {"name", "uses", "with"}:
         return False
-    if not REMOTE_ACTION_SHA.fullmatch(target):
+    if step.get("uses") != CHECKOUT_ACTION:
         return False
     with_values = step.get("with")
-    if not isinstance(with_values, dict):
-        return False
     return (
-        with_values.get("ref") == EXACT_HEAD_REF
-        and _persist_credentials_disabled(
-            with_values.get("persist-credentials")
+        isinstance(with_values, dict)
+        and with_values == {
+            "ref": EXACT_HEAD_REF,
+            "persist-credentials": False,
+        }
+    )
+
+
+def _value_references_persistent_runner_state(value: Any) -> bool:
+    if isinstance(value, dict):
+        return any(
+            _value_references_persistent_runner_state(key)
+            or _value_references_persistent_runner_state(item)
+            for key, item in value.items()
+        )
+    if isinstance(value, list):
+        return any(_value_references_persistent_runner_state(item) for item in value)
+    if not isinstance(value, str):
+        return False
+    upper = value.upper()
+    return bool(
+        PERSISTENT_RUNNER_STATE_REFERENCES & set(re.findall(r"[A-Z_]+", upper))
+        or re.search(
+            r"(?:^|\s)(?:PATH|PYTHONHOME|PYTHONPATH|BASH_ENV|ENV)=",
+            value,
         )
     )
 
 
-def _carrier_has_fresh_checkout_guard(
-    steps: list[Any],
-    carrier_index: int,
+def _canonical_setup_step(step: Any, *, setup_id: str, name: str) -> bool:
+    return (
+        isinstance(step, dict)
+        and set(step) == {"name", "id", "uses", "with"}
+        and step.get("name") == name
+        and step.get("id") == setup_id
+        and step.get("uses") == SETUP_PYTHON_ACTION
+        and step.get("with") == {"python-version": "3.11"}
+        and not _value_references_persistent_runner_state(step)
+    )
+
+
+def _canonical_run_step(
+    step: Any,
+    *,
+    name: str,
+    run: str,
+    allow_controls: bool = False,
+) -> bool:
+    if not isinstance(step, dict):
+        return False
+    allowed = {"name", "shell", "run"}
+    if allow_controls:
+        allowed |= {"if", "continue-on-error", "working-directory"}
+    return (
+        set(step).issubset(allowed)
+        and {"name", "shell", "run"}.issubset(step)
+        and step.get("name") == name
+        and step.get("shell") == CANONICAL_PROOF_SHELL
+        and step.get("run") == run
+        and _proof_node_is_blocking(step)
+        and not _value_references_persistent_runner_state(step)
+    )
+
+
+def _canonical_guard_step(
+    step: Any,
+    *,
+    name: str,
+    guard_lines: tuple[str, ...],
     job: dict[str, Any],
     document: dict[str, Any],
 ) -> bool:
-    if carrier_index < 2:
+    if not isinstance(step, dict):
+        return False
+    allowed = {
+        "name",
+        "shell",
+        "run",
+        "if",
+        "continue-on-error",
+        "working-directory",
+    }
+    return (
+        set(step).issubset(allowed)
+        and {"name", "shell", "run"}.issubset(step)
+        and step.get("name") == name
+        and step.get("shell") == CANONICAL_PROOF_SHELL
+        and tuple(_meaningful_command_lines(step.get("run"))) == guard_lines
+        and _proof_node_is_blocking(step)
+        and not _value_references_persistent_runner_state(step)
+        and _proof_working_directory_is_root(step, job, document)
+        and _proof_yaml_environment_is_empty(step, job, document)
+    )
+
+
+def _canonical_carrier_step(
+    step: Any,
+    *,
+    names: set[str],
+    run: str,
+    job: dict[str, Any],
+    document: dict[str, Any],
+) -> bool:
+    if not isinstance(step, dict) or step.get("name") not in names:
         return False
     return (
-        _is_exact_checkout_step(steps[carrier_index - 2])
-        and _contains_workspace_guard(
-            steps[carrier_index - 1], job, document
+        _canonical_run_step(
+            step,
+            name=step["name"],
+            run=run,
+            allow_controls=True,
+        )
+        and _proof_working_directory_is_root(step, job, document)
+        and _proof_yaml_environment_is_empty(step, job, document)
+    )
+
+
+def _canonical_checkout_named(step: Any, name: str) -> bool:
+    return _is_exact_checkout_step(step) and step.get("name") == name
+
+
+def _canonical_proof_job_is_valid(
+    job: Any,
+    document: dict[str, Any],
+    validator_file: str,
+) -> bool:
+    if not isinstance(job, dict) or not _proof_node_is_blocking(job):
+        return False
+    if not _proof_job_execution_context_is_trusted(job):
+        return False
+    if set(job) - {"runs-on", "steps", "if", "continue-on-error"}:
+        return False
+    if document.get("env") is not None or document.get("defaults") is not None:
+        return False
+    if job.get("env") is not None or job.get("defaults") is not None:
+        return False
+    steps = job.get("steps")
+    if not isinstance(steps, list) or len(steps) != 10:
+        return False
+    if _value_references_persistent_runner_state(steps):
+        return False
+    return all(
+        (
+            _canonical_setup_step(
+                steps[0],
+                setup_id=VALIDATOR_SETUP_ID,
+                name="Set up trusted Python for validator",
+            ),
+            _canonical_run_step(
+                steps[1],
+                name="Install validation dependencies for validator",
+                run=VALIDATOR_INSTALL_COMMAND,
+            ),
+            _canonical_checkout_named(
+                steps[2], "Checkout exact pull request head"
+            ),
+            _canonical_guard_step(
+                steps[3],
+                name="Assert exact pull request head",
+                guard_lines=VALIDATOR_WORKSPACE_GUARD_LINES,
+                job=job,
+                document=document,
+            ),
+            _canonical_carrier_step(
+                steps[4],
+                names={"Validate", "Validate AI governance coverage and fixtures"},
+                run=f'"{VALIDATOR_PYTHON_REF}" -I -P {validator_file}',
+                job=job,
+                document=document,
+            ),
+            _canonical_setup_step(
+                steps[5],
+                setup_id=TEST_SETUP_ID,
+                name="Set up trusted Python for tests",
+            ),
+            _canonical_run_step(
+                steps[6],
+                name="Install validation dependencies for tests",
+                run=TEST_INSTALL_COMMAND,
+            ),
+            _canonical_checkout_named(
+                steps[7], "Checkout exact pull request head for tests"
+            ),
+            _canonical_guard_step(
+                steps[8],
+                name="Assert exact pull request head for tests",
+                guard_lines=TEST_WORKSPACE_GUARD_LINES,
+                job=job,
+                document=document,
+            ),
+            _canonical_carrier_step(
+                steps[9],
+                names={"Run AI governance regression tests"},
+                run=TEST_CARRIER_COMMAND,
+                job=job,
+                document=document,
+            ),
         )
     )
 
@@ -1538,14 +1767,6 @@ def _verify_ci_step(
             )
         ]
 
-    if validate_workflow_document(workflow_name, document, root):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI workflow fails structural security validation",
-            )
-        ]
     if "pull_request" not in workflow_events(document):
         return False, [
             Diagnostic(
@@ -1554,69 +1775,39 @@ def _verify_ci_step(
                 "CI workflow must have a pull_request trigger",
             )
         ]
+    if not _pull_request_trigger_is_unrestricted_for_ci(document):
+        return False, [
+            Diagnostic(
+                "AIGOV-COVERAGE-001_CI_TRIGGER_RESTRICTED",
+                "$",
+                "CI proof workflow must not use paths, paths-ignore, branches, or branches-ignore and must include required pull_request activity types",
+            )
+        ]
+    if validate_workflow_document(workflow_name, document, root):
+        return False, [
+            Diagnostic(
+                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                "$",
+                "CI workflow fails structural security validation",
+            )
+        ]
 
     jobs = document.get("jobs") or {}
-    job = jobs.get(job_name) if isinstance(jobs, dict) else None
-    if not isinstance(job, dict):
+    if not isinstance(jobs, dict) or set(jobs) != {"validate"}:
+        return False, [
+            Diagnostic(
+                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                "$",
+                "CI proof workflow must contain only the dedicated validate proof job",
+            )
+        ]
+    job = jobs.get(job_name)
+    if job_name != "validate" or not isinstance(job, dict):
         return False, [
             Diagnostic(
                 "AIGOV-COVERAGE-001_CI_STEP_INVALID",
                 "$",
                 f"job not found: {job_name}",
-            )
-        ]
-    if not _proof_node_is_blocking(job):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI carrier job must be unconditionally active and blocking",
-            )
-        ]
-
-    steps = job.get("steps")
-    step_index = next(
-        (
-            index
-            for index, item in enumerate(steps or [])
-            if isinstance(item, dict) and item.get("name") == step_name
-        ),
-        None,
-    )
-    step = (
-        steps[step_index]
-        if isinstance(steps, list) and step_index is not None
-        else None
-    )
-    if not isinstance(step, dict):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                f"step not found: {step_name}",
-            )
-        ]
-    if not _proof_node_is_blocking(step):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI carrier step must be unconditionally active and blocking",
-            )
-        ]
-
-    if (
-        not isinstance(steps, list)
-        or step_index is None
-        or not _carrier_has_fresh_checkout_guard(
-            steps, step_index, job, document
-        )
-    ):
-        return False, [
-            Diagnostic(
-                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
-                "$",
-                "CI carrier must be immediately preceded by a clean-worktree exact-head guard and a fresh exact-head checkout",
             )
         ]
 
@@ -1626,14 +1817,41 @@ def _verify_ci_step(
         if isinstance(validator_reference, str)
         else ""
     )
-    if not validator_file or not _step_executes_applicable_command(
-        step, validator_file, job, document
+    if not validator_file or not _canonical_proof_job_is_valid(
+        job, document, validator_file
     ):
         return False, [
             Diagnostic(
                 "AIGOV-COVERAGE-001_CI_STEP_INVALID",
                 "$",
-                "named CI step does not execute an allowed blocking validator or test command",
+                "CI proof job does not match the complete canonical proof sequence",
+            )
+        ]
+
+    steps = job["steps"]
+    step_index = next(
+        (
+            index
+            for index, item in enumerate(steps)
+            if isinstance(item, dict) and item.get("name") == step_name
+        ),
+        None,
+    )
+    if step_index not in {4, 9}:
+        return False, [
+            Diagnostic(
+                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                "$",
+                f"step not found or not a canonical proof carrier: {step_name}",
+            )
+        ]
+    step = steps[step_index]
+    if not _step_executes_applicable_command(step, validator_file, job, document):
+        return False, [
+            Diagnostic(
+                "AIGOV-COVERAGE-001_CI_STEP_INVALID",
+                "$",
+                "named CI step does not execute the exact trusted-interpreter validator or test command",
             )
         ]
 
@@ -1656,7 +1874,7 @@ def _verify_ci_step(
             Diagnostic(
                 "AIGOV-COVERAGE-001_CI_PATH_FILTER_MISSING",
                 "$",
-                f"CI path filters do not cover: {sorted(missed)}",
+                f"CI proof workflow contains forbidden trigger filters: {sorted(missed)}",
             )
         ]
     return True, []
