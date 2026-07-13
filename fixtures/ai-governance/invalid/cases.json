@@ -1,0 +1,105 @@
+{
+  "cases": [
+    {
+      "case_id": "startup-missing-authority-inspection",
+      "fixture_type": "startup_session",
+      "expected_diagnostic": "AIGOV-START-001_MISSING_AUTHORITY_EVIDENCE",
+      "payload": {
+        "artifact_type": "startup_session",
+        "repository": "rezahh107/EV4-Architect-Repo",
+        "default_branch": "main",
+        "authority_files_inspected": [
+          "README.md",
+          "STATUS.md",
+          "docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md",
+          "docs/NOT_AN_AUTHORITY.md"
+        ],
+        "authorized_work": "ARCH-GOV-ARTIFACT-001",
+        "dependencies_checked": true
+      }
+    },
+    {
+      "case_id": "unknown-converted-to-fact",
+      "fixture_type": "evidence_claim",
+      "expected_diagnostic": "AIGOV-EVIDENCE-001_UNKNOWN_AS_FACT",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-BAD-UNKNOWN",
+        "claim_kind": "material_claim",
+        "claim_text": "Unknown runtime behavior is confirmed.",
+        "evidence_state": "REPOSITORY_CONFIRMED",
+        "source_type": "repository",
+        "source_reference": "README.md",
+        "unknown_input": true,
+        "self_asserted_outcome": false
+      }
+    },
+    {
+      "case_id": "ai-critique-treated-as-fact",
+      "fixture_type": "evidence_claim",
+      "expected_diagnostic": "AIGOV-EVIDENCE-001_AI_SIGNAL_AS_FACT",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-BAD-CRITIQUE",
+        "claim_kind": "material_claim",
+        "claim_text": "Coach critique proves technical correctness.",
+        "evidence_state": "REPOSITORY_CONFIRMED",
+        "source_type": "coach_critique",
+        "source_reference": "review/critic-output",
+        "unknown_input": false,
+        "self_asserted_outcome": false
+      }
+    },
+    {
+      "case_id": "self-authored-merged-claim",
+      "fixture_type": "evidence_claim",
+      "expected_diagnostic": "AIGOV-EVIDENCE-001_SELF_ASSERTED_OUTCOME",
+      "payload": {
+        "artifact_type": "evidence_claim",
+        "claim_id": "CLAIM-BAD-MERGED",
+        "claim_kind": "merge_status",
+        "claim_text": "merged: true",
+        "evidence_state": "AI_TECHNICAL_DECISION",
+        "source_type": "ai_technical_decision",
+        "source_reference": null,
+        "unknown_input": false,
+        "self_asserted_outcome": true
+      }
+    },
+    {
+      "case_id": "public-repository-without-profile",
+      "fixture_type": "security_profile_fixture",
+      "expected_diagnostic": "AIGOV-SECURITY-PROFILE-001_MISSING_PROFILE",
+      "payload": {
+        "artifact_type": "security_profile",
+        "repository_visibility": "public",
+        "active_profile": null,
+        "minimum_controls": [],
+        "enterprise_controls_status": "unknown"
+      }
+    },
+    {
+      "case_id": "human-approval-used-as-evidence",
+      "fixture_type": "approval_contract",
+      "expected_diagnostic": "AIGOV-HUMAN-001_APPROVAL_AS_EVIDENCE",
+      "payload": {
+        "artifact_type": "approval_contract",
+        "human_technical_approval_required": true,
+        "owner_acknowledgement_used_as_evidence": true,
+        "user_merge_action_role": "technical_approval"
+      }
+    },
+    {
+      "case_id": "coach-critique-claims-truth",
+      "fixture_type": "coach_critique",
+      "expected_diagnostic": "AIGOV-COACH-001_CRITIQUE_AS_FACT",
+      "payload": {
+        "artifact_type": "coach_critique",
+        "critique_id": "COACH-BAD-001",
+        "evidence_state": "REPOSITORY_CONFIRMED",
+        "claims_technical_truth": true,
+        "claims_real_world_outcome": true
+      }
+    }
+  ]
+}
