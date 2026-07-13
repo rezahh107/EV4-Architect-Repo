@@ -1,0 +1,518 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rezahh107/EV4-Architect-Repo/planning/ai-governance-coverage.schema.json",
+  "title": "EV4 Architect AI Governance Coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repository",
+    "standard",
+    "adoption",
+    "security_profile",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "repository": {
+      "const": "rezahh107/EV4-Architect-Repo"
+    },
+    "standard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "title": {
+          "const": "AI Authority Deterministic Governance — Source of Truth"
+        },
+        "version": {
+          "const": "1.0.2"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "adoption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_id",
+        "plan_version",
+        "increment_id"
+      ],
+      "properties": {
+        "plan_id": {
+          "const": "GOV-ADOPTION-EV4-ARCHITECT-REPO-C9109F9-V1"
+        },
+        "plan_version": {
+          "const": 1
+        },
+        "increment_id": {
+          "const": "ARCH-GOV-ARTIFACT-001"
+        }
+      }
+    },
+    "security_profile": {
+      "$ref": "#/$defs/security_profile_definition"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/rule_record"
+      }
+    }
+  },
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "nullable_non_empty_string": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      ]
+    },
+    "enforcement_status": {
+      "enum": [
+        "prose_only",
+        "schema_backed",
+        "validator_backed",
+        "fixture_tested",
+        "advisory_ci_observed",
+        "ci_enforced",
+        "sequence_ci_enforced",
+        "runtime_monitor_enforced",
+        "os_harness_enforced",
+        "downstream_contract_enforced"
+      ]
+    },
+    "evidence_state": {
+      "enum": [
+        "REPOSITORY_CONFIRMED",
+        "TOOL_CONFIRMED",
+        "SOURCE_CONFIRMED",
+        "TEST_CONFIRMED",
+        "CI_CONFIRMED",
+        "RUNTIME_CONFIRMED",
+        "PUBLICATION_RECEIPT_CONFIRMED",
+        "PERFORMANCE_RECEIPT_CONFIRMED",
+        "AI_REVIEW_SIGNAL",
+        "AI_TECHNICAL_DECISION",
+        "USER_STATED_INPUT",
+        "ASSUMED",
+        "UNKNOWN",
+        "BLOCKED_INSUFFICIENT_EVIDENCE",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "carriers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prose_source",
+        "schema_carrier",
+        "validator_rule",
+        "valid_fixture",
+        "invalid_fixture",
+        "CI_step",
+        "sequence_test",
+        "downstream_contract"
+      ],
+      "properties": {
+        "prose_source": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "schema_carrier": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "validator_rule": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "valid_fixture": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "invalid_fixture": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "CI_step": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "sequence_test": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "downstream_contract": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        }
+      }
+    },
+    "rule_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "risk",
+        "session_scope",
+        "trigger",
+        "predicate",
+        "enforcement_action",
+        "recovery_action",
+        "minimum_required_status",
+        "carriers",
+        "status",
+        "enforcement_scope",
+        "limitations"
+      ],
+      "properties": {
+        "rule_id": {
+          "enum": [
+            "AIGOV-START-001",
+            "AIGOV-EVIDENCE-001",
+            "AIGOV-SECURITY-PROFILE-001",
+            "AIGOV-HUMAN-001",
+            "AIGOV-COACH-001"
+          ]
+        },
+        "risk": {
+          "enum": [
+            "Critical",
+            "High"
+          ]
+        },
+        "session_scope": {
+          "enum": [
+            "per_session",
+            "per_artifact",
+            "cross_turn"
+          ]
+        },
+        "trigger": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "predicate": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          }
+        },
+        "enforcement_action": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "recovery_action": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "minimum_required_status": {
+          "$ref": "#/$defs/enforcement_status"
+        },
+        "carriers": {
+          "$ref": "#/$defs/carriers"
+        },
+        "status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enforcement_status",
+            "evidence_state"
+          ],
+          "properties": {
+            "enforcement_status": {
+              "$ref": "#/$defs/enforcement_status"
+            },
+            "evidence_state": {
+              "$ref": "#/$defs/evidence_state"
+            }
+          }
+        },
+        "enforcement_scope": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          }
+        }
+      }
+    },
+    "security_profile_definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "repository_visibility",
+        "activation_trigger",
+        "minimum_controls",
+        "enterprise_controls"
+      ],
+      "properties": {
+        "profile_id": {
+          "const": "personal_public_repository_minimum"
+        },
+        "repository_visibility": {
+          "const": "public"
+        },
+        "activation_trigger": {
+          "const": "repository_is_public"
+        },
+        "minimum_controls": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "immutable_action_pins",
+              "minimum_explicit_permissions",
+              "exact_head_checkout_when_repository_is_checked_out",
+              "persist_credentials_false",
+              "fail_closed_head_identity",
+              "no_pull_request_secret_exposure"
+            ]
+          }
+        },
+        "enterprise_controls": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason",
+            "does_not_block"
+          ],
+          "properties": {
+            "status": {
+              "const": "intentionally_out_of_scope"
+            },
+            "reason": {
+              "const": "personal_repository_minimum_security_profile"
+            },
+            "does_not_block": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "implementation",
+                  "independent_ai_review",
+                  "GREEN_merge_recommendation"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "startup_session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "repository",
+        "default_branch",
+        "authority_files_inspected",
+        "authorized_work",
+        "dependencies_checked"
+      ],
+      "properties": {
+        "artifact_type": {
+          "const": "startup_session"
+        },
+        "repository": {
+          "const": "rezahh107/EV4-Architect-Repo"
+        },
+        "default_branch": {
+          "const": "main"
+        },
+        "authority_files_inspected": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          }
+        },
+        "authorized_work": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "dependencies_checked": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "claim_id",
+        "claim_kind",
+        "claim_text",
+        "evidence_state",
+        "source_type",
+        "source_reference",
+        "unknown_input",
+        "self_asserted_outcome"
+      ],
+      "properties": {
+        "artifact_type": {
+          "const": "evidence_claim"
+        },
+        "claim_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "claim_kind": {
+          "enum": [
+            "material_claim",
+            "readiness",
+            "repository_state",
+            "merge_status",
+            "ci_status",
+            "runtime_status"
+          ]
+        },
+        "claim_text": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "evidence_state": {
+          "$ref": "#/$defs/evidence_state"
+        },
+        "source_type": {
+          "enum": [
+            "repository",
+            "tool",
+            "source",
+            "test",
+            "ci",
+            "runtime",
+            "publication_receipt",
+            "performance_receipt",
+            "ai_review_signal",
+            "coach_critique",
+            "ai_technical_decision",
+            "user_stated_input",
+            "assumption",
+            "unknown"
+          ]
+        },
+        "source_reference": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "unknown_input": {
+          "type": "boolean"
+        },
+        "self_asserted_outcome": {
+          "type": "boolean"
+        }
+      }
+    },
+    "security_profile_fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "repository_visibility",
+        "active_profile",
+        "minimum_controls",
+        "enterprise_controls_status"
+      ],
+      "properties": {
+        "artifact_type": {
+          "const": "security_profile"
+        },
+        "repository_visibility": {
+          "enum": [
+            "public",
+            "private"
+          ]
+        },
+        "active_profile": {
+          "$ref": "#/$defs/nullable_non_empty_string"
+        },
+        "minimum_controls": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          }
+        },
+        "enterprise_controls_status": {
+          "enum": [
+            "intentionally_out_of_scope",
+            "activated",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "approval_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "human_technical_approval_required",
+        "owner_acknowledgement_used_as_evidence",
+        "user_merge_action_role"
+      ],
+      "properties": {
+        "artifact_type": {
+          "const": "approval_contract"
+        },
+        "human_technical_approval_required": {
+          "type": "boolean"
+        },
+        "owner_acknowledgement_used_as_evidence": {
+          "type": "boolean"
+        },
+        "user_merge_action_role": {
+          "enum": [
+            "administrative_action",
+            "technical_approval"
+          ]
+        }
+      }
+    },
+    "coach_critique": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "critique_id",
+        "evidence_state",
+        "claims_technical_truth",
+        "claims_real_world_outcome"
+      ],
+      "properties": {
+        "artifact_type": {
+          "const": "coach_critique"
+        },
+        "critique_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "evidence_state": {
+          "$ref": "#/$defs/evidence_state"
+        },
+        "claims_technical_truth": {
+          "type": "boolean"
+        },
+        "claims_real_world_outcome": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
