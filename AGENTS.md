@@ -14,13 +14,25 @@ It does not prove constructability, execute Elementor actions, or claim responsi
 
 1. `README.md`
 2. `STATUS.md`
-3. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
-4. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
-5. `schemas/ev4-architect-stage-payload.v1.schema.json`
-6. `scripts/check-architect-stage-payload.py`
-7. the relevant stage, contract, schema, fixture, and diagnostic files for the task
+3. `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md`
+4. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
+5. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
+6. `schemas/ev4-architect-stage-payload.v1.schema.json`
+7. `scripts/check-architect-stage-payload.py`
+8. the relevant stage, contract, schema, fixture, and diagnostic files for the task
 
 When sources conflict, follow the highest-authority current contract or explicit active override. Do not silently merge incompatible rules.
+
+## AI Authority Governance
+
+Apply `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md` to repository work.
+
+- AI is the technical decision authority; repository evidence is factual authority.
+- Human technical approval and owner acknowledgement must not be treated, accepted, or used as substitutes for repository evidence.
+- Keep the Scope Gate and Progress Gate separate.
+- Bind validation and independent review claims to the exact current revision.
+- Any head change makes an earlier review stale.
+- Do not claim machine enforcement from prose-only governance.
 
 ## Project Gate Handoff
 
