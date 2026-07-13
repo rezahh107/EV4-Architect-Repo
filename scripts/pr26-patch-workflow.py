@@ -68,6 +68,7 @@ Path(".github/workflows/validate-ai-governance.yml").write_text(
 )
 for path in (
     Path("scripts/pr26-patch-core.py"),
+    Path("scripts/pr26-patch-compat.py"),
     Path("scripts/pr26-patch-tests.py"),
     Path("scripts/pr26-patch-workflow.py"),
 ):
@@ -75,6 +76,7 @@ for path in (
         raise SystemExit(f"missing temporary patch file: {path}")
 for path in (
     Path("scripts/pr26-patch-core.py"),
+    Path("scripts/pr26-patch-compat.py"),
     Path("scripts/pr26-patch-tests.py"),
     Path("scripts/pr26-patch-workflow.py"),
 ):
