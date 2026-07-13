@@ -7,10 +7,10 @@ on:
       - '.github/workflows/**'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export-pr26-repair:
+  export-pr26-blobs:
     if: github.event.pull_request.number == 26
     runs-on: ubuntu-latest
     steps:
@@ -39,7 +39,11 @@ jobs:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= \
             python -I -P -m pytest -c /dev/null --noconftest -q \
             tests/test_ai_governance.py
-      - name: Package exact validated files
+      - name: Create immutable Git blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -47,17 +51,59 @@ jobs:
           test ! -e .github/pr26_repair_fix.py
           test ! -e .github/workflows/pr26-repair-proof-surface.yml
           test ! -e .github/workflows/pr26-trigger-temp.yml
-          tar -czf pr26-final-repair.tar.gz \
-            scripts/check-ai-governance.py \
-            tests/test_ai_governance.py \
-            .github/workflows/validate-ai-governance.yml
-          sha256sum pr26-final-repair.tar.gz > pr26-final-repair.tar.gz.sha256
-      - name: Upload validated repair
+          python - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          repository = os.environ["REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          paths = [
+              "scripts/check-ai-governance.py",
+              "tests/test_ai_governance.py",
+              ".github/workflows/validate-ai-governance.yml",
+          ]
+          manifest = {
+              "source_head_sha": os.environ["SOURCE_HEAD_SHA"],
+              "files": {},
+          }
+          for path in paths:
+              data = Path(path).read_bytes()
+              payload = json.dumps({
+                  "content": base64.b64encode(data).decode("ascii"),
+                  "encoding": "base64",
+              }).encode("utf-8")
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repository}/git/blobs",
+                  data=payload,
+                  method="POST",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {token}",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  result = json.load(response)
+              manifest["files"][path] = {
+                  "blob_sha": result["sha"],
+                  "sha256": hashlib.sha256(data).hexdigest(),
+                  "size": len(data),
+              }
+          Path("pr26-blob-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(manifest, sort_keys=True))
+          PY
+      - name: Upload blob manifest
         uses: actions/upload-artifact@84480863f228bb9747b473957fcc9e309aa96097
         with:
-          name: pr26-final-repair
-          path: |
-            pr26-final-repair.tar.gz
-            pr26-final-repair.tar.gz.sha256
+          name: pr26-blob-manifest
+          path: pr26-blob-manifest.json
           if-no-files-found: error
           retention-days: 1
