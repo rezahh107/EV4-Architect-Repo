@@ -33,7 +33,7 @@ When authorities conflict, stop and report the conflict. Do not silently combine
 - AI is the technical decision authority for repository implementation, repair, validation interpretation, and merge recommendation.
 - Repository evidence is the authority for factual claims about files, revisions, tests, CI, review identity, and implementation state.
 - AI critique, confidence, or reviewer language is not factual evidence by itself.
-- Human technical approval is not required and must not be created as a substitute for evidence.
+- Human technical approval and owner acknowledgement must not be treated, accepted, or used as substitutes for repository evidence.
 - The user may perform the administrative Merge action after a valid technical recommendation; that action is not technical approval and does not prove correctness.
 - Missing evidence must not be normalized into success, completion, readiness, or enforcement.
 
