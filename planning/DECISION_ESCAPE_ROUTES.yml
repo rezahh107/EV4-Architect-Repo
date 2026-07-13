@@ -4,8 +4,8 @@ consumer_repo_evidence_state: expected_unverified
 
 last_updated:
   date: "2026-07-09"
-  pr: null
-  commit: null
+  pr: "22"
+  commit: "54c413c327bd18a3fbca543aa74dd09f7c8dda04"
 
 brc_reference:
   document: Behavioral_Rule_Coverage_v0.4.1

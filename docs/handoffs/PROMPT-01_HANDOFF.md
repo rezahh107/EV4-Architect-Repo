@@ -10,12 +10,25 @@ producer_pr: 14
 producer_pr_head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
 producer_merge_commit_sha: bf0b63c1f5d78725e7ea24371bab3360d9452a4f
 project_gate_prompt_0_commit: ea19c22c32458068e167b267da8b819e9263cdf7
-exact_head_ci_status: passed
+exact_head_ci_status: insufficient_evidence
+historical_ci_identity:
+  tested_ref_type: pull_request_merge
+  synthetic_merge: true
+  reviewed_head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
+  tested_sha: 8ec6cff257eea79c5dc95e7b17c4832bb69e0fbc
 project_gate_runtime_integration: not_implemented
 producer_repositories_modified_by_prompt_5: false
 prompt_5_ready_input: false
-human_review_required: true
+human_technical_approval_required: false
+independent_ai_review_required: true
+user_merge_action_required: true
 ```
+
+## Governance interpretation
+
+- `human_technical_approval_required: false` means technical correctness is not delegated to a human signoff.
+- `independent_ai_review_required: true` defines the review requirement for technical acceptance; it does not retroactively claim that Producer PR #14 received an independent exact-head AI review.
+- `user_merge_action_required: true` identifies Merge as an administrative user action, not technical approval or factual evidence.
 
 ## Normalization note
 
@@ -27,14 +40,22 @@ This handoff was normalized after Producer PR #14 was merged. It updates stale h
 producer_pr: 14
 producer_pr_state: merged
 base_branch: main
-head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
+reviewed_head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
 merge_commit_sha: bf0b63c1f5d78725e7ea24371bab3360d9452a4f
-exact_head_ci:
-  - workflow_name: verify-project-gate-contract
-    conclusion: success
-  - workflow_name: validate-architect-producer-gate-adoption
-    conclusion: success
+exact_head_ci_status: insufficient_evidence
+pull_request_merge_ci:
+  tested_ref_type: pull_request_merge
+  synthetic_merge: true
+  tested_sha: 8ec6cff257eea79c5dc95e7b17c4832bb69e0fbc
+  exact_head_equal: false
+  workflows:
+    - workflow_name: verify-project-gate-contract
+      conclusion: success
+    - workflow_name: validate-architect-producer-gate-adoption
+      conclusion: success
 ```
+
+The successful PR #14 workflow conclusions are preserved as synthetic pull-request merge/integration evidence. They do not prove execution on the historical reviewed head SHA.
 
 ## Project Gate Prompt 0 pin
 
@@ -72,9 +93,15 @@ artifact_paths:
 original_local_tests_recorded:
   - python scripts/check-architect-producer-gate-adoption.py --format json
   - PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
-remote_exact_head_ci_observed:
-  verify-project-gate-contract: success
-  validate-architect-producer-gate-adoption: success
+remote_pull_request_merge_ci_observed:
+  tested_ref_type: pull_request_merge
+  synthetic_merge: true
+  reviewed_head_sha: be64ea1a90dd0ad66c2e721597a4c35056f71b4f
+  tested_sha: 8ec6cff257eea79c5dc95e7b17c4832bb69e0fbc
+  exact_head_equal: false
+  workflows:
+    verify-project-gate-contract: success
+    validate-architect-producer-gate-adoption: success
 normalization_local_tests_run: []
 normalization_tests_not_run:
   - python scripts/check-architect-producer-gate-adoption.py --format json
@@ -97,6 +124,8 @@ ci_scope: repository_validation_evidence_only
 - Cross-repository E2E remains `insufficient_evidence`.
 - Real Elementor export validation remains `insufficient_evidence`.
 - Live Elementor execution remains `insufficient_evidence`.
+- Exact-head CI evidence for historical Producer PR #14 remains `insufficient_evidence`.
+- Independent exact-head AI review evidence for historical Producer PR #14 remains `insufficient_evidence`.
 
 ## Prompt 5 consumption rule
 
@@ -112,8 +141,9 @@ files_changed:
 ## No-false-execution notes
 
 - Producer adoption was not rerun.
+- Historical successful workflow conclusions are classified only as synthetic pull-request merge/integration evidence.
 - Runtime code was not modified.
 - Validators were not modified.
 - Schemas were not modified.
 - Fixtures were not modified.
-- Workflows were not modified.
+- Workflows were not modified by the historical normalization documented here.

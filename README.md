@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption pending merge; Project Gate Architect-to-CE runtime transition not implemented.
+Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption merged; Project Gate Architect-to-CE runtime transition not implemented.
 
 Role: `architecture_decision_system`
 
@@ -50,7 +50,7 @@ Implemented now:
 
 ```text
 Architect Stage Payload v1 schema and semantic validation
-Architect Producer Gate Export adoption artifacts pending merge
+Architect Producer Gate Export adoption merged in PR #14
 ```
 
 Not implemented yet:
@@ -63,7 +63,7 @@ real Elementor export validation
 legacy contract retirement
 ```
 
-Legacy handoff and builder-feed contracts remain available during migration and must not be treated as retired by this PR.
+Legacy handoff and builder-feed contracts remain available during migration and are not retired.
 
 ## Architect Producer Gate Export
 
@@ -129,15 +129,6 @@ https://github.com/rezahh107/EV4-Builder-Assistant-Repo
 https://github.com/rezahh107/EV4-Responsive-Architect
 ```
 
-## Status
+## Status Authority
 
-```yaml
-role: architecture_decision_system
-selected_candidate_authority: architect
-architect_stage_payload_v1: implemented_initial_v1
-architect_producer_gate_export_adoption: pending_merge
-constructability_gate_required: true
-project_gate_handoff: documented
-project_gate_architect_to_ce_transition: not_implemented
-production_ready: false
-```
+Mutable project and stage status is maintained only in `STATUS.md`. The summary at the top of this README is derived for orientation and must not override `STATUS.md`, exact repository evidence, or the live default branch.
