@@ -14,8 +14,16 @@ exact_head_ci_status: passed
 project_gate_runtime_integration: not_implemented
 producer_repositories_modified_by_prompt_5: false
 prompt_5_ready_input: false
-human_review_required: true
+human_technical_approval_required: false
+independent_ai_review_required: true
+user_merge_action_required: true
 ```
+
+## Governance interpretation
+
+- `human_technical_approval_required: false` means technical correctness is not delegated to a human signoff.
+- `independent_ai_review_required: true` defines the review requirement for technical acceptance; it does not retroactively claim that Producer PR #14 received an independent exact-head AI review.
+- `user_merge_action_required: true` identifies Merge as an administrative user action, not technical approval or factual evidence.
 
 ## Normalization note
 
@@ -97,6 +105,7 @@ ci_scope: repository_validation_evidence_only
 - Cross-repository E2E remains `insufficient_evidence`.
 - Real Elementor export validation remains `insufficient_evidence`.
 - Live Elementor execution remains `insufficient_evidence`.
+- Independent exact-head AI review evidence for historical Producer PR #14 remains `insufficient_evidence`.
 
 ## Prompt 5 consumption rule
 
