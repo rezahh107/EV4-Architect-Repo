@@ -102,6 +102,17 @@ EXACT_HEAD_REF = "${{ github.event.pull_request.head.sha }}"
 EXACT_HEAD_WORDS = ["test", "$(git rev-parse HEAD)", "=", EXACT_HEAD_REF]
 REMOTE_ACTION_SHA = re.compile(r"^[^@\s]+@[0-9a-fA-F]{40}$")
 ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", re.DOTALL)
+SAFE_PROOF_SHELLS = {"bash", "sh"}
+GITHUB_WORKSPACE_REF = "$" + "{{ github.workspace }}"
+SAFE_ROOT_WORKING_DIRECTORIES = {".", "./", GITHUB_WORKSPACE_REF}
+SAFE_TEST_INLINE_ENV = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+FORBIDDEN_PROOF_ENV_KEYS = {
+    "PYTEST_ADDOPTS",
+    "PATH",
+    "PYTHONPATH",
+    "BASH_ENV",
+    "ENV",
+}
 SECRET_REFERENCE = re.compile(
     r"(?:\bsecrets\.[A-Za-z_][A-Za-z0-9_]*"
     r"|\bsecrets\s*\[\s*['\"][^'\"]+['\"]\s*\]"
@@ -478,10 +489,20 @@ def _proof_node_is_blocking(node: Any) -> bool:
 
 
 def _shell_is_posix(value: Any) -> bool:
-    if not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str):
         return False
-    words = _shell_words(value)
-    return bool(words) and Path(words[0]).name in {"bash", "sh"}
+    normalized = " ".join(value.strip().split())
+    return normalized in SAFE_PROOF_SHELLS
+
+
+def _run_defaults(node: Any) -> dict[str, Any]:
+    if not isinstance(node, dict):
+        return {}
+    defaults = node.get("defaults")
+    if not isinstance(defaults, dict):
+        return {}
+    run = defaults.get("run")
+    return run if isinstance(run, dict) else {}
 
 
 def _proof_step_shell_is_supported(
@@ -492,29 +513,58 @@ def _proof_step_shell_is_supported(
     explicit = step.get("shell")
     if explicit is not None:
         return _shell_is_posix(explicit)
-    job_defaults = (
-        job.get("defaults") if isinstance(job.get("defaults"), dict) else {}
+    inherited = _run_defaults(job).get(
+        "shell", _run_defaults(document).get("shell")
     )
-    job_run = (
-        job_defaults.get("run")
-        if isinstance(job_defaults.get("run"), dict)
-        else {}
-    )
-    workflow_defaults = (
-        document.get("defaults")
-        if isinstance(document.get("defaults"), dict)
-        else {}
-    )
-    workflow_run = (
-        workflow_defaults.get("run")
-        if isinstance(workflow_defaults.get("run"), dict)
-        else {}
-    )
-    inherited = job_run.get("shell", workflow_run.get("shell"))
     if inherited is not None:
         return _shell_is_posix(inherited)
     runs_on = job.get("runs-on")
     return isinstance(runs_on, str) and runs_on.startswith("ubuntu-")
+
+
+def _proof_working_directory_is_root(
+    step: Any, job: dict[str, Any], document: dict[str, Any]
+) -> bool:
+    if not isinstance(step, dict):
+        return False
+    inherited = _run_defaults(job).get(
+        "working-directory",
+        _run_defaults(document).get("working-directory"),
+    )
+    effective = step.get("working-directory", inherited)
+    if effective is None:
+        return True
+    return (
+        isinstance(effective, str)
+        and effective.strip() in SAFE_ROOT_WORKING_DIRECTORIES
+    )
+
+
+def _normalized_env_mapping(value: Any) -> dict[str, str] | None:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        return None
+    output: dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not isinstance(
+            item, (str, int, float, bool)
+        ):
+            return None
+        output[key] = str(item)
+    return output
+
+
+def _proof_yaml_environment_is_empty(
+    step: Any, job: dict[str, Any], document: dict[str, Any]
+) -> bool:
+    for node in (document, job, step):
+        if not isinstance(node, dict):
+            return False
+        environment = _normalized_env_mapping(node.get("env"))
+        if environment is None or environment:
+            return False
+    return True
 
 
 def _shell_words(line: str) -> list[str]:
@@ -560,6 +610,8 @@ def _contains_exact_head_assertion(
         _proof_node_is_blocking(step)
         and isinstance(step, dict)
         and _proof_step_shell_is_supported(step, job, document)
+        and _proof_working_directory_is_root(step, job, document)
+        and _proof_yaml_environment_is_empty(step, job, document)
         and _is_fail_closed_exact_head_command(step.get("run"))
     )
 
@@ -1126,20 +1178,41 @@ def _workflow_paths_cover(
     return not missed, missed
 
 
-def _strip_environment_assignments(words: list[str]) -> list[str]:
+def _split_environment_assignments(
+    words: list[str],
+) -> tuple[dict[str, str] | None, list[str]]:
+    assignments: dict[str, str] = {}
     index = 0
     while index < len(words) and ENV_ASSIGNMENT.fullmatch(words[index]):
+        key, value = words[index].split("=", 1)
+        if key in assignments:
+            return None, []
+        assignments[key] = value
         index += 1
-    return words[index:]
+    return assignments, words[index:]
 
 
-def _simple_shell_words(run: Any) -> list[str]:
+def _simple_shell_command(
+    run: Any,
+) -> tuple[dict[str, str] | None, list[str]]:
     line = _single_command_line(run)
     if line is None:
-        return []
+        return None, []
     if any(token in line for token in FORBIDDEN_SHELL_SYNTAX):
-        return []
-    return _strip_environment_assignments(_shell_words(line))
+        return None, []
+    return _split_environment_assignments(_shell_words(line))
+
+
+def _inline_environment_is_safe(
+    assignments: dict[str, str] | None, *, for_tests: bool
+) -> bool:
+    if assignments is None:
+        return False
+    if FORBIDDEN_PROOF_ENV_KEYS & set(assignments):
+        return False
+    if not assignments:
+        return True
+    return for_tests and assignments == SAFE_TEST_INLINE_ENV
 
 
 def _words_execute_validator(words: list[str], validator_file: str) -> bool:
@@ -1181,13 +1254,20 @@ def _step_executes_applicable_command(
 ) -> bool:
     if not _proof_node_is_blocking(step):
         return False
-    if job is not None and document is not None:
-        if not _proof_step_shell_is_supported(step, job, document):
-            return False
-    words = _simple_shell_words(step.get("run"))
-    return _words_execute_validator(
-        words, validator_file
-    ) or _words_execute_tests(words)
+    if job is None or document is None:
+        return False
+    if not _proof_step_shell_is_supported(step, job, document):
+        return False
+    if not _proof_working_directory_is_root(step, job, document):
+        return False
+    if not _proof_yaml_environment_is_empty(step, job, document):
+        return False
+    assignments, words = _simple_shell_command(step.get("run"))
+    if _words_execute_validator(words, validator_file):
+        return _inline_environment_is_safe(assignments, for_tests=False)
+    if _words_execute_tests(words):
+        return _inline_environment_is_safe(assignments, for_tests=True)
+    return False
 
 
 def _verify_ci_step(

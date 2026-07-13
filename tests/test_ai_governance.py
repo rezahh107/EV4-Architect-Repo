@@ -672,3 +672,127 @@ def test_human_approval_and_coach_truth_are_rejected():
     assert "AIGOV-COACH-001_CRITIQUE_AS_FACT" in codes(
         ai_governance.validate_coach_critique(critique)
     )
+
+
+
+# PRF-002/003 proof-context hardening regressions
+def test_custom_shell_cannot_bypass_exact_head_assertion():
+    text = workflow().replace(
+        "        shell: bash",
+        "        shell: bash -c 'exit 0' -- {0}",
+    )
+    assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
+        ai_governance.validate_workflow_text("workflow.yml", text)
+    )
+
+
+def test_custom_shell_cannot_bypass_ci_carrier(tmp_path):
+    text = workflow().replace(
+        '      - name: Validate\n        run: "python scripts/check-ai-governance.py"',
+        "      - name: Validate\n        shell: bash -c 'exit 0' -- {0}\n"
+        '        run: "python scripts/check-ai-governance.py"',
+    )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+def test_pytest_addopts_collect_only_assignment_is_rejected(tmp_path):
+    text = workflow(
+        validation_run=(
+            "PYTEST_ADDOPTS=--collect-only pytest -q "
+            "tests/test_ai_governance.py"
+        )
+    )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+@pytest.mark.parametrize(
+    "variable",
+    ["PATH", "PYTHONPATH", "BASH_ENV", "ENV"],
+)
+def test_dangerous_inline_environment_assignment_is_rejected(
+    tmp_path, variable
+):
+    text = workflow(
+        validation_run=(
+            f"{variable}=attacker python scripts/check-ai-governance.py"
+        )
+    )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+@pytest.mark.parametrize("scope", ["workflow", "job", "step"])
+def test_effective_yaml_environment_is_rejected_for_ci_proof(tmp_path, scope):
+    text = workflow()
+    if scope == "workflow":
+        text = text.replace(
+            "permissions:\n  contents: read\n",
+            "permissions:\n  contents: read\n"
+            "env:\n  PYTEST_ADDOPTS: --collect-only\n",
+        )
+    elif scope == "job":
+        text = text.replace(
+            "  validate:\n    runs-on:",
+            "  validate:\n    env:\n"
+            "      PYTEST_ADDOPTS: --collect-only\n    runs-on:",
+        )
+    else:
+        text = text.replace(
+            "      - name: Validate\n",
+            "      - name: Validate\n        env:\n"
+            "          PYTEST_ADDOPTS: --collect-only\n",
+        )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+@pytest.mark.parametrize("scope", ["workflow", "job", "step"])
+def test_non_root_working_directory_is_rejected_for_ci_proof(tmp_path, scope):
+    text = workflow()
+    if scope == "workflow":
+        text = text.replace(
+            "permissions:\n  contents: read\n",
+            "permissions:\n  contents: read\n"
+            "defaults:\n  run:\n    working-directory: subdir\n",
+        )
+    elif scope == "job":
+        text = text.replace(
+            "  validate:\n    runs-on:",
+            "  validate:\n    defaults:\n      run:\n"
+            "        working-directory: subdir\n    runs-on:",
+        )
+    else:
+        text = text.replace(
+            "      - name: Validate\n",
+            "      - name: Validate\n"
+            "        working-directory: subdir\n",
+        )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is False
+    assert "AIGOV-COVERAGE-001_CI_STEP_INVALID" in codes(diagnostics)
+
+
+def test_non_root_working_directory_invalidates_head_assertion():
+    text = workflow().replace(
+        "        shell: bash",
+        "        working-directory: subdir\n        shell: bash",
+    )
+    assert "AIGOV-SECURITY-PROFILE-001_HEAD_ASSERTION_MISSING" in codes(
+        ai_governance.validate_workflow_text("workflow.yml", text)
+    )
+
+
+def test_repository_root_working_directory_is_accepted(tmp_path):
+    text = workflow().replace(
+        "      - name: Validate\n",
+        "      - name: Validate\n        working-directory: .\n",
+    )
+    passed, diagnostics = verify_temp_ci_step(tmp_path, text)
+    assert passed is True, diagnostics
+    assert diagnostics == []
