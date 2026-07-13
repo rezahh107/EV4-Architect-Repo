@@ -101,13 +101,23 @@ MERGE_INVARIANT = (
 EXACT_HEAD_REF = "${{ github.event.pull_request.head.sha }}"
 EXACT_HEAD_WORDS = ["test", "$(git rev-parse HEAD)", "=", EXACT_HEAD_REF]
 REMOTE_ACTION_SHA = re.compile(r"^[^@\s]+@[0-9a-fA-F]{40}$")
+DOCKER_ACTION_DIGEST = re.compile(r"^docker://[^@\s]+@sha256:[0-9a-fA-F]{64}$")
 ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", re.DOTALL)
 SAFE_PROOF_SHELLS = {"bash", "sh"}
 GITHUB_WORKSPACE_REF = "$" + "{{ github.workspace }}"
 SAFE_ROOT_WORKING_DIRECTORIES = {".", "./", GITHUB_WORKSPACE_REF}
-SAFE_TEST_INLINE_ENV = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+SAFE_TEST_INLINE_ENV = {
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+    "PYTEST_ADDOPTS": "",
+    "PYTEST_PLUGINS": "",
+}
+CI_PROOF_SURFACE_PATHS = {
+    "scripts/_proof_surface_probe.py",
+    "tests/_proof_surface_probe.py",
+    ".github/actions/_proof_surface/action.yml",
+    "pytest.ini", "pyproject.toml", "setup.cfg", "tox.ini", "conftest.py",
+}
 FORBIDDEN_PROOF_ENV_KEYS = {
-    "PYTEST_ADDOPTS",
     "PATH",
     "PYTHONPATH",
     "BASH_ENV",
@@ -455,6 +465,18 @@ def _is_remote_action(target: str) -> bool:
     return not target.startswith(("./", "docker://"))
 
 
+def _is_docker_action(target: str) -> bool:
+    return target.startswith("docker://")
+
+
+def _is_local_action(target: str) -> bool:
+    return target.startswith("./")
+
+
+def _proof_job_execution_context_is_trusted(job: Any) -> bool:
+    return isinstance(job, dict) and "container" not in job and "services" not in job
+
+
 def _is_checkout(target: str) -> bool:
     return target.split("@", 1)[0].lower() == "actions/checkout"
 
@@ -608,6 +630,7 @@ def _contains_exact_head_assertion(
 ) -> bool:
     return (
         _proof_node_is_blocking(step)
+        and _proof_job_execution_context_is_trusted(job)
         and isinstance(step, dict)
         and _proof_step_shell_is_supported(step, job, document)
         and _proof_working_directory_is_root(step, job, document)
@@ -647,6 +670,108 @@ def _resolve_local_workflow(target: str, root: Path) -> tuple[Path, str] | None:
     if candidate.suffix not in {".yml", ".yaml"}:
         return None
     return candidate, relative
+
+
+def _resolve_local_action(target: str, root: Path) -> tuple[Path, str] | None:
+    if not _is_local_action(target) or "@" in target:
+        return None
+    directory = (root / target[2:]).resolve()
+    try:
+        relative_dir = directory.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return None
+    if not relative_dir.startswith(".github/actions/") or not directory.is_dir():
+        return None
+    candidates = [p for p in (directory / "action.yml", directory / "action.yaml") if p.is_file()]
+    if len(candidates) != 1:
+        return None
+    return candidates[0], candidates[0].relative_to(root.resolve()).as_posix()
+
+
+def _validate_action_reference(
+    target: str, path: str, root: Path, stack: tuple[str, ...] = ()
+) -> list[Diagnostic]:
+    if _is_docker_action(target):
+        if DOCKER_ACTION_DIGEST.fullmatch(target):
+            return []
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_MUTABLE_DOCKER_ACTION", path,
+            f"Docker action must use an immutable sha256 digest: {target}",
+        )]
+    if _is_remote_action(target):
+        if REMOTE_ACTION_SHA.fullmatch(target):
+            return []
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF", path,
+            f"mutable action ref: {target}",
+        )]
+    resolved = _resolve_local_action(target, root)
+    if resolved is None:
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", path,
+            f"unsupported or missing local action: {target}",
+        )]
+    action_file, relative = resolved
+    if relative in stack:
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_CYCLE", path,
+            f"local action cycle detected: {' -> '.join((*stack, relative))}",
+        )]
+    try:
+        document = load_actions_yaml(action_file.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError, ValueError) as exc:
+        return [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", path,
+            f"local action cannot be parsed: {exc}",
+        )]
+    output = [
+        Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_PR_SECRET_EXPOSURE",
+            f"{relative}:{secret_path}",
+            "direct PR secret exposure is forbidden in local actions",
+        )
+        for secret_path in _secret_exposure_paths(document)
+    ]
+    runs = document.get("runs")
+    if not isinstance(runs, dict) or runs.get("using") != "composite":
+        return output + [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", relative,
+            "local PR actions must be composite actions",
+        )]
+    action_steps = runs.get("steps")
+    if not isinstance(action_steps, list):
+        return output + [Diagnostic(
+            "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", relative,
+            "local composite action must define a steps list",
+        )]
+    current = (*stack, relative)
+    for index, step in enumerate(action_steps):
+        step_path = f"{relative}::runs.steps[{index}]"
+        if not isinstance(step, dict):
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", step_path,
+                "local composite step must be a mapping",
+            ))
+            continue
+        nested = step.get("uses")
+        if isinstance(nested, str):
+            if _is_checkout(nested):
+                output.append(Diagnostic(
+                    "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", step_path,
+                    "repository checkout must remain a direct workflow step",
+                ))
+            output.extend(_validate_action_reference(nested, f"{step_path}.uses", root, current))
+        elif "run" in step:
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_RUN_UNBOUNDED", step_path,
+                "local composite run steps are outside the active bounded profile",
+            ))
+        else:
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_LOCAL_ACTION_INVALID", step_path,
+                "local composite step must contain a uses reference",
+            ))
+    return output
 
 
 def validate_workflow_document(
@@ -726,6 +851,12 @@ def validate_workflow_document(
                     "effective permissions must be exactly contents: read",
                 )
             )
+
+        if not _proof_job_execution_context_is_trusted(job):
+            output.append(Diagnostic(
+                "AIGOV-SECURITY-PROFILE-001_UNTRUSTED_JOB_RUNTIME", job_path,
+                "PR proof jobs must not declare container or services",
+            ))
 
         reusable_target = job.get("uses")
         if isinstance(reusable_target, str):
@@ -818,14 +949,7 @@ def validate_workflow_document(
                 continue
             target = step.get("uses")
             if isinstance(target, str):
-                if _is_remote_action(target) and not REMOTE_ACTION_SHA.fullmatch(target):
-                    output.append(
-                        Diagnostic(
-                            "AIGOV-SECURITY-PROFILE-001_MUTABLE_ACTION_REF",
-                            f"{step_path}.uses",
-                            f"mutable action ref: {target}",
-                        )
-                    )
+                output.extend(_validate_action_reference(target, f"{step_path}.uses", root))
                 if _is_checkout(target):
                     checkout_indexes.append(index)
                     with_values = (
@@ -1217,33 +1341,22 @@ def _inline_environment_is_safe(
 
 def _words_execute_validator(words: list[str], validator_file: str) -> bool:
     return (
-        len(words) == 2
+        len(words) == 4
         and Path(words[0]).name in {"python", "python3"}
-        and words[1] == validator_file
+        and words[1:3] == ["-I", "-P"]
+        and words[3] == validator_file
     )
 
 
 def _words_execute_tests(
     words: list[str], test_file: str = "tests/test_ai_governance.py"
 ) -> bool:
-    if not words:
+    if not words or Path(words[0]).name not in {"python", "python3"}:
         return False
-    executable = Path(words[0]).name
-    if executable in {"python", "python3"}:
-        if len(words) < 4 or words[1:3] != ["-m", "pytest"]:
-            return False
-        arguments = words[3:]
-    elif executable == "pytest":
-        arguments = words[1:]
-    else:
-        return False
-
-    allowed_options = {"-q", "--quiet"}
-    positional = [item for item in arguments if not item.startswith("-")]
-    options = [item for item in arguments if item.startswith("-")]
-    return positional == [test_file] and all(
-        item in allowed_options for item in options
-    )
+    return tuple(words[1:]) in {
+        ("-I", "-P", "-m", "pytest", "-c", "/dev/null", "--noconftest", "-q", test_file),
+        ("-I", "-P", "-m", "pytest", "-c", "/dev/null", "--noconftest", "--quiet", test_file),
+    }
 
 
 def _step_executes_applicable_command(
@@ -1255,6 +1368,8 @@ def _step_executes_applicable_command(
     if not _proof_node_is_blocking(step):
         return False
     if job is None or document is None:
+        return False
+    if not _proof_job_execution_context_is_trusted(job):
         return False
     if not _proof_step_shell_is_supported(step, job, document):
         return False
@@ -1396,7 +1511,7 @@ def _verify_ci_step(
     authoritative_paths = {
         "planning/AI_GOVERNANCE_COVERAGE.yml",
         "tests/test_ai_governance.py",
-    }
+    } | CI_PROOF_SURFACE_PATHS
     for carrier_value in carriers.values():
         path_value = carrier_path(carrier_value)
         if path_value:
