@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption merged; Project Gate Architect-to-CE runtime transition not implemented.
+Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption merged; Project Gate Architect-to-CE transition implemented at a pinned, fixture-verified scope; real non-synthetic handoff and current-live-head compatibility remain `insufficient_evidence`.
 
 Role: `architecture_decision_system`
 
@@ -32,9 +32,9 @@ The complete planned line is:
 Architect → Gate → CE → Gate → Builder → Gate → Responsive → Gate
 ```
 
-The user will upload the Architect output and run one check. A successful result provides the CE package. A failed result provides a plain Persian repair package for the Architect-connected model. The corrected output is checked again before CE receives it.
+The user may submit Architect output to Project Gate. At the currently verified scope, Project Gate can validate the pinned Architect/CE contracts and produce a CE intake package or a fail-closed result with diagnostics. This fixture-tested, pinned-scope path is not evidence of a real-project handoff, compatibility with the current live heads, Builder authorization, or production readiness.
 
-The Project Gate Python foundation exists, but the Architect-to-CE runtime transition is not implemented yet.
+The Project Gate Python verifier, Architect-to-CE CLI transition, and initial local operator UI are implemented at their documented scopes. The transition remains fixture-tested against pinned owner revisions; real non-synthetic handoff and compatibility with the current live heads are not established.
 
 ## Architect Stage Payload v1
 
@@ -51,13 +51,14 @@ Implemented now:
 ```text
 Architect Stage Payload v1 schema and semantic validation
 Architect Producer Gate Export adoption merged in PR #14
+Project Gate Architect-to-CE orchestration and CE intake validation at a pinned, synthetic-fixture-tested scope
 ```
 
 Not implemented yet:
 
 ```text
-Project Gate Architect-to-CE runtime transition
-CE intake validation
+real non-synthetic Architect-to-CE handoff
+current-live-head compatibility for the Project Gate transition pins
 Builder execution authorization
 real Elementor export validation
 legacy contract retirement
