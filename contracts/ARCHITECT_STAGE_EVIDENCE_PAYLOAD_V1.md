@@ -16,7 +16,7 @@ Architect stages
 → Architect Stage Payload
 → common Stage Evidence Bundle
 → Project Gate envelope validation
-→ future Architect-to-CE transition
+→ Project Gate Architect-to-CE transition (implemented externally at a pinned, fixture-tested scope)
 ```
 
 Project Gate may validate the envelope and preserve hashes/provenance. Project Gate must not create missing Architect facts, change locked architecture identity, or silently repair the payload.
@@ -38,8 +38,8 @@ Implemented in this contract:
 
 Not implemented here:
 
-- Project Gate Architect-to-CE transition;
-- CE intake validation;
+- Project Gate Architect-to-CE transition logic, which is owned by Project Gate;
+- CE intake validation logic, which is owned by CE and orchestrated by Project Gate;
 - Builder execution authorization;
 - real end-to-end fixture validation;
 - legacy contract retirement.
