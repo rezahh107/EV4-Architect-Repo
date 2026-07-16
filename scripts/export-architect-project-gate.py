@@ -154,10 +154,27 @@ def _status_path(line: str) -> Path:
 def inside(root: Path, path: Path) -> Path:
     resolved = path.resolve()
     try:
-        resolved.relative_to(root.resolve())
+        relative = resolved.relative_to(root.resolve())
     except ValueError as exc:
         raise ExportError("ARCH_EXPORT_UNSAFE_OUTPUT_PATH", "output_preflight", "Output must remain inside the Architect repository.", "operator") from exc
+    if relative.parts and relative.parts[0] == ".git":
+        raise ExportError("ARCH_EXPORT_UNSAFE_OUTPUT_PATH", "output_preflight", "Output must not target Git metadata.", "operator")
     return resolved
+
+
+def _is_tracked(root: Path, path: Path) -> bool:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    result = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", str(relative)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance:
@@ -173,6 +190,8 @@ def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance
     commit = _git(root, "rev-parse", "HEAD")
     if not SHA40.fullmatch(commit):
         raise ExportError("ARCH_EXPORT_INVALID_HEAD_SHA", "git_provenance", "HEAD is not a full commit SHA.", "operator")
+    if _is_tracked(root, output):
+        raise ExportError("ARCH_EXPORT_TRACKED_OUTPUT_FORBIDDEN", "output_preflight", "Output must not replace a tracked repository file.", "operator")
     allowed: set[Path] = set()
     for candidate in (payload, output):
         try:
@@ -181,8 +200,6 @@ def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance
             pass
     dirty = []
     for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines():
-        # Only untracked run input/output files are allowed. A tracked payload
-        # modified in-place is still a dirty checkout and therefore fails closed.
         if line[:2] == "??" and _status_path(line) in allowed:
             continue
         dirty.append(line)
@@ -398,6 +415,8 @@ def run_export(
 ) -> ExportResult:
     root, payload_path = root.resolve(), payload_path.resolve()
     output_path = inside(root, output_path)
+    if output_path == payload_path:
+        raise ExportError("ARCH_EXPORT_INPUT_OUTPUT_COLLISION", "output_preflight", "Output must not replace the source payload.", "operator")
     if output_path.exists() and not overwrite:
         raise ExportError("ARCH_EXPORT_OUTPUT_EXISTS", "output_preflight", "Output exists; pass --overwrite only intentionally.", "operator")
     payload = load_json(payload_path)
