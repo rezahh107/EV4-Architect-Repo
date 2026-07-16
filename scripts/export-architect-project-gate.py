@@ -52,10 +52,10 @@ class ExportResult:
 
 
 class ExportError(RuntimeError):
-    def __init__(self, code: str, stage: str, reason: str, owner: str, exit_code: int = 1):
+    def __init__(self, code: str, stage: str, reason: str, owner: str, exit_code: int = 1, output_written: bool = False):
         super().__init__(reason)
         self.code, self.stage, self.reason = code, stage, reason
-        self.owner, self.exit_code = owner, exit_code
+        self.owner, self.exit_code, self.output_written = owner, exit_code, output_written
 
     def report(self) -> dict[str, Any]:
         return {
@@ -63,7 +63,7 @@ class ExportError(RuntimeError):
             "failed_stage": self.stage,
             "reason": self.reason,
             "repair_owner": self.owner,
-            "output_written": False,
+            "output_written": self.output_written,
             "handoff_prohibited": True,
         }
 
@@ -179,7 +179,13 @@ def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance
             allowed.add(candidate.resolve().relative_to(root.resolve()))
         except ValueError:
             pass
-    dirty = [line for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines() if _status_path(line) not in allowed]
+    dirty = []
+    for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines():
+        # Only untracked run input/output files are allowed. A tracked payload
+        # modified in-place is still a dirty checkout and therefore fails closed.
+        if line[:2] == "??" and _status_path(line) in allowed:
+            continue
+        dirty.append(line)
     if dirty:
         raise ExportError("ARCH_EXPORT_DIRTY_WORKTREE", "git_provenance", "Unrelated staged, unstaged, or untracked changes prevent reliable provenance.", "operator")
     return GitProvenance(REPOSITORY, ref, commit)
@@ -394,11 +400,11 @@ def run_export(
     output_path = inside(root, output_path)
     if output_path.exists() and not overwrite:
         raise ExportError("ARCH_EXPORT_OUTPUT_EXISTS", "output_preflight", "Output exists; pass --overwrite only intentionally.", "operator")
-    git = provenance_provider(root, payload_path, output_path)
     payload = load_json(payload_path)
     validate_payload(root, payload)
     if not isinstance(payload, dict):
         raise ExportError("ARCH_EXPORT_PAYLOAD_NOT_OBJECT", "semantic_validation", "Architect payload must be an object.", "architect")
+    git = provenance_provider(root, payload_path, output_path)
     export, hashes = build_export(payload, git, run_id, _input_ref(root, payload_path))
     validate_contracts(root, export)
     verify_hashes(export, hashes)
@@ -407,8 +413,20 @@ def run_export(
         reread = load_json(output_path)
         validate_contracts(root, reread)
         verify_hashes(reread, hashes)
-    except Exception:
-        output_path.unlink(missing_ok=True)
+    except Exception as exc:
+        try:
+            output_path.unlink(missing_ok=True)
+        except OSError:
+            if isinstance(exc, ExportError):
+                exc.output_written = output_path.exists()
+            else:
+                raise ExportError(
+                    "ARCH_EXPORT_POSTWRITE_CLEANUP_FAILED",
+                    "post_write_validation",
+                    "Post-write validation failed and the invalid artifact could not be removed.",
+                    "operator",
+                    output_written=output_path.exists(),
+                ) from exc
         raise
     return ExportResult(
         status=export["handoff"]["status"],
