@@ -77,13 +77,17 @@ def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return value
 
 
+def _reject_constant(value: str) -> Any:
+    raise ValueError(f"non-finite number: {value}")
+
+
 def load_json(path: Path) -> Any:
     try:
         text = path.read_text(encoding="utf-8")
         return json.loads(
             text,
             object_pairs_hook=_pairs,
-            parse_constant=lambda value: (_ for _ in ()).throw(ValueError(f"non-finite number: {value}")),
+            parse_constant=_reject_constant,
         )
     except UnicodeDecodeError as exc:
         raise ExportError("ARCH_EXPORT_INPUT_NOT_UTF8", "json_parse", "Payload must be UTF-8 JSON.", "architect") from exc
@@ -97,9 +101,10 @@ def _finite(value: Any, path: str = "$") -> None:
     if isinstance(value, float) and not math.isfinite(value):
         raise ExportError("ARCH_EXPORT_NON_FINITE_NUMBER", "canonicalization", f"Non-finite number at {path}.", "architect")
     if isinstance(value, dict):
-        for key in sorted(value):
+        for key in value:
             if not isinstance(key, str):
                 raise ExportError("ARCH_EXPORT_NON_STRING_KEY", "canonicalization", f"Non-string object key at {path}.", "architect")
+        for key in sorted(value):
             _finite(value[key], f"{path}.{key}")
     elif isinstance(value, list):
         for index, item in enumerate(value):
@@ -199,7 +204,7 @@ def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance
         except ValueError:
             pass
     dirty = []
-    for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines():
+    for line in _git(root, "-c", "core.quotepath=false", "status", "--porcelain=v1", "--untracked-files=all").splitlines():
         if line[:2] == "??" and _status_path(line) in allowed:
             continue
         dirty.append(line)
@@ -420,32 +425,35 @@ def run_export(
     if output_path.exists() and not overwrite:
         raise ExportError("ARCH_EXPORT_OUTPUT_EXISTS", "output_preflight", "Output exists; pass --overwrite only intentionally.", "operator")
     payload = load_json(payload_path)
-    validate_payload(root, payload)
     if not isinstance(payload, dict):
         raise ExportError("ARCH_EXPORT_PAYLOAD_NOT_OBJECT", "semantic_validation", "Architect payload must be an object.", "architect")
+    validate_payload(root, payload)
     git = provenance_provider(root, payload_path, output_path)
     export, hashes = build_export(payload, git, run_id, _input_ref(root, payload_path))
     validate_contracts(root, export)
     verify_hashes(export, hashes)
+    output_replaced = False
     try:
         atomic_write(output_path, export, overwrite)
+        output_replaced = True
         reread = load_json(output_path)
         validate_contracts(root, reread)
         verify_hashes(reread, hashes)
     except Exception as exc:
-        try:
-            output_path.unlink(missing_ok=True)
-        except OSError:
-            if isinstance(exc, ExportError):
-                exc.output_written = output_path.exists()
-            else:
-                raise ExportError(
-                    "ARCH_EXPORT_POSTWRITE_CLEANUP_FAILED",
-                    "post_write_validation",
-                    "Post-write validation failed and the invalid artifact could not be removed.",
-                    "operator",
-                    output_written=output_path.exists(),
-                ) from exc
+        if output_replaced:
+            try:
+                output_path.unlink(missing_ok=True)
+            except OSError:
+                if isinstance(exc, ExportError):
+                    exc.output_written = output_path.exists()
+                else:
+                    raise ExportError(
+                        "ARCH_EXPORT_POSTWRITE_CLEANUP_FAILED",
+                        "post_write_validation",
+                        "Post-write validation failed and the invalid artifact could not be removed.",
+                        "operator",
+                        output_written=output_path.exists(),
+                    ) from exc
         raise
     return ExportResult(
         status=export["handoff"]["status"],
