@@ -9,12 +9,13 @@ import json
 import math
 import os
 import re
+import stat
 import subprocess
 import sys
 import tempfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
@@ -84,11 +85,7 @@ def _reject_constant(value: str) -> Any:
 def load_json(path: Path) -> Any:
     try:
         text = path.read_text(encoding="utf-8")
-        return json.loads(
-            text,
-            object_pairs_hook=_pairs,
-            parse_constant=_reject_constant,
-        )
+        return json.loads(text, object_pairs_hook=_pairs, parse_constant=_reject_constant)
     except UnicodeDecodeError as exc:
         raise ExportError("ARCH_EXPORT_INPUT_NOT_UTF8", "json_parse", "Payload must be UTF-8 JSON.", "architect") from exc
     except OSError as exc:
@@ -157,7 +154,10 @@ def _status_path(line: str) -> Path:
 
 
 def inside(root: Path, path: Path) -> Path:
-    resolved = path.resolve()
+    absolute = path if path.is_absolute() else root / path
+    if os.path.lexists(absolute) and absolute.is_symlink():
+        raise ExportError("ARCH_EXPORT_UNSAFE_OUTPUT_PATH", "output_preflight", "Output must not be a symbolic link.", "operator")
+    resolved = absolute.resolve()
     try:
         relative = resolved.relative_to(root.resolve())
     except ValueError as exc:
@@ -182,7 +182,12 @@ def _is_tracked(root: Path, path: Path) -> bool:
     return result.returncode == 0
 
 
-def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance:
+def inspect_repository(
+    root: Path,
+    payload: Path,
+    output: Path,
+    allowed_paths: Iterable[Path] = (),
+) -> GitProvenance:
     if Path(_git(root, "rev-parse", "--show-toplevel")).resolve() != root.resolve():
         raise ExportError("ARCH_EXPORT_REPOSITORY_ROOT_MISMATCH", "git_provenance", "Run from the repository root.", "operator")
     remote = _git(root, "remote", "get-url", "origin")
@@ -198,7 +203,7 @@ def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance
     if _is_tracked(root, output):
         raise ExportError("ARCH_EXPORT_TRACKED_OUTPUT_FORBIDDEN", "output_preflight", "Output must not replace a tracked repository file.", "operator")
     allowed: set[Path] = set()
-    for candidate in (payload, output):
+    for candidate in (payload, output, *tuple(allowed_paths)):
         try:
             allowed.add(candidate.resolve().relative_to(root.resolve()))
         except ValueError:
@@ -211,6 +216,24 @@ def inspect_repository(root: Path, payload: Path, output: Path) -> GitProvenance
     if dirty:
         raise ExportError("ARCH_EXPORT_DIRTY_WORKTREE", "git_provenance", "Unrelated staged, unstaged, or untracked changes prevent reliable provenance.", "operator")
     return GitProvenance(REPOSITORY, ref, commit)
+
+
+def _assert_same_provenance(expected: GitProvenance, observed: GitProvenance, stage: str) -> None:
+    if observed == expected:
+        return
+    changes = []
+    if observed.repository != expected.repository:
+        changes.append("repository")
+    if observed.ref != expected.ref:
+        changes.append("ref")
+    if observed.commit_sha != expected.commit_sha:
+        changes.append("HEAD")
+    raise ExportError(
+        "ARCH_EXPORT_PROVENANCE_DRIFT",
+        stage,
+        f"Git provenance changed during export: {', '.join(changes) or 'unknown field'}.",
+        "operator",
+    )
 
 
 def validate_payload(root: Path, payload: Any) -> dict[str, Any]:
@@ -390,24 +413,157 @@ def verify_hashes(export: dict[str, Any], expected: dict[str, str]) -> None:
         raise ExportError("ARCH_EXPORT_BUNDLE_HASH_MISMATCH", "hash_self_verification", "Recorded bundle hash does not match final_stage_bundle.", "repository_owner")
 
 
-def atomic_write(path: Path, value: Any, overwrite: bool) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ExportError("ARCH_EXPORT_OUTPUT_EXISTS", "atomic_write", "Output exists; pass --overwrite only intentionally.", "operator")
-    temp: Path | None = None
+def _fsync_directory(path: Path) -> None:
     try:
-        with tempfile.NamedTemporaryFile("wb", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as handle:
-            temp = Path(handle.name)
-            handle.write(canonical_bytes(value) + b"\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        if path.exists() and not overwrite:
-            raise ExportError("ARCH_EXPORT_OUTPUT_EXISTS", "atomic_write", "Output appeared during write; nothing was replaced.", "operator")
-        os.replace(temp, path)
-        temp = None
+        descriptor = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        try:
+            os.fsync(descriptor)
+        except OSError:
+            pass
     finally:
-        if temp:
-            temp.unlink(missing_ok=True)
+        os.close(descriptor)
+
+
+def _identity(path: Path) -> tuple[int, int] | None:
+    try:
+        observed = os.lstat(path)
+    except FileNotFoundError:
+        return None
+    return observed.st_dev, observed.st_ino
+
+
+def _new_temp_path(path: Path, suffix: str) -> Path:
+    descriptor, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=suffix)
+    os.close(descriptor)
+    candidate = Path(name)
+    candidate.unlink()
+    return candidate
+
+
+@dataclass
+class OutputTransaction:
+    path: Path
+    candidate: Path
+    overwrite: bool
+    backup: Path | None = None
+    published_identity: tuple[int, int] | None = None
+    published: bool = False
+    committed: bool = False
+    cleanup_warnings: list[str] = field(default_factory=list)
+
+    @classmethod
+    def stage(cls, path: Path, value: Any, overwrite: bool) -> "OutputTransaction":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if os.path.lexists(path) and path.is_symlink():
+            raise ExportError("ARCH_EXPORT_UNSAFE_OUTPUT_PATH", "output_preflight", "Output must not be a symbolic link.", "operator")
+        temp: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile("wb", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as handle:
+                temp = Path(handle.name)
+                handle.write(canonical_bytes(value) + b"\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            return cls(path=path, candidate=temp, overwrite=overwrite)
+        except Exception:
+            if temp is not None:
+                temp.unlink(missing_ok=True)
+            raise
+
+    def allowed_paths(self) -> tuple[Path, ...]:
+        return tuple(path for path in (self.candidate, self.backup) if path is not None)
+
+    def _quarantine_existing(self) -> None:
+        if not self.overwrite:
+            return
+        try:
+            observed = os.lstat(self.path)
+        except FileNotFoundError:
+            return
+        if not stat.S_ISREG(observed.st_mode):
+            raise ExportError("ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID", "atomic_write", "Existing output must be a regular file.", "operator")
+        self.backup = _new_temp_path(self.path, ".bak")
+        try:
+            os.replace(self.path, self.backup)
+            _fsync_directory(self.path.parent)
+        except Exception:
+            self.backup.unlink(missing_ok=True)
+            self.backup = None
+            raise
+
+    def publish(self) -> None:
+        self._quarantine_existing()
+        try:
+            os.link(self.candidate, self.path, follow_symlinks=False)
+        except FileExistsError as exc:
+            if self.backup is not None:
+                os.replace(self.backup, self.path)
+                self.backup = None
+                _fsync_directory(self.path.parent)
+            raise ExportError(
+                "ARCH_EXPORT_OUTPUT_EXISTS",
+                "atomic_write",
+                "Output appeared at the atomic publication boundary; nothing from this run was published.",
+                "operator",
+            ) from exc
+        except Exception:
+            if self.backup is not None:
+                os.replace(self.backup, self.path)
+                self.backup = None
+                _fsync_directory(self.path.parent)
+            raise
+        self.published_identity = _identity(self.path)
+        self.published = True
+        self.candidate.unlink(missing_ok=True)
+        _fsync_directory(self.path.parent)
+
+    def rollback(self) -> None:
+        rollback_error: OSError | None = None
+        try:
+            if self.backup is not None:
+                os.replace(self.backup, self.path)
+                self.backup = None
+                _fsync_directory(self.path.parent)
+            elif self.published and _identity(self.path) == self.published_identity:
+                self.path.unlink(missing_ok=True)
+                _fsync_directory(self.path.parent)
+        except OSError as exc:
+            rollback_error = exc
+        finally:
+            self.candidate.unlink(missing_ok=True)
+        if rollback_error is not None:
+            raise ExportError(
+                "ARCH_EXPORT_ROLLBACK_FAILED",
+                "post_write_validation",
+                "Export validation failed and the prior output state could not be restored.",
+                "operator",
+                output_written=os.path.lexists(self.path),
+            ) from rollback_error
+
+    def commit(self) -> None:
+        self.committed = True
+        self.candidate.unlink(missing_ok=True)
+        if self.backup is not None:
+            for _ in range(2):
+                try:
+                    self.backup.unlink(missing_ok=True)
+                    self.backup = None
+                    break
+                except OSError as exc:
+                    self.cleanup_warnings.append(type(exc).__name__)
+        _fsync_directory(self.path.parent)
+
+
+def atomic_write(path: Path, value: Any, overwrite: bool) -> None:
+    transaction = OutputTransaction.stage(path, value, overwrite)
+    try:
+        transaction.publish()
+    except Exception:
+        transaction.rollback()
+        raise
+    transaction.commit()
 
 
 def run_export(
@@ -416,45 +572,47 @@ def run_export(
     output_path: Path,
     run_id: str,
     overwrite: bool = False,
-    provenance_provider: Callable[[Path, Path, Path], GitProvenance] = inspect_repository,
+    provenance_provider: Callable[[Path, Path, Path, Iterable[Path]], GitProvenance] = inspect_repository,
 ) -> ExportResult:
     root, payload_path = root.resolve(), payload_path.resolve()
     output_path = inside(root, output_path)
     if output_path == payload_path:
         raise ExportError("ARCH_EXPORT_INPUT_OUTPUT_COLLISION", "output_preflight", "Output must not replace the source payload.", "operator")
-    if output_path.exists() and not overwrite:
-        raise ExportError("ARCH_EXPORT_OUTPUT_EXISTS", "output_preflight", "Output exists; pass --overwrite only intentionally.", "operator")
     payload = load_json(payload_path)
     if not isinstance(payload, dict):
         raise ExportError("ARCH_EXPORT_PAYLOAD_NOT_OBJECT", "semantic_validation", "Architect payload must be an object.", "architect")
     validate_payload(root, payload)
-    git = provenance_provider(root, payload_path, output_path)
-    export, hashes = build_export(payload, git, run_id, _input_ref(root, payload_path))
+    initial_git = provenance_provider(root, payload_path, output_path, ())
+    export, hashes = build_export(payload, initial_git, run_id, _input_ref(root, payload_path))
     validate_contracts(root, export)
     verify_hashes(export, hashes)
-    output_replaced = False
+
+    transaction = OutputTransaction.stage(output_path, export, overwrite)
     try:
-        atomic_write(output_path, export, overwrite)
-        output_replaced = True
+        staged = load_json(transaction.candidate)
+        validate_contracts(root, staged)
+        verify_hashes(staged, hashes)
+
+        prepublish_git = provenance_provider(root, payload_path, output_path, transaction.allowed_paths())
+        _assert_same_provenance(initial_git, prepublish_git, "prepublication_provenance")
+
+        transaction.publish()
         reread = load_json(output_path)
         validate_contracts(root, reread)
         verify_hashes(reread, hashes)
+
+        final_git = provenance_provider(root, payload_path, output_path, transaction.allowed_paths())
+        _assert_same_provenance(initial_git, final_git, "final_provenance")
     except Exception as exc:
-        if output_replaced:
-            try:
-                output_path.unlink(missing_ok=True)
-            except OSError:
-                if isinstance(exc, ExportError):
-                    exc.output_written = output_path.exists()
-                else:
-                    raise ExportError(
-                        "ARCH_EXPORT_POSTWRITE_CLEANUP_FAILED",
-                        "post_write_validation",
-                        "Post-write validation failed and the invalid artifact could not be removed.",
-                        "operator",
-                        output_written=output_path.exists(),
-                    ) from exc
+        try:
+            transaction.rollback()
+        except ExportError as rollback_exc:
+            raise rollback_exc from exc
+        if isinstance(exc, ExportError):
+            exc.output_written = False
         raise
+    transaction.commit()
+
     return ExportResult(
         status=export["handoff"]["status"],
         output_path=str(output_path.relative_to(root)).replace(os.sep, "/"),
@@ -462,7 +620,7 @@ def run_export(
         payload_hash=hashes["payload_hash"],
         bundle_hash=hashes["bundle_hash"],
         export_hash=hashes["export_hash"],
-        producer_commit=git.commit_sha,
+        producer_commit=initial_git.commit_sha,
         handoff_target=TARGET,
         handoff_allowed=export["handoff"]["allowed"],
     )
