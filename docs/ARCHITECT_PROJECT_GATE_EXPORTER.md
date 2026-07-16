@@ -51,19 +51,23 @@ The operator does not provide repository identity, branch/ref, commit SHA, schem
 
 Use `--overwrite` only when intentionally replacing an existing output after all validation succeeds.
 
-## Validation sequence
+## Validation and publication sequence
 
 ```text
 strict UTF-8 JSON parsing
 → duplicate-key and non-finite-number rejection
 → active Architect JSON Schema validation
 → official Architect semantic validation
-→ Git repository, branch, commit, and worktree verification
+→ initial Git repository, named-ref, HEAD, and worktree verification
 → Stage Evidence Bundle construction and validation
 → Producer Gate Export construction and validation
 → canonical SHA-256 self-verification
-→ atomic write
-→ post-write re-read, contract validation, and hash verification
+→ same-filesystem candidate staging, fsync, re-read, contract validation, and hash verification
+→ pre-publication Git provenance equality recheck
+→ atomic publication
+→ post-publication re-read, contract validation, and hash verification
+→ final Git provenance equality and worktree recheck
+→ publication commit point and obsolete backup cleanup
 ```
 
 The active contracts are reused without local forks or version changes:
@@ -75,6 +79,14 @@ Producer export: producer-gate-export.v1
 Handoff target: ce-intake
 Acquisition mode: producer_emitted_gate_artifact
 ```
+
+## Atomic output rules
+
+Without `--overwrite`, the staged candidate is published with an atomic hard-link/no-replace primitive. If any file, directory, or symbolic link exists at the destination at the publication boundary, publication fails with `ARCH_EXPORT_OUTPUT_EXISTS`. Destination bytes remain unchanged, temporary files are removed, and `output_written` remains false.
+
+With explicit `--overwrite`, an existing regular output is first moved to a same-directory quarantine backup. The validated candidate is then published with the same no-replace primitive. Until post-publication validation and final provenance verification pass, any failure restores the prior output. If there was no prior output, rollback removes only the artifact whose filesystem identity matches this exporter run.
+
+Symbolic-link destinations and non-regular overwrite targets are rejected. Candidate and backup artifacts use unpredictable same-directory names, are included only in the exporter's bounded clean-worktree allowance, and are removed after rollback or commit. A cleanup interruption after the commit point does not invalidate the already verified new output.
 
 ## Identity and hash rules
 
@@ -92,15 +104,17 @@ Repeated export of the same unchanged run, payload, and source commit is byte-st
 
 ## Git and provenance rules
 
-Before emission, the exporter verifies:
+The exporter verifies at initial capture, immediately before publication, and again before successful completion:
 
 - execution inside the Git repository root;
 - `origin` identifies `rezahh107/EV4-Architect-Repo`;
-- HEAD is attached to a named branch;
-- HEAD is a full commit SHA;
+- HEAD is attached to the same named branch;
+- HEAD remains the same full commit SHA;
 - no unrelated staged, unstaged, or untracked changes exist.
 
-The selected payload path and intended output path may be untracked run artifacts. Any other dirty-worktree state fails closed. Absolute private checkout paths are not written into the export.
+The selected payload path, intended output path, staged candidate, and bounded overwrite backup may be untracked run artifacts. Any other dirty-worktree state fails closed. Absolute private checkout paths are not written into the export.
+
+A concurrent checkout, reset, commit, branch switch, or tracked contract/schema modification prevents success. Drift before publication writes nothing. Drift after publication triggers rollback and prevents the artifact from being reported as successful under stale provenance.
 
 ## Handoff behavior
 
@@ -118,7 +132,7 @@ payload_status: insufficient_evidence
 → handoff.allowed: false
 
 invalid payload or unreliable Git provenance
-→ no export
+→ no successful export
 → handoff prohibited
 ```
 
@@ -151,6 +165,6 @@ On failure it reports a stable diagnostic code, failed stage, concise reason, re
 
 ## Evidence boundary
 
-The automated test vectors are synthetic unit, fixture, contract, and integration evidence only. They do not prove a real non-synthetic Architect run, current Project Gate adoption of the new source commit, CE semantic acceptance, Builder execution, browser/runtime validity, release readiness, or production readiness.
+The automated test vectors are synthetic unit, fixture, contract, concurrency, and integration evidence only. They do not prove a real non-synthetic Architect run, current Project Gate adoption of the new source commit, CE semantic acceptance, Builder execution, browser/runtime validity, release readiness, or production readiness.
 
 A real operator run and a fresh independent `ARCH-02` audit bound to the exact PR head remain required before stronger claims.
