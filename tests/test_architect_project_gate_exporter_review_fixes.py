@@ -60,46 +60,18 @@ def test_unicode_run_paths_are_allowed_in_clean_repository(tmp_path: Path):
 
 
 def test_concurrently_created_output_is_not_deleted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    payload = tmp_path / "payload.json"
     output = tmp_path / "architect-project-gate.json"
-    payload.write_text("{}\n", encoding="utf-8")
+    real_link = exporter.os.link
 
-    monkeypatch.setattr(exporter, "validate_payload", lambda root, value: {"status": "valid"})
-    monkeypatch.setattr(
-        exporter,
-        "build_export",
-        lambda value, provenance, run_id, input_ref: (
-            {"handoff": {"status": "successful", "allowed": True}, "export_id": "unit-export"},
-            {"payload_hash": "payload", "bundle_hash": "bundle", "export_hash": "export"},
-        ),
-    )
-    monkeypatch.setattr(exporter, "validate_contracts", lambda root, value: None)
-    monkeypatch.setattr(exporter, "verify_hashes", lambda value, hashes: None)
+    def concurrent_create(source, destination, **kwargs):
+        Path(destination).write_text("operator-created artifact\n", encoding="utf-8")
+        return real_link(source, destination, **kwargs)
 
-    def concurrent_create(path: Path, value: object, overwrite: bool) -> None:
-        path.write_text("operator-created artifact\n", encoding="utf-8")
-        raise exporter.ExportError(
-            "ARCH_EXPORT_OUTPUT_EXISTS",
-            "atomic_write",
-            "Output appeared during write; nothing was replaced.",
-            "operator",
-        )
-
-    monkeypatch.setattr(exporter, "atomic_write", concurrent_create)
-    provenance = lambda root, payload_path, output_path: exporter.GitProvenance(
-        exporter.REPOSITORY,
-        "main",
-        "a" * 40,
-    )
+    monkeypatch.setattr(exporter.os, "link", concurrent_create)
 
     with pytest.raises(exporter.ExportError) as exc:
-        exporter.run_export(
-            tmp_path,
-            payload,
-            output,
-            "run-concurrent-output",
-            provenance_provider=provenance,
-        )
+        exporter.atomic_write(output, {"unit": True}, overwrite=False)
 
     assert exc.value.code == "ARCH_EXPORT_OUTPUT_EXISTS"
     assert output.read_text(encoding="utf-8") == "operator-created artifact\n"
+    assert not list(tmp_path.glob(".architect-project-gate.json.*.tmp"))
