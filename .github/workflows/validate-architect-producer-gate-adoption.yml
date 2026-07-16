@@ -4,6 +4,8 @@ name: validate-architect-producer-gate-adoption
 on:
   pull_request:
     paths:
+      - 'README.md'
+      - 'STATUS.md'
       - 'contracts/project-gate/**'
       - 'manifests/**'
       - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'

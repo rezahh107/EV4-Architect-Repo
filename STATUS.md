@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.15.5
-Status: architect_project_gate_exporter_implemented_pending_independent_review
+Version: 0.15.6
+Status: architect_project_gate_exporter_ci_green_pending_independent_review
 Last confirmed stage: Stage 8–10 hardening alignment patch + STATUS history preservation
-Current next step: Run exact-head CI and independent `ARCH-02` review for the Architect Project Gate exporter; the separate `/e2e-screenshot-validation` track remains pending raster screenshot evidence.
+Current next step: Complete independent `ARCH-02` review for the Architect Project Gate exporter; the separate `/e2e-screenshot-validation` track remains pending raster screenshot evidence.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-07-16
 
@@ -47,7 +47,7 @@ Last automation update: 2026-07-16
 | /implementation | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 8 remains confirmed; next-anchor status/schema must follow active STATUS.md |
 | /final-audit | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 9 remains confirmed; scoped E2E validation vocabulary applies |
 | /handoff-export | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 10 remains confirmed; E2E payload state must not be hard-coded |
-| /project-gate-export | implemented_pending_independent_review | Official repository-local exporter emits `architect-project-gate.json`; exact-head CI, real-run evidence, and independent ARCH-02 review remain pending |
+| /project-gate-export | implemented_ci_green_pending_independent_review | Official repository-local exporter emits `architect-project-gate.json`; exact-head CI passed; real-run evidence and independent ARCH-02 review remain pending |
 | /elementor-knowledge-base-strategy | active_v1.0.0 | Hardened into `ev4-rag-strategy-contract@1.0.0`; owns current Stage Source Access Matrix, `/research` source-pinning ownership, source classes, retrieved fact schema, downstream permissions, freshness policy, EDIS boundary, conflict lifecycle, leakage probes, repair routes, self-audit, debug trace, and TUYA handoff |
 | /tuya-concept-reference | active_v1.0.0 | Hardened into `ev4-tuya-concept-reference@1.0.0`; explicitly `source_type: internal_concept_reference` and `fact_class: project_conceptual_model` |
 | /stage-8-10-alignment-patch | confirmed_hardening_patch_v1.0.1 | `stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md` |
@@ -380,7 +380,7 @@ Not validated by E2E-001:
 Preferred next actions:
 
 ```text
-1. Complete exact-head CI and independent ARCH-02 review for /project-gate-export.
+1. Complete independent ARCH-02 review for /project-gate-export.
 2. Prepare or run /e2e-screenshot-validation when raster screenshot evidence or a screenshot fixture is available.
 ```
 
@@ -396,7 +396,7 @@ anchor_schema: ev4-stage-anchor@1.1.0
 source_stage: /stage-8-10-alignment-patch
 target_stage: /e2e-screenshot-validation
 target_stage_hardening_status: draft
-project_status_version: 0.15.5
+project_status_version: 0.15.6
 payload_schema_in:
   - ev4-stage-hardening-alignment-patch@1.0.1
   - ev4-e2e-test-report@1.0.0
@@ -516,7 +516,10 @@ ARCH_01:
   git_provenance_verification: implemented
   atomic_write_and_postwrite_validation: implemented
   valid_blocked_invalid_tamper_repository_state_tests: added
-  exact_head_ci: pending
+  exact_head_ci: passed_for_current_pr_head
+  exact_head_ci_workflows:
+    - validate-ai-governance
+    - validate-architect-producer-gate-adoption
   independent_arch_02_review: pending
   real_non_synthetic_run: not_yet_available
   project_gate_current_head_adoption: insufficient_evidence
