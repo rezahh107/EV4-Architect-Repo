@@ -1,0 +1,46 @@
+{
+  "suite_id": "architect-project-gate-exporter-cases.v1",
+  "classification": "synthetic_test_vectors_only",
+  "real_run_evidence": false,
+  "base_fixture": "../architect-stage-payload/valid/minimal-complete.v1.json",
+  "cases": [
+    {
+      "case_id": "complete-nonsynthetic-unit-vector",
+      "purpose": "Exercise the allowed runtime branch as a unit-only vector; this is not a real Architect run.",
+      "mutations": [
+        {"op": "set", "path": "synthetic", "value": false},
+        {"op": "set", "path": "payload_identity.synthetic_fixture_notice", "value": "Unit-only non-production vector; not real-run evidence."}
+      ],
+      "expected_handoff_allowed": true,
+      "evidence_type": "unit"
+    },
+    {
+      "case_id": "synthetic-blocked",
+      "purpose": "Prove that a synthetically labelled payload cannot authorize handoff.",
+      "mutations": [],
+      "expected_handoff_allowed": false,
+      "evidence_type": "fixture"
+    },
+    {
+      "case_id": "insufficient-evidence-blocked",
+      "purpose": "Prove that insufficient Architect evidence remains fail-closed.",
+      "mutations": [
+        {"op": "set", "path": "synthetic", "value": false},
+        {"op": "set", "path": "payload_status", "value": "insufficient_evidence"},
+        {"op": "set", "path": "unresolved_evidence.0.blocks", "value": ["architect_stage_payload_acceptance", "ce_transition"]},
+        {"op": "set", "path": "unresolved_evidence.0.required_before", "value": "project_gate_acceptance"}
+      ],
+      "expected_handoff_allowed": false,
+      "evidence_type": "fixture"
+    },
+    {
+      "case_id": "invalid-evidence-reference",
+      "purpose": "Prove official Architect semantic validation rejects unknown decision evidence.",
+      "mutations": [
+        {"op": "set", "path": "kernel_decision_records.0.evidence_refs", "value": ["missing-evidence"]}
+      ],
+      "expected_diagnostic": "ARCH-KERNEL-DECISION-004",
+      "evidence_type": "adversarial_fixture"
+    }
+  ]
+}
