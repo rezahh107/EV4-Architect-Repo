@@ -32,7 +32,7 @@ scripts/check-architect-stage-payload.py
 
 Architect truth is carried by the payload's architecture identity, approved structure, intent maps, evidence register, unresolved evidence, forbidden work, boundary assertions, and Kernel decision records. `payload_status` controls whether the payload is complete or `insufficient_evidence`.
 
-The exporter never repairs or rewrites semantic content. Invalid input produces diagnostics only and no export.
+The exporter never repairs or rewrites semantic content. Invalid input produces diagnostics only and no authoritative export receipt.
 
 ## Official command
 
@@ -45,11 +45,21 @@ python scripts/export-architect-project-gate.py \
   --output architect-project-gate.json
 ```
 
-`--run-id` is an explicit run input because two independent Architect executions must not receive the same execution, bundle, or export identity merely because their semantic payload content is equal.
+`--run-id` is explicit because two independent Architect executions must not receive the same execution, bundle, or export identity merely because their semantic payload content is equal.
 
 The operator does not provide repository identity, branch/ref, commit SHA, schema identities, handoff target, validation status, payload hash, bundle hash, or export hash. These are derived or verified by the exporter.
 
-Use `--overwrite` only when intentionally replacing an existing output after all validation succeeds.
+## Overwrite policy
+
+`--overwrite` is intentionally fail-closed and returns:
+
+```text
+ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED
+```
+
+The exporter does not move an existing destination into quarantine and does not restore a backup over a destination. Python and the supported platform APIs do not provide a portable operation that atomically combines a device/inode ownership predicate with a destructive path replacement. An advisory lock cannot close that gap against editors, operators, or unrelated local processes.
+
+To replace an existing artifact, the operator must first move or archive it outside the exporter transaction, inspect the retained artifact, and then run the exporter without `--overwrite`. The exporter itself never treats that manual action as validation evidence.
 
 ## Validation and publication sequence
 
@@ -62,16 +72,19 @@ strict UTF-8 JSON parsing
 → Stage Evidence Bundle construction and validation
 → Producer Gate Export construction and validation
 → canonical SHA-256 self-verification
-→ exclusive non-blocking overwrite transaction lock
-→ same-filesystem candidate staging, fsync, re-read, contract validation, and hash verification
+→ shared exclusive output lock for every exporter mode
+→ same-filesystem candidate staging and fsync
+→ staged candidate re-read, contract validation, and hash verification
 → pre-publication Git provenance equality recheck
-→ atomic publication
-→ post-publication identity, byte, contract, and hash verification
+→ atomic hard-link/no-replace publication
+→ open and retain a descriptor for the published inode
+→ exact identity and byte verification through the retained descriptor
+→ post-publication contract and hash verification
 → final Git provenance equality and worktree recheck
-→ second final destination identity, byte, and hash verification
+→ second exact identity, byte, contract, and hash verification
 → publication commit point
-→ obsolete backup cleanup with operator-visible warnings
-→ post-commit destination identity, byte, and hash verification before success
+→ historical receipt serialization and flush while the exporter lock is held
+→ descriptor close and lock release
 ```
 
 The active contracts are reused without local forks or version changes:
@@ -86,17 +99,63 @@ Acquisition mode: producer_emitted_gate_artifact
 
 ## Atomic output rules
 
-Without `--overwrite`, the staged candidate is published with an atomic hard-link/no-replace primitive. If any file, directory, or symbolic link exists at the destination at the publication boundary, publication fails with `ARCH_EXPORT_OUTPUT_EXISTS`. Destination bytes remain unchanged, temporary files are removed, and `output_written` remains false.
+All supported exporter operations targeting the same absolute output path use the same exclusive transaction lock. This serializes overwrite and no-overwrite exporter processes with each other. The lock is not presented as protection against arbitrary non-cooperating writers.
 
-With explicit `--overwrite`, cooperating exporter processes are serialized by an exclusive, non-blocking output transaction lock. Each transaction records the destination identity observed before lock acquisition. A transaction that loses the lock or observes identity drift before quarantine fails closed, so two overlapping overwrite exporters cannot both report authoritative success.
+Without `--overwrite`, the staged candidate is published with an atomic hard-link/no-replace primitive. If any file appears at the destination before the publication primitive completes, publication fails with `ARCH_EXPORT_OUTPUT_EXISTS`; that destination remains unchanged.
 
-The lock coordinates exporter processes on the same host. Non-cooperating writers are not trusted; device/inode and final byte/hash checks detect their interference and convert it into a conflict rather than an authoritative success.
+After publication, the exporter retains an open descriptor for the published inode and verifies:
 
-An existing regular output is moved to a same-directory quarantine backup while preserving its device/inode identity. The candidate is published with the same no-replace primitive and receives its own recorded device/inode identity. Before rollback restores a backup or removes a published candidate, the exporter verifies that the current destination is absent or still matches the identity owned by that transaction.
+- descriptor device/inode identity;
+- current destination device/inode identity;
+- exact canonical bytes including the final newline;
+- strict JSON parsing;
+- active contract validity;
+- payload, bundle, and export hashes.
 
-If another process creates or replaces the destination, rollback never overwrites that concurrent artifact. The exporter fails with `ARCH_EXPORT_ROLLBACK_CONFLICT`, preserves the concurrent destination, and retains the previous output in its quarantine backup for operator recovery. The diagnostic identifies the retained backup by filename.
+If identity or byte drift occurs, the exporter fails closed. Rollback is namespace-nondestructive: it does not unlink, move, replace, or restore the destination. A post-publication artifact may remain for operator inspection, but it is not reported as an authoritative current-path output.
 
-Symbolic-link destinations and non-regular overwrite targets are rejected. Candidate and backup artifacts use unpredictable same-directory names and are included only in the exporter's bounded clean-worktree allowance. Backup cleanup is attempted twice after the commit point. A transient cleanup failure and retry, or retained backup residue after repeated failure, is reported through `cleanup_warnings` without invalidating the already verified output.
+Symbolic-link destinations and non-regular existing destinations are rejected. Candidate files use unpredictable same-directory names and are included only in the exporter's bounded clean-worktree allowance.
+
+## Receipt semantics
+
+A success result is explicitly a historical commit receipt, not a continuing assertion about the current destination path:
+
+```yaml
+receipt_scope: historical_commit
+current_destination_claim: false
+output_committed: true
+output_written: false
+```
+
+`output_committed: true` means the transaction published and fully verified the artifact at its commit boundary.
+
+`output_written` means the destination is still owned by the live transaction. Because the returned library result is observed after the transaction boundary ends, successful returned results use `output_written: false`.
+
+The CLI serializes and flushes the historical receipt while the exporter lock is still held. The lock is released only after receipt serialization. The receipt still does not claim that arbitrary external writers cannot change the destination later.
+
+The result and failure reports distinguish:
+
+```text
+output_written
+output_committed
+destination_present
+concurrent_destination_preserved
+backup_retained
+backup_path
+receipt_scope
+current_destination_claim
+cleanup_warnings
+```
+
+No backup is created by the fail-closed overwrite design, so `backup_retained` is false and `backup_path` is null. A concurrent replacement detected after no-clobber publication remains at the original destination path and is reported through `concurrent_destination_preserved`.
+
+## Cleanup behavior
+
+Rollback and close may remove only the transaction's private staged candidate and close transaction-owned descriptors and locks. They never conditionally remove or replace the destination.
+
+Cleanup degradation is operator-visible through `cleanup_warnings`. A warning discovered only while releasing the lock is returned by the library API and emitted by the CLI as a `post_release_cleanup` receipt update on standard error.
+
+The prior backup retry and retained-backup cleanup paths no longer exist because the exporter never creates a rollback backup. Tests assert that overwrite rejection occurs before backup creation or backup cleanup.
 
 ## Identity and hash rules
 
@@ -114,7 +173,7 @@ Repeated export of the same unchanged run, payload, and source commit is byte-st
 
 ## Git and provenance rules
 
-The exporter verifies at initial capture, immediately before publication, and again before successful completion:
+The exporter verifies at initial capture, immediately before publication, and again before the commit receipt:
 
 - execution inside the Git repository root;
 - `origin` identifies `rezahh107/EV4-Architect-Repo`;
@@ -122,9 +181,35 @@ The exporter verifies at initial capture, immediately before publication, and ag
 - HEAD remains the same full commit SHA;
 - no unrelated staged, unstaged, or untracked changes exist.
 
-The selected payload path, intended output path, staged candidate, and bounded overwrite backup may be untracked run artifacts. Any other dirty-worktree state fails closed. Absolute private checkout paths are not written into the export.
+The selected payload path, intended output path, and staged candidate may be untracked run artifacts. Any other dirty-worktree state fails closed. Absolute private checkout paths are not written into the export.
 
-A concurrent checkout, reset, commit, branch switch, or tracked contract/schema modification prevents success. Drift before publication writes nothing. Drift after publication triggers bounded rollback and prevents the artifact from being reported as successful under stale provenance.
+Drift before publication writes nothing. Drift after publication prevents a success receipt and leaves the destination namespace untouched by rollback.
+
+## Platform support
+
+### POSIX
+
+The implementation uses `fcntl.flock` for the shared exporter lock and `os.link` for atomic no-clobber publication. Linux GitHub Actions provide the current executed platform evidence. `--overwrite` remains unsupported and fail-closed.
+
+### Windows
+
+The implementation uses `msvcrt.locking` for the shared exporter lock and Python's `os.link` no-clobber primitive. The Windows branch is implemented but is not independently executed by the current Linux-only workflow. `--overwrite` remains unsupported and fail-closed.
+
+### Other or unsupported platforms
+
+If neither supported locking API is present, the exporter fails with:
+
+```text
+ARCH_EXPORT_OUTPUT_LOCK_UNAVAILABLE
+```
+
+If atomic hard-link/no-clobber publication is unavailable, it fails with:
+
+```text
+ARCH_EXPORT_ATOMIC_NO_CLOBBER_UNSUPPORTED
+```
+
+No fallback weakens the invariant.
 
 ## Handoff behavior
 
@@ -142,39 +227,11 @@ payload_status: insufficient_evidence
 → handoff.allowed: false
 
 invalid payload or unreliable Git provenance
-→ no successful export
+→ no successful receipt
 → handoff prohibited
 ```
 
 Unresolved items that belong only to later Builder, Responsive, or production boundaries remain visible and may produce `successful_with_flags`; they are not silently removed. Any unresolved item that blocks Architect payload acceptance or the CE transition prohibits handoff.
-
-## Output
-
-The output is one canonical JSON file:
-
-```text
-architect-project-gate.json
-```
-
-On success or valid blocked emission, the command reports:
-
-```text
-status
-output_path
-export_id
-payload_hash
-bundle_hash
-export_hash
-producer_commit
-handoff_target
-handoff_allowed
-output_written
-cleanup_warnings
-```
-
-`cleanup_warnings` is an empty list when post-commit cleanup is complete. Retry or retained-quarantine diagnostics are returned explicitly when cleanup is degraded.
-
-On failure it reports a stable diagnostic code, failed stage, concise reason, repair owner, output-written state, and `handoff_prohibited: true`.
 
 ## Evidence boundary
 
