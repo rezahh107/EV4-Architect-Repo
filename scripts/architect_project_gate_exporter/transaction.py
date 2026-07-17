@@ -161,12 +161,32 @@ class CandidateOwnership:
     residue_reported: bool = False
 
 
-def _record_residue_state(candidate: CandidateOwnership, warnings: list[str]) -> None:
-    if candidate.residue_path is None or candidate.residue_reported:
-        return
-    candidate.residue_reported = True
+def _raw_identity(observed: os.stat_result) -> tuple[int, int]:
+    """Return identity without relying on the validated conversion helper."""
+    return observed.st_dev, observed.st_ino
+
+
+def _descriptor_identity_for_reporting(descriptor: int) -> tuple[int, int] | None:
+    """Best-effort identity used only to classify retained non-destructive residue."""
     try:
-        observed = os.lstat(candidate.residue_path)
+        return _raw_identity(os.fstat(descriptor))
+    except OSError:
+        pass
+    try:
+        return _raw_identity(os.stat(f"/proc/self/fd/{descriptor}", follow_symlinks=True))
+    except (OSError, NotImplementedError, TypeError):
+        return None
+
+
+def _record_residue_path_state(
+    residue_path: Path | None,
+    expected_identity: tuple[int, int] | None,
+    warnings: list[str],
+) -> None:
+    if residue_path is None:
+        return
+    try:
+        observed = os.lstat(residue_path)
     except FileNotFoundError:
         _append_warning(warnings, "ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:MISSING")
         return
@@ -176,10 +196,77 @@ def _record_residue_state(candidate: CandidateOwnership, warnings: list[str]) ->
             f"ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:{type(exc).__name__}",
         )
         return
-    if _identity_from_stat(observed) == candidate.identity:
+    if expected_identity is None:
+        _append_warning(
+            warnings,
+            "ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:IDENTITY_UNAVAILABLE",
+        )
+    elif _raw_identity(observed) == expected_identity:
         _append_warning(warnings, "ARCH_EXPORT_CANDIDATE_RESIDUE_RETAINED")
     else:
         _append_warning(warnings, "ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT")
+
+
+def _record_residue_state(candidate: CandidateOwnership, warnings: list[str]) -> None:
+    if candidate.residue_path is None or candidate.residue_reported:
+        return
+    candidate.residue_reported = True
+    _record_residue_path_state(candidate.residue_path, candidate.identity, warnings)
+
+
+def _close_provisional_descriptor(descriptor: int, warnings: list[str]) -> None:
+    try:
+        os.close(descriptor)
+    except OSError as exc:
+        _append_warning(
+            warnings,
+            f"ARCH_EXPORT_CANDIDATE_RELEASE_FAILED:{type(exc).__name__}",
+        )
+
+
+def _candidate_identity_capture_error(
+    descriptor: int,
+    residue_path: Path | None,
+    captured_identity: tuple[int, int] | None,
+    cause: Exception,
+) -> ExportError:
+    warnings: list[str] = []
+    reporting_identity = captured_identity
+    if reporting_identity is None:
+        reporting_identity = _descriptor_identity_for_reporting(descriptor)
+    _close_provisional_descriptor(descriptor, warnings)
+    _record_residue_path_state(residue_path, reporting_identity, warnings)
+    return ExportError(
+        "ARCH_EXPORT_CANDIDATE_IDENTITY_CAPTURE_FAILED",
+        "atomic_write",
+        f"Staged candidate identity capture failed: {type(cause).__name__}.",
+        "operator",
+        cleanup_warnings=warnings,
+    )
+
+
+def _complete_candidate_ownership(
+    descriptor: int,
+    residue_path: Path | None,
+) -> CandidateOwnership:
+    """Promote a just-created descriptor/path pair from provisional to owned."""
+    captured_identity: tuple[int, int] | None = None
+    try:
+        observed = os.fstat(descriptor)
+        captured_identity = _raw_identity(observed)
+        identity = _identity_from_stat(observed)
+        return CandidateOwnership(
+            descriptor=descriptor,
+            identity=identity,
+            residue_path=residue_path,
+        )
+    except Exception as exc:
+        raise _candidate_identity_capture_error(
+            descriptor,
+            residue_path,
+            captured_identity,
+            exc,
+        ) from exc
 
 
 def _release_candidate(candidate: CandidateOwnership, warnings: list[str]) -> None:
@@ -205,18 +292,8 @@ def _allocate_candidate(
 ) -> CandidateOwnership:
     descriptor = _open_unnamed_candidate(parent_descriptor)
     if descriptor is not None:
-        try:
-            return CandidateOwnership(
-                descriptor=descriptor,
-                identity=_identity_from_stat(os.fstat(descriptor)),
-                residue_path=None,
-            )
-        except Exception:
-            try:
-                os.close(descriptor)
-            except OSError:
-                pass
-            raise
+        # The returned descriptor is provisional immediately after kernel creation.
+        return _complete_candidate_ownership(descriptor, None)
 
     residue_root, residue_descriptor = _open_residue_directory(root, parent_descriptor)
     try:
@@ -240,18 +317,11 @@ def _allocate_candidate(
                     f"Staged candidate creation failed: {type(exc).__name__}.",
                     "operator",
                 ) from exc
-            try:
-                return CandidateOwnership(
-                    descriptor=descriptor,
-                    identity=_identity_from_stat(os.fstat(descriptor)),
-                    residue_path=residue_root / name,
-                )
-            except Exception:
-                try:
-                    os.close(descriptor)
-                except OSError:
-                    pass
-                raise
+
+            # Record provisional state immediately after successful O_EXCL creation,
+            # before fstat, identity conversion, or CandidateOwnership construction.
+            residue_path = residue_root / name
+            return _complete_candidate_ownership(descriptor, residue_path)
         raise ExportError(
             "ARCH_EXPORT_STAGED_CANDIDATE_CREATE_FAILED",
             "atomic_write",
