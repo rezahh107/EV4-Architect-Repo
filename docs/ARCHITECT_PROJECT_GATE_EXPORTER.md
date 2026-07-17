@@ -50,15 +50,16 @@ The exporter:
 2. traverses each output-parent component relative to the retained preceding directory descriptor;
 3. rejects symbolic links and non-directory components;
 4. retains descriptors and device/inode identities for the root and every traversed directory;
-5. creates the staged candidate relative to the retained output-parent descriptor;
-6. publishes with descriptor-relative `os.link(..., src_dir_fd=..., dst_dir_fd=..., follow_symlinks=False)`;
-7. opens and retains the published file descriptor relative to that same parent descriptor;
-8. verifies exact bytes, file identity, component identities and parent relationships before commit and receipt emission;
-9. independently walks `..` from the retained output parent to prove that the retained repository root remains an ancestor.
+5. stages canonical bytes into a retained transaction-owned file descriptor;
+6. prefers an unnamed `O_TMPFILE` inode and otherwise allocates with `O_CREAT | O_EXCL` in a private same-filesystem residue directory outside the repository worktree;
+7. publishes from the retained descriptor through `/proc/self/fd/<fd>` using descriptor-relative atomic hard-link/no-replace publication;
+8. opens and retains the published file descriptor relative to the bound output-parent descriptor;
+9. verifies exact bytes, file identity, component identities and parent relationships before commit and receipt emission;
+10. independently walks `..` from the retained output parent to prove that the retained repository root remains an ancestor.
 
 A parent rename, exchange, removal, intermediate symlink replacement, repository-root identity change, or move outside the repository fails with a stable ancestry diagnostic. A rename outside the repository followed by a symlink at the original parent path cannot produce a success receipt, even when the output file inode itself is unchanged.
 
-Relevant diagnostics include:
+Relevant ancestry diagnostics include:
 
 ```text
 ARCH_EXPORT_ANCESTRY_BINDING_UNSUPPORTED
@@ -68,15 +69,45 @@ ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT
 ARCH_EXPORT_OUTPUT_ANCESTRY_CREATE_FAILED
 ```
 
+## Candidate ownership and cleanup
+
+A generated candidate pathname is not an ownership record. Candidate ownership begins only after the kernel has successfully created a new inode and the exporter has retained its descriptor and identity.
+
+The candidate lifecycle is explicit:
+
+```text
+unallocated
+→ owned descriptor
+→ published or abandoned
+→ released exactly once
+```
+
+Candidate content is read and published from the retained descriptor. Transaction cleanup never calls pathname `unlink` for a candidate. Therefore allocation collisions, a candidate pathname replaced by another process, and later reuse of a former name are never removed by rollback or `close()`.
+
+When `O_TMPFILE` is unavailable, the exporter uses an `O_EXCL` candidate in a private mode-`0700`, current-user-owned, same-filesystem residue directory outside the repository. The exporter deliberately retains that entry rather than risking deletion of an unrelated replacement. The retained residue or a changed occupant is surfaced through deterministic `cleanup_warnings`.
+
+Relevant candidate diagnostics and warnings include:
+
+```text
+ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED
+ARCH_EXPORT_CANDIDATE_OWNERSHIP_LOST
+ARCH_EXPORT_CANDIDATE_RELEASE_FAILED:<exception>
+ARCH_EXPORT_CANDIDATE_RESIDUE_RETAINED
+ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT
+ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:<state>
+```
+
+`ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT` means the visible fallback entry no longer identifies the transaction-owned inode. The exporter preserves the current occupant and does not retry pathname cleanup.
+
 ## Platform support
 
 ### POSIX/Linux
 
-POSIX ancestry binding is implemented with descriptor-relative filesystem operations, `fcntl.flock`, `O_DIRECTORY`, `O_NOFOLLOW`, `dir_fd`, and hard-link/no-replace publication. Exact-head Linux GitHub Actions are the executed platform evidence.
+POSIX ancestry binding and publication use `fcntl.flock`, `O_DIRECTORY`, `O_NOFOLLOW`, `dir_fd`, retained file descriptors, `/proc/self/fd`, and atomic hard-link/no-replace publication. `O_TMPFILE` is preferred but not required when a private same-filesystem residue directory can be established safely. Exact-head Linux GitHub Actions are the executed platform evidence.
 
 ### Windows
 
-Windows is intentionally unsupported for authoritative publication because the current implementation cannot establish the same complete descriptor-bound ancestry invariant with the available Python interfaces. It fails closed with:
+Windows is intentionally unsupported for authoritative publication because the current implementation cannot establish the same complete descriptor-bound ancestry and descriptor-derived publication invariants with the available Python interfaces. It fails closed with:
 
 ```text
 ARCH_EXPORT_ANCESTRY_BINDING_UNSUPPORTED
@@ -86,7 +117,7 @@ The prior Windows lock branch remains non-authoritative and does not weaken the 
 
 ### Other platforms
 
-Any platform lacking the required directory-descriptor, no-follow, descriptor-relative stat/link/unlink/mkdir, or locking behavior fails closed. There is no pathname-based fallback.
+A platform lacking the required directory descriptors, no-follow traversal, locking, descriptor-derived source publication or atomic no-replace hard links fails closed. There is no unsafe pathname-cleanup fallback.
 
 ## Destination preflight
 
@@ -95,6 +126,7 @@ Destination inspection uses one guarded descriptor-relative `stat(..., follow_sy
 - `FileNotFoundError` means the destination is absent.
 - a symbolic link is rejected with `ARCH_EXPORT_UNSAFE_OUTPUT_PATH`;
 - a non-regular destination is rejected with `ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID`;
+- an existing regular destination is rejected with `ARCH_EXPORT_OUTPUT_EXISTS`;
 - other inspection failures are converted to `ARCH_EXPORT_OUTPUT_INSPECTION_FAILED`.
 
 Filesystem races do not escape as raw `OSError` or traceback from the CLI.
@@ -113,12 +145,13 @@ strict UTF-8 JSON parsing
 → descriptor-bound repository/output-parent ancestry capture
 → shared exclusive exporter lock
 → single guarded destination stat
-→ descriptor-relative staged candidate creation, write and fsync
-→ descriptor-relative candidate reread and validation
+→ transaction-owned candidate descriptor allocation, write and fsync
+→ descriptor-based candidate reread and validation
 → pre-publication Git provenance equality check
 → pre-publication ancestry verification
-→ descriptor-relative hard-link/no-replace publication
+→ descriptor-derived hard-link/no-replace publication
 → retained published-file descriptor
+→ candidate descriptor release exactly once
 → post-publication ancestry, identity and exact-byte verification
 → post-publication contract and hash verification
 → final Git provenance equality check
@@ -131,15 +164,15 @@ strict UTF-8 JSON parsing
 
 ## Atomic no-clobber behavior
 
-All cooperating exporters targeting the same absolute output path use the same exclusive lock. Publication uses a hard-link/no-replace primitive relative to the retained output-parent descriptor.
+All cooperating exporters targeting the same absolute output path use the same exclusive lock. Publication uses an atomic hard-link/no-replace primitive relative to the retained output-parent descriptor.
 
-If a destination appears at the publication boundary, the exporter returns:
+If a destination appears at preflight or the publication boundary, the exporter returns:
 
 ```text
 ARCH_EXPORT_OUTPUT_EXISTS
 ```
 
-It never deletes the concurrent destination. Rollback remains namespace-nondestructive: it may remove only the transaction-private staged candidate and close transaction-owned descriptors.
+It never deletes the concurrent destination. Rollback is namespace-nondestructive: it closes transaction-owned descriptors, preserves a published artifact for historical diagnosis, and never removes an entry merely because it occupies a formerly generated candidate name.
 
 Non-cooperating writers are not trusted. File identity drift, byte drift and ancestry drift prohibit a success receipt.
 
@@ -198,7 +231,7 @@ The exporter verifies:
 - unchanged full HEAD SHA;
 - absence of unrelated staged, unstaged or untracked changes.
 
-The selected payload, intended output and transaction-private candidate are the only bounded untracked allowances. HEAD, ref, tracked-worktree or active-contract drift prevents a success receipt.
+The selected payload and intended output are the bounded worktree allowances. An unnamed candidate has no pathname; a named fallback candidate is retained outside the repository worktree in a private same-filesystem residue directory. HEAD, ref, tracked-worktree or active-contract drift prevents a success receipt.
 
 ## Handoff behavior
 
