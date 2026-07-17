@@ -23,7 +23,9 @@ if PACKAGE_NAME not in sys.modules:
     sys.modules[PACKAGE_NAME] = package
     package_spec.loader.exec_module(package)
 
-_implementation = importlib.import_module(f"{PACKAGE_NAME}.runner")
+# ARCH-02 is the bounded operational entrypoint. It preserves the complete
+# ARCH-01 surface and overrides only commit-boundary/result semantics.
+_implementation = importlib.import_module(f"{PACKAGE_NAME}.arch02")
 
 globals().update(
     {name: value for name, value in vars(_implementation).items() if not name.startswith("__")}
