@@ -1,0 +1,48 @@
+name: apply-prf003-repair
+
+on:
+  push:
+    branches:
+      - feature/architect-project-gate-exporter
+    paths:
+      - '.github/workflows/apply-prf003-repair.yml'
+      - '.github/prf003/**'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair head
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: feature/architect-project-gate-exporter
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Apply bounded repair
+        run: python .github/prf003/apply.py
+      - name: Install test dependencies
+        run: python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
+      - name: Validate repair
+        run: |
+          python -m py_compile scripts/export-architect-project-gate.py
+          python scripts/check-architect-stage-payload.py
+          python scripts/check-architect-producer-gate-adoption.py --format json
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py
+      - name: Remove bounded repair helpers
+        run: rm -rf .github/prf003 .github/workflows/apply-prf003-repair.yml
+      - name: Commit bounded repair
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/export-architect-project-gate.py .github/prf003 .github/workflows/apply-prf003-repair.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: isolate overwrite rollback ownership"
+          git push origin HEAD:feature/architect-project-gate-exporter
