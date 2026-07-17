@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/export-architect-project-gate.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts/export-architect-project-gate.py"
 spec = importlib.util.spec_from_file_location("architect_project_gate_exporter_review_fixes", SCRIPT)
 exporter = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
@@ -38,10 +38,8 @@ def test_canonicalization_rejects_mixed_key_types_without_crashing():
 def test_non_object_payload_is_rejected_before_official_validator(tmp_path: Path):
     payload = tmp_path / "payload.json"
     payload.write_text("[]\n", encoding="utf-8")
-
     with pytest.raises(exporter.ExportError) as exc:
         exporter.run_export(tmp_path, payload, tmp_path / "output.json", "run-non-object")
-
     assert exc.value.code == "ARCH_EXPORT_PAYLOAD_NOT_OBJECT"
 
 
@@ -52,26 +50,32 @@ def test_unicode_run_paths_are_allowed_in_clean_repository(tmp_path: Path):
     payload = repo / "معماری-ورودی.json"
     output = repo / "معماری-خروجی.json"
     payload.write_text("{}\n", encoding="utf-8")
-
     observed = exporter.inspect_repository(repo, payload, output)
-
     assert observed.repository == exporter.REPOSITORY
     assert observed.ref == "main"
 
 
-def test_concurrently_created_output_is_not_deleted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_concurrently_created_output_is_not_deleted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     output = tmp_path / "architect-project-gate.json"
     real_link = exporter.os.link
 
     def concurrent_create(source, destination, **kwargs):
-        Path(destination).write_text("operator-created artifact\n", encoding="utf-8")
+        parent_fd = kwargs["dst_dir_fd"]
+        descriptor = os.open(
+            destination,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        os.write(descriptor, b"operator-created artifact\n")
+        os.close(descriptor)
         return real_link(source, destination, **kwargs)
 
     monkeypatch.setattr(exporter.os, "link", concurrent_create)
-
     with pytest.raises(exporter.ExportError) as exc:
         exporter.atomic_write(output, {"unit": True}, overwrite=False)
-
     assert exc.value.code == "ARCH_EXPORT_OUTPUT_EXISTS"
     assert output.read_text(encoding="utf-8") == "operator-created artifact\n"
     assert not list(tmp_path.glob(".architect-project-gate.json.*.tmp"))
