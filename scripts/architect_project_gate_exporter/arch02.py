@@ -3,18 +3,18 @@ from __future__ import annotations
 """ARCH-02 bounded repair for the Architect Project Gate exporter.
 
 Every semantic, contract, hash, Git-provenance, and ancestry check capable of
-invalidating acceptance completes before canonical publication. Successful
-descriptor-derived atomic no-clobber publication is the operational commit
-point. Receipt, observation, and cleanup degradation after that point is
-warning-bearing success and never destructive rollback or false artifact
-failure.
+invalidating acceptance completes before canonical publication. Descriptor-
+derived atomic no-clobber publication remains the historical commit point.
+Post-link acceptance proof is separate: if canonical repository ancestry,
+current Git provenance, or destination ownership cannot be proven, the artifact
+remains committed but handoff is blocked without pathname-based rollback.
 """
 
 import argparse
 import json
 import os
 import sys
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -28,18 +28,32 @@ globals().update(
 
 
 @dataclass(frozen=True)
+class PublishOutcome:
+    """Historical commit outcome before current-revision handoff acceptance."""
+
+    warnings: tuple[str, ...] = ()
+    acceptance_blockers: tuple[str, ...] = ()
+    canonical_destination_present: bool = True
+    committed_output_location: str = "canonical_repository_destination"
+
+
+@dataclass(frozen=True)
 class ExportOperationResult(ExportResult):
-    """Explicit operator result for the ARCH-02 commit-boundary contract."""
+    """Explicit operator result for commit, location, and revision acceptance."""
 
     result_status: str = "SUCCESS"
     artifact_committed: bool = True
     receipt_emitted: bool = False
     cleanup_complete: bool = True
+    current_revision_accepted: bool = True
+    canonical_destination_present: bool = True
+    committed_output_location: str = "canonical_repository_destination"
+    acceptance_blockers: list[str] = field(default_factory=list)
 
 
-def _append_once(warnings: list[str], warning: str) -> None:
-    if warning not in warnings:
-        warnings.append(warning)
+def _append_once(values: list[str], value: str) -> None:
+    if value not in values:
+        values.append(value)
 
 
 def _diagnostic_name(exc: BaseException) -> str:
@@ -54,6 +68,10 @@ def _receipt_warning(exc: BaseException) -> str:
     return f"ARCH_EXPORT_RECEIPT_EMIT_FAILED:{type(exc).__name__}"
 
 
+def _acceptance_blocker(prefix: str, exc: BaseException) -> str:
+    return f"{prefix}:{_diagnostic_name(exc)}"
+
+
 def _is_receipt_warning(warning: str) -> bool:
     return warning.startswith("ARCH_EXPORT_RECEIPT_EMIT_FAILED:")
 
@@ -63,14 +81,24 @@ def _is_cleanup_warning(warning: str) -> bool:
         (
             "ARCH_EXPORT_CANDIDATE_",
             "ARCH_EXPORT_OUTPUT_DESCRIPTOR_CLOSE_FAILED:",
+            "ARCH_EXPORT_OUTPUT_LOCK_RELEASE_FAILED:",
             "ARCH_EXPORT_LOCK_",
             "ARCH_EXPORT_ANCESTRY_",
         )
     )
 
 
-def _result_status(warnings: Iterable[str]) -> str:
+def _result_status(
+    warnings: Iterable[str], acceptance_blockers: Iterable[str] = ()
+) -> str:
     values = list(warnings)
+    blockers = list(acceptance_blockers)
+    if blockers:
+        return (
+            "COMMITTED_HANDOFF_BLOCKED_WITH_WARNINGS"
+            if values
+            else "COMMITTED_HANDOFF_BLOCKED"
+        )
     receipt = any(_is_receipt_warning(item) for item in values)
     other = any(not _is_receipt_warning(item) for item in values)
     if receipt and other:
@@ -91,31 +119,50 @@ def _operation_result(
     warnings: Iterable[str],
     *,
     receipt_emitted: bool,
+    acceptance_blockers: Iterable[str] = (),
+    canonical_destination_present: bool = True,
+    committed_output_location: str = "canonical_repository_destination",
+    current_revision_accepted: bool = True,
 ) -> ExportOperationResult:
     collected = list(warnings)
+    blockers = list(acceptance_blockers)
+    accepted = current_revision_accepted and not blockers
+    canonical_path = (
+        str(output_path.relative_to(root)).replace(os.sep, "/")
+        if canonical_destination_present
+        else ""
+    )
     return ExportOperationResult(
         status=export["handoff"]["status"],
-        output_path=str(output_path.relative_to(root)).replace(os.sep, "/"),
+        output_path=canonical_path,
         export_id=export["export_id"],
         payload_hash=hashes["payload_hash"],
         bundle_hash=hashes["bundle_hash"],
         export_hash=hashes["export_hash"],
         producer_commit=initial_git.commit_sha,
         handoff_target=TARGET,
-        handoff_allowed=export["handoff"]["allowed"],
+        handoff_allowed=(
+            export["handoff"]["allowed"]
+            and accepted
+            and canonical_destination_present
+        ),
         output_written=False,
         output_committed=True,
-        destination_present=True,
+        destination_present=canonical_destination_present,
         concurrent_destination_preserved=False,
         backup_retained=False,
         backup_path=None,
         receipt_scope="historical_commit",
         current_destination_claim=False,
         cleanup_warnings=collected,
-        result_status=_result_status(collected),
+        result_status=_result_status(collected, blockers),
         artifact_committed=True,
         receipt_emitted=receipt_emitted,
         cleanup_complete=not any(_is_cleanup_warning(item) for item in collected),
+        current_revision_accepted=accepted,
+        canonical_destination_present=canonical_destination_present,
+        committed_output_location=committed_output_location,
+        acceptance_blockers=blockers,
     )
 
 
@@ -137,20 +184,115 @@ def _destination_present(transaction: OutputTransaction, stage: str) -> bool:
         return False
 
 
-def _publish_commit(transaction: OutputTransaction) -> list[str]:
-    """Publish once; the successful no-clobber link is operational commit."""
+def _location_for_unproven_publication(exc: BaseException) -> str:
+    diagnostic = _diagnostic_name(exc)
+    if diagnostic.startswith("ARCH_EXPORT_OUTPUT_ANCESTRY_"):
+        return "bound_parent_outside_canonical_ancestry"
+    return "canonical_destination_unverified"
 
+
+def _publication_still_canonical(transaction: OutputTransaction) -> bool:
+    if transaction.published_descriptor is None:
+        return False
+    try:
+        transaction.verify_owned("postcommit_exception_acceptance")
+    except Exception:
+        return False
+    return True
+
+
+def _publish_commit(transaction: OutputTransaction) -> PublishOutcome:
+    """Publish once and separate historical commit from handoff acceptance."""
+
+    warnings = list(transaction.cleanup_warnings)
+    blockers: list[str] = []
+    canonical_destination_present = True
+    committed_output_location = "canonical_repository_destination"
     try:
         transaction.publish()
     except Exception as exc:
         if not transaction.published:
             raise
-        # The link already made a fully prevalidated artifact operational.
         transaction.committed = True
         _append_once(transaction.cleanup_warnings, _postcommit_warning(exc))
+        warnings = list(transaction.cleanup_warnings)
+
+        # A failure after the link may still be an auxiliary observation failure
+        # if ancestry, destination identity, and bytes can be re-proved.
+        if not _publication_still_canonical(transaction):
+            _append_once(
+                blockers,
+                _acceptance_blocker(
+                    "ARCH_EXPORT_POST_COMMIT_PUBLICATION_BLOCKED", exc
+                ),
+            )
+            canonical_destination_present = False
+            committed_output_location = _location_for_unproven_publication(exc)
     else:
         transaction.committed = True
-    return list(transaction.cleanup_warnings)
+        warnings = list(transaction.cleanup_warnings)
+
+    return PublishOutcome(
+        warnings=tuple(warnings),
+        acceptance_blockers=tuple(blockers),
+        canonical_destination_present=canonical_destination_present,
+        committed_output_location=committed_output_location,
+    )
+
+
+def _post_link_acceptance(
+    transaction: OutputTransaction,
+    initial_git: GitProvenance,
+    root: Path,
+    payload_path: Path,
+    output_path: Path,
+    provenance_provider: Callable[
+        [Path, Path, Path, Iterable[Path]], GitProvenance
+    ],
+    publication: PublishOutcome,
+) -> tuple[list[str], bool, str, bool]:
+    """Prove current-revision and canonical destination acceptance after link."""
+
+    blockers = list(publication.acceptance_blockers)
+    canonical_destination_present = publication.canonical_destination_present
+    committed_output_location = publication.committed_output_location
+    current_revision_accepted = not blockers
+
+    try:
+        post_link_git = provenance_provider(
+            root, payload_path, output_path, transaction.allowed_paths()
+        )
+        _assert_same_provenance(
+            initial_git, post_link_git, "postpublication_provenance"
+        )
+    except Exception as exc:
+        _append_once(
+            blockers,
+            _acceptance_blocker(
+                "ARCH_EXPORT_POST_COMMIT_PROVENANCE_BLOCKED", exc
+            ),
+        )
+        current_revision_accepted = False
+
+    try:
+        transaction.verify_owned("postpublication_acceptance")
+    except Exception as exc:
+        _append_once(
+            blockers,
+            _acceptance_blocker(
+                "ARCH_EXPORT_POST_COMMIT_DESTINATION_BLOCKED", exc
+            ),
+        )
+        canonical_destination_present = False
+        committed_output_location = _location_for_unproven_publication(exc)
+        current_revision_accepted = False
+
+    return (
+        blockers,
+        canonical_destination_present,
+        committed_output_location,
+        current_revision_accepted,
+    )
 
 
 def atomic_write(
@@ -161,9 +303,12 @@ def atomic_write(
 ) -> list[str]:
     transaction = OutputTransaction.stage(path, value, overwrite, root=root)
     precommit_error: ExportError | None = None
+    committed_blocker: PublishOutcome | None = None
     destination_present = False
     try:
-        _publish_commit(transaction)
+        publication = _publish_commit(transaction)
+        if publication.acceptance_blockers:
+            committed_blocker = publication
     except Exception as exc:
         precommit_error = _normalize_precommit_error(exc)
         destination_present = _destination_present(transaction, precommit_error.stage)
@@ -187,6 +332,16 @@ def atomic_write(
         precommit_error.destination_present = destination_present
         precommit_error.cleanup_warnings = list(close_warnings)
         raise precommit_error
+    if committed_blocker is not None:
+        raise ExportError(
+            "ARCH_EXPORT_COMMITTED_DESTINATION_UNVERIFIED",
+            "post_commit_acceptance",
+            "The artifact was committed but its canonical repository destination could not be proven.",
+            "operator",
+            output_committed=True,
+            destination_present=committed_blocker.canonical_destination_present,
+            cleanup_warnings=list(close_warnings),
+        )
     return list(close_warnings)
 
 
@@ -221,7 +376,9 @@ def run_export(
         )
     validate_payload(root, payload)
     initial_git = provenance_provider(root, payload_path, output_path, ())
-    export, hashes = build_export(payload, initial_git, run_id, _input_ref(root, payload_path))
+    export, hashes = build_export(
+        payload, initial_git, run_id, _input_ref(root, payload_path)
+    )
     validate_contracts(root, export)
     verify_hashes(export, hashes)
 
@@ -252,19 +409,36 @@ def run_export(
         prepublish_git = provenance_provider(
             root, payload_path, output_path, transaction.allowed_paths()
         )
-        _assert_same_provenance(initial_git, prepublish_git, "prepublication_provenance")
+        _assert_same_provenance(
+            initial_git, prepublish_git, "prepublication_provenance"
+        )
         transaction.ancestry.verify("prepublication_ancestry")
 
-        # Repeat the mutable repository/worktree proof immediately before the
-        # atomic boundary. This is still pre-commit, not post-publication proof.
         commit_git = provenance_provider(
             root, payload_path, output_path, transaction.allowed_paths()
         )
-        _assert_same_provenance(initial_git, commit_git, "operational_commit_provenance")
+        _assert_same_provenance(
+            initial_git, commit_git, "operational_commit_provenance"
+        )
         transaction.ancestry.verify("operational_commit_ancestry")
 
-        # Successful no-clobber publication is the operational commit point.
-        _publish_commit(transaction)
+        # The link is the historical commit point. Handoff acceptance is then
+        # re-proved against current Git provenance and canonical ancestry.
+        publication = _publish_commit(transaction)
+        (
+            acceptance_blockers,
+            canonical_destination_present,
+            committed_output_location,
+            current_revision_accepted,
+        ) = _post_link_acceptance(
+            transaction,
+            initial_git,
+            root,
+            payload_path,
+            output_path,
+            provenance_provider,
+            publication,
+        )
         result = _operation_result(
             export,
             hashes,
@@ -273,11 +447,14 @@ def run_export(
             output_path,
             transaction.cleanup_warnings,
             receipt_emitted=False,
+            acceptance_blockers=acceptance_blockers,
+            canonical_destination_present=canonical_destination_present,
+            committed_output_location=committed_output_location,
+            current_revision_accepted=current_revision_accepted,
         )
 
-        # Receipt is auxiliary post-commit reporting. It remains inside the
-        # cooperating lock so another exporter cannot interleave with the
-        # historical acknowledgment, but failure is warning-bearing success.
+        # Receipt remains inside the cooperating lock. A receipt failure is
+        # auxiliary and cannot weaken an existing acceptance blocker.
         if receipt_emitter is not None:
             emitted_result = replace(result, receipt_emitted=True)
             try:
@@ -292,6 +469,10 @@ def run_export(
                     output_path,
                     transaction.cleanup_warnings,
                     receipt_emitted=False,
+                    acceptance_blockers=result.acceptance_blockers,
+                    canonical_destination_present=result.canonical_destination_present,
+                    committed_output_location=result.committed_output_location,
+                    current_revision_accepted=result.current_revision_accepted,
                 )
             else:
                 receipt_emitted = True
@@ -308,6 +489,14 @@ def run_export(
                 output_path,
                 transaction.cleanup_warnings,
                 receipt_emitted=receipt_emitted,
+                acceptance_blockers=[
+                    _acceptance_blocker(
+                        "ARCH_EXPORT_POST_COMMIT_ACCEPTANCE_BLOCKED", exc
+                    )
+                ],
+                canonical_destination_present=False,
+                committed_output_location=_location_for_unproven_publication(exc),
+                current_revision_accepted=False,
             )
         else:
             precommit_error = _normalize_precommit_error(exc)
@@ -345,7 +534,8 @@ def run_export(
             destination_present=transaction.published,
         )
 
-    # Close/release degradation is post-commit and reflected in the final result.
+    # Close/release degradation is post-commit and reflected without losing
+    # canonical-location or current-revision acceptance state.
     return _operation_result(
         export,
         hashes,
@@ -354,12 +544,18 @@ def run_export(
         output_path,
         close_warnings,
         receipt_emitted=receipt_emitted,
+        acceptance_blockers=result.acceptance_blockers,
+        canonical_destination_present=result.canonical_destination_present,
+        committed_output_location=result.committed_output_location,
+        current_revision_accepted=result.current_revision_accepted,
     )
 
 
 def render(data: dict[str, Any], mode: str) -> str:
     if mode == "json":
-        return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return json.dumps(
+            data, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
     return "\n".join(
         f"{key}: {str(value).lower() if isinstance(value, bool) else value}"
         for key, value in data.items()
@@ -375,7 +571,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=Path(DEFAULT_OUTPUT))
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--format", choices=("text", "json"), default="text")
-    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS
+    )
     args = parser.parse_args(argv)
     root = args.repo_root.resolve()
     payload = args.payload if args.payload.is_absolute() else root / args.payload
@@ -393,20 +591,24 @@ def main(argv: list[str] | None = None) -> int:
             args.overwrite,
             receipt_emitter=emit_receipt,
         )
-        if result.cleanup_warnings:
+        if result.cleanup_warnings or result.acceptance_blockers:
             update = {
-                "receipt_update": "post_commit_warning",
+                "receipt_update": "post_commit_state",
                 "result_status": result.result_status,
                 "artifact_committed": result.artifact_committed,
                 "receipt_emitted": result.receipt_emitted,
                 "cleanup_complete": result.cleanup_complete,
+                "current_revision_accepted": result.current_revision_accepted,
+                "canonical_destination_present": result.canonical_destination_present,
+                "committed_output_location": result.committed_output_location,
                 "cleanup_warnings": result.cleanup_warnings,
+                "acceptance_blockers": result.acceptance_blockers,
             }
             try:
                 print(render(update, args.format), file=sys.stderr, flush=True)
             except Exception:
                 # The artifact is already committed. Reporting degradation must
-                # not become a false exporter failure.
+                # not become destructive rollback or false current acceptance.
                 pass
         return 0 if result.handoff_allowed else 2
     except ExportError as exc:
