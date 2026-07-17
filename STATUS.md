@@ -36,6 +36,17 @@ ARCH_01:
   exporter: scripts/export-architect-project-gate.py
   output: architect-project-gate.json
 
+ARCH_02:
+  audit_status: bounded_repair_pr_open
+  confirmed_repairs:
+    - ARCH02-F01
+    - ARCH02-F03
+    - ARCH02-F05
+  identity_decision:
+    ARCH02-F02: PATH_IS_INTENTIONAL_IDENTITY_INPUT
+  real_run_evidence: pending
+  exact_merged_main_closure: pending
+
 P_003_CONTINUATION:
   canonical_action_kind: repair_and_verify
   protocol_version: v1.11.0
