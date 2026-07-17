@@ -71,18 +71,28 @@ ARCH_EXPORT_OUTPUT_ANCESTRY_CREATE_FAILED
 
 ## Candidate ownership and cleanup
 
-A generated candidate pathname is not an ownership record. Candidate ownership begins only after the kernel has successfully created a new inode and the exporter has retained its descriptor and identity.
+A generated candidate pathname is not an ownership record. For a named fallback, successful `O_CREAT | O_EXCL` creation immediately establishes a provisional record containing the created descriptor and residue path. This record exists before `fstat`, identity conversion or `CandidateOwnership` construction.
 
 The candidate lifecycle is explicit:
 
 ```text
 unallocated
-→ owned descriptor
+→ provisional descriptor plus optional residue path
+→ identity captured and owned
 → published or abandoned
 → released exactly once
 ```
 
 Candidate content is read and published from the retained descriptor. Transaction cleanup never calls pathname `unlink` for a candidate. Therefore allocation collisions, a candidate pathname replaced by another process, and later reuse of a former name are never removed by rollback or `close()`.
+
+If identity capture or ownership construction fails after candidate creation, the exporter:
+
+1. returns `ARCH_EXPORT_CANDIDATE_IDENTITY_CAPTURE_FAILED`;
+2. attempts to close the provisional descriptor exactly once;
+3. never unlinks the candidate pathname;
+4. inspects the visible named residue only for reporting;
+5. preserves any concurrent replacement;
+6. retains candidate-specific warnings when the error passes through `OutputTransaction.stage()`.
 
 When `O_TMPFILE` is unavailable, the exporter uses an `O_EXCL` candidate in a private mode-`0700`, current-user-owned, same-filesystem residue directory outside the repository. The exporter deliberately retains that entry rather than risking deletion of an unrelated replacement. The retained residue or a changed occupant is surfaced through deterministic `cleanup_warnings`.
 
@@ -90,6 +100,7 @@ Relevant candidate diagnostics and warnings include:
 
 ```text
 ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED
+ARCH_EXPORT_CANDIDATE_IDENTITY_CAPTURE_FAILED
 ARCH_EXPORT_CANDIDATE_OWNERSHIP_LOST
 ARCH_EXPORT_CANDIDATE_RELEASE_FAILED:<exception>
 ARCH_EXPORT_CANDIDATE_RESIDUE_RETAINED
@@ -97,7 +108,7 @@ ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT
 ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:<state>
 ```
 
-`ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT` means the visible fallback entry no longer identifies the transaction-owned inode. The exporter preserves the current occupant and does not retry pathname cleanup.
+`ARCH_EXPORT_CANDIDATE_RESIDUE_RETAINED` means the original named candidate still occupies the residue path. `ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT` means the visible fallback entry no longer identifies the transaction-created inode. The exporter preserves the current occupant and does not retry pathname cleanup. An unnamed `O_TMPFILE` identity-capture failure produces the dedicated diagnostic without a named-residue claim.
 
 ## Platform support
 
@@ -145,7 +156,10 @@ strict UTF-8 JSON parsing
 → descriptor-bound repository/output-parent ancestry capture
 → shared exclusive exporter lock
 → single guarded destination stat
-→ transaction-owned candidate descriptor allocation, write and fsync
+→ candidate kernel creation
+→ immediate provisional descriptor/path record
+→ candidate identity capture and ownership promotion
+→ candidate write and fsync
 → descriptor-based candidate reread and validation
 → pre-publication Git provenance equality check
 → pre-publication ancestry verification
