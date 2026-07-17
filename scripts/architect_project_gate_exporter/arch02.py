@@ -2,21 +2,21 @@ from __future__ import annotations
 
 """ARCH-02 bounded repair for the Architect Project Gate exporter.
 
-This module preserves the ARCH-01 contract surface while moving every
-semantic, contract, hash, provenance, and ancestry check that can invalidate
-acceptance before the atomic no-clobber publication boundary. A successful
-publication is the operational commit point. Later receipt, observation, or
-cleanup degradation is reported as a warning and never retroactively turns a
-valid committed artifact into a failed export.
+Every semantic, contract, hash, Git-provenance, and ancestry check capable of
+invalidating acceptance completes before canonical publication. Successful
+descriptor-derived atomic no-clobber publication is the operational commit
+point. Receipt, observation, and cleanup degradation after that point is
+warning-bearing success and never destructive rollback or false artifact
+failure.
 """
 
-from dataclasses import asdict, dataclass, replace
-from pathlib import Path
-from typing import Any, Callable, Iterable
 import argparse
 import json
 import os
 import sys
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
+from typing import Any, Callable, Iterable
 
 from . import runner as _legacy
 
@@ -43,9 +43,7 @@ def _append_once(warnings: list[str], warning: str) -> None:
 
 
 def _diagnostic_name(exc: BaseException) -> str:
-    if isinstance(exc, ExportError):
-        return exc.code
-    return type(exc).__name__
+    return exc.code if isinstance(exc, ExportError) else type(exc).__name__
 
 
 def _postcommit_warning(exc: BaseException) -> str:
@@ -90,11 +88,11 @@ def _operation_result(
     initial_git: GitProvenance,
     root: Path,
     output_path: Path,
-    cleanup_warnings: Iterable[str],
+    warnings: Iterable[str],
     *,
     receipt_emitted: bool,
 ) -> ExportOperationResult:
-    warnings = list(cleanup_warnings)
+    collected = list(warnings)
     return ExportOperationResult(
         status=export["handoff"]["status"],
         output_path=str(output_path.relative_to(root)).replace(os.sep, "/"),
@@ -113,11 +111,11 @@ def _operation_result(
         backup_path=None,
         receipt_scope="historical_commit",
         current_destination_claim=False,
-        cleanup_warnings=warnings,
-        result_status=_result_status(warnings),
+        cleanup_warnings=collected,
+        result_status=_result_status(collected),
         artifact_committed=True,
         receipt_emitted=receipt_emitted,
-        cleanup_complete=not any(_is_cleanup_warning(item) for item in warnings),
+        cleanup_complete=not any(_is_cleanup_warning(item) for item in collected),
     )
 
 
@@ -132,20 +130,22 @@ def _normalize_precommit_error(exc: BaseException) -> ExportError:
     )
 
 
-def _publish_commit(transaction: OutputTransaction) -> list[str]:
-    """Publish with an unambiguous atomic operational commit boundary.
+def _destination_present(transaction: OutputTransaction, stage: str) -> bool:
+    try:
+        return transaction.destination_identity(stage) is not None
+    except ExportError:
+        return False
 
-    Before ``transaction.published`` becomes true, an exception is a normal
-    pre-commit failure. Once the descriptor-derived no-clobber link succeeds,
-    the artifact was already fully validated and is historically committed;
-    any later observation failure is a warning, not rollback.
-    """
+
+def _publish_commit(transaction: OutputTransaction) -> list[str]:
+    """Publish once; the successful no-clobber link is operational commit."""
 
     try:
         transaction.publish()
     except Exception as exc:
         if not transaction.published:
             raise
+        # The link already made a fully prevalidated artifact operational.
         transaction.committed = True
         _append_once(transaction.cleanup_warnings, _postcommit_warning(exc))
     else:
@@ -161,10 +161,12 @@ def atomic_write(
 ) -> list[str]:
     transaction = OutputTransaction.stage(path, value, overwrite, root=root)
     precommit_error: ExportError | None = None
+    destination_present = False
     try:
         _publish_commit(transaction)
     except Exception as exc:
         precommit_error = _normalize_precommit_error(exc)
+        destination_present = _destination_present(transaction, precommit_error.stage)
         try:
             transaction.rollback()
         except Exception as rollback_exc:  # pragma: no cover - defensive only
@@ -174,7 +176,7 @@ def atomic_write(
                 f"Nondestructive pre-commit cleanup failed: {type(rollback_exc).__name__}.",
                 "operator",
                 output_committed=False,
-                destination_present=False,
+                destination_present=destination_present,
             )
     finally:
         close_warnings = transaction.close()
@@ -182,9 +184,7 @@ def atomic_write(
     if precommit_error is not None:
         precommit_error.output_written = False
         precommit_error.output_committed = False
-        precommit_error.destination_present = (
-            transaction.destination_identity(precommit_error.stage) is not None
-        )
+        precommit_error.destination_present = destination_present
         precommit_error.cleanup_warnings = list(close_warnings)
         raise precommit_error
     return list(close_warnings)
@@ -239,8 +239,11 @@ def run_export(
 
     result: ExportOperationResult | None = None
     precommit_error: ExportError | None = None
+    precommit_destination_present = False
+    receipt_emitted = False
+
     try:
-        # Every acceptance-invalidating check completes before publication.
+        # Candidate acceptance is complete before canonical publication.
         staged_bytes = transaction.read_candidate("staged_candidate_ancestry")
         staged = _strict_json_bytes(staged_bytes, "staged_candidate_validation")
         validate_contracts(root, staged)
@@ -251,6 +254,14 @@ def run_export(
         )
         _assert_same_provenance(initial_git, prepublish_git, "prepublication_provenance")
         transaction.ancestry.verify("prepublication_ancestry")
+
+        # Repeat the mutable repository/worktree proof immediately before the
+        # atomic boundary. This is still pre-commit, not post-publication proof.
+        commit_git = provenance_provider(
+            root, payload_path, output_path, transaction.allowed_paths()
+        )
+        _assert_same_provenance(initial_git, commit_git, "operational_commit_provenance")
+        transaction.ancestry.verify("operational_commit_ancestry")
 
         # Successful no-clobber publication is the operational commit point.
         _publish_commit(transaction)
@@ -263,10 +274,30 @@ def run_export(
             transaction.cleanup_warnings,
             receipt_emitted=False,
         )
+
+        # Receipt is auxiliary post-commit reporting. It remains inside the
+        # cooperating lock so another exporter cannot interleave with the
+        # historical acknowledgment, but failure is warning-bearing success.
+        if receipt_emitter is not None:
+            emitted_result = replace(result, receipt_emitted=True)
+            try:
+                receipt_emitter(emitted_result)
+            except Exception as exc:
+                _append_once(transaction.cleanup_warnings, _receipt_warning(exc))
+                result = _operation_result(
+                    export,
+                    hashes,
+                    initial_git,
+                    root,
+                    output_path,
+                    transaction.cleanup_warnings,
+                    receipt_emitted=False,
+                )
+            else:
+                receipt_emitted = True
+                result = emitted_result
     except Exception as exc:
         if transaction.published:
-            # The artifact was already valid and atomically committed. Do not
-            # misreport it as a failed/rolled-back export.
             transaction.committed = True
             _append_once(transaction.cleanup_warnings, _postcommit_warning(exc))
             result = _operation_result(
@@ -276,10 +307,13 @@ def run_export(
                 root,
                 output_path,
                 transaction.cleanup_warnings,
-                receipt_emitted=False,
+                receipt_emitted=receipt_emitted,
             )
         else:
             precommit_error = _normalize_precommit_error(exc)
+            precommit_destination_present = _destination_present(
+                transaction, precommit_error.stage
+            )
             try:
                 transaction.rollback()
             except Exception as rollback_exc:
@@ -289,19 +323,15 @@ def run_export(
                     f"Nondestructive pre-commit cleanup failed: {type(rollback_exc).__name__}.",
                     "operator",
                     output_committed=False,
-                    destination_present=False,
+                    destination_present=precommit_destination_present,
                 )
     finally:
         close_warnings = transaction.close()
 
     if precommit_error is not None:
-        try:
-            current_identity = transaction.destination_identity(precommit_error.stage)
-        except ExportError:
-            current_identity = None
         precommit_error.output_written = False
         precommit_error.output_committed = False
-        precommit_error.destination_present = current_identity is not None
+        precommit_error.destination_present = precommit_destination_present
         precommit_error.cleanup_warnings = list(close_warnings)
         raise precommit_error
 
@@ -316,36 +346,15 @@ def run_export(
         )
 
     # Close/release degradation is post-commit and reflected in the final result.
-    result = _operation_result(
+    return _operation_result(
         export,
         hashes,
         initial_git,
         root,
         output_path,
         close_warnings,
-        receipt_emitted=False,
+        receipt_emitted=receipt_emitted,
     )
-
-    # Receipt emission is auxiliary reporting after operational commit and cleanup.
-    if receipt_emitter is not None:
-        emitted_result = replace(result, receipt_emitted=True)
-        try:
-            receipt_emitter(emitted_result)
-        except Exception as exc:
-            warnings = list(result.cleanup_warnings)
-            _append_once(warnings, _receipt_warning(exc))
-            result = _operation_result(
-                export,
-                hashes,
-                initial_git,
-                root,
-                output_path,
-                warnings,
-                receipt_emitted=False,
-            )
-        else:
-            result = emitted_result
-    return result
 
 
 def render(data: dict[str, Any], mode: str) -> str:
