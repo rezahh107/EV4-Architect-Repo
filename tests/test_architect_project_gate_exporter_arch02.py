@@ -178,7 +178,7 @@ def test_success_result_explicitly_reports_commit_receipt_and_cleanup(
     assert result.receipt_emitted is True
     assert result.cleanup_complete is True
     assert result.handoff_allowed is True
-    assert emitted and emitted[0].receipt_emitted is True
+    assert emitted and emitted[0] == result
     assert output.exists()
 
 
@@ -282,18 +282,29 @@ def test_input_path_is_intentional_content_identity_input():
     assert hashes_a["export_hash"] != moved_hashes["export_hash"]
 
 
-def test_workflow_has_event_aware_exact_sha_and_main_push_path():
-    workflow = (
-        Path(__file__).resolve().parents[1]
-        / ".github/workflows/validate-architect-producer-gate-adoption.yml"
+def test_event_specific_workflows_assert_exact_pr_and_main_sha():
+    root = Path(__file__).resolve().parents[1]
+    pr_workflow = (
+        root / ".github/workflows/validate-architect-producer-gate-adoption.yml"
     ).read_text(encoding="utf-8")
-    assert "push:" in workflow
-    assert "branches:" in workflow
-    assert "- main" in workflow
-    assert "github.event_name == 'pull_request'" in workflow
-    assert "github.event.pull_request.head.sha" in workflow
-    assert "github.sha" in workflow
-    assert 'test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"' in workflow
+    main_workflow = (
+        root / ".github/workflows/validate-architect-producer-gate-adoption-main.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "pull_request:" in pr_workflow
+    assert "push:" not in pr_workflow
+    assert "ref: ${{ github.event.pull_request.head.sha }}" in pr_workflow
+    assert (
+        'test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"'
+        in pr_workflow
+    )
+
+    assert "push:" in main_workflow
+    assert "branches:" in main_workflow
+    assert "- main" in main_workflow
+    assert "github.event.pull_request.head.sha" not in main_workflow
+    assert "ref: ${{ github.sha }}" in main_workflow
+    assert 'test "$(git rev-parse HEAD)" = "${{ github.sha }}"' in main_workflow
 
 
 def test_status_records_arch01_merge_and_arch02_repair_without_false_closure():
