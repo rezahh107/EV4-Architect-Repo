@@ -1,8 +1,10 @@
-name: validate-architect-producer-gate-adoption
+name: validate-architect-producer-gate-adoption-main
 
-# Prompt 01 / ARCH-01 + P-003 / ARCH-02 exact pull-request-head validation.
+# ARCH-02 exact pushed-main carrier for the same authoritative exporter suite.
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - 'README.md'
       - 'STATUS.md'
@@ -25,6 +27,7 @@ on:
       - 'tests/test_architect_project_gate_exporter*.py'
       - '.github/workflows/validate-architect-producer-gate-adoption.yml'
       - '.github/workflows/validate-architect-producer-gate-adoption-main.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,14 +36,14 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact pull request head
+      - name: Checkout exact pushed or dispatched revision
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Assert exact pull request head
+      - name: Assert exact pushed or dispatched revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
@@ -55,20 +58,4 @@ jobs:
       - name: Run Architect Producer adoption tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
       - name: Run Architect Project Gate exporter tests
-        id: exporter-tests
-        continue-on-error: true
-        run: |
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py > architect-exporter-pytest.log 2>&1
-      - name: Upload exporter failure diagnostics
-        if: steps.exporter-tests.outcome != 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: architect-exporter-pytest-${{ github.event.pull_request.head.sha }}
-          path: architect-exporter-pytest.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce exporter test result
-        if: steps.exporter-tests.outcome != 'success'
-        run: |
-          cat architect-exporter-pytest.log
-          exit 1
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py
