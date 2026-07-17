@@ -51,15 +51,37 @@ jobs:
         run: python scripts/check-architect-producer-gate-adoption.py --format json
       - name: Run Architect Producer adoption tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
-      - name: Run exporter contract and integration tests
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter.py
+      - name: Run exporter semantic integration tests
+        run: >-
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter.py
+          -k 'not atomic_write_refuses_overwrite_and_roundtrips and not output_path_must_remain_inside_repository and not git_provenance'
+      - name: Run exporter atomic integration test
+        if: always()
+        run: >-
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter.py
+          -k 'atomic_write_refuses_overwrite_and_roundtrips'
+      - name: Run exporter path-boundary integration test
+        if: always()
+        run: >-
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter.py
+          -k 'output_path_must_remain_inside_repository'
+      - name: Run exporter Git provenance integration tests
+        if: always()
+        run: >-
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter.py
+          -k 'git_provenance'
       - name: Run exporter output safety tests
+        if: always()
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter_output_safety.py
       - name: Run exporter provenance tests
+        if: always()
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter_provenance.py
       - name: Run exporter review-fix tests
+        if: always()
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter_review_fixes.py
       - name: Run exporter transaction and ancestry tests
+        if: always()
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter_transaction.py
       - name: Run exporter PRF-004 race tests
+        if: always()
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter_prf004_race.py
