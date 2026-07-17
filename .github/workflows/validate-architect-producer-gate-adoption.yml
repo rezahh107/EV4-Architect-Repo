@@ -1,6 +1,6 @@
 name: validate-architect-producer-gate-adoption
 
-# Prompt 01 / ARCH-01 + P-003 / ARCH-02 exporter validation.
+# Prompt 01 / ARCH-01 + P-003 / ARCH-02 exact pull-request-head validation.
 on:
   pull_request:
     paths:
@@ -24,31 +24,7 @@ on:
       - 'tests/test_architect_producer_gate_adoption.py'
       - 'tests/test_architect_project_gate_exporter*.py'
       - '.github/workflows/validate-architect-producer-gate-adoption.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'README.md'
-      - 'STATUS.md'
-      - 'status-history/**'
-      - 'contracts/project-gate/**'
-      - 'manifests/**'
-      - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
-      - 'fixtures/build-tree/**'
-      - 'fixtures/project-gate-export/**'
-      - 'fixtures/architect-project-gate-export/**'
-      - 'references/ELEMENTOR_V4_OFFICIAL_CAPABILITY_REGISTRY.v1.json'
-      - 'docs/BEHAVIORAL_RULE_COVERAGE_PROMPT_01.md'
-      - 'docs/PROJECT_GATE_PRODUCER_ADOPTION.md'
-      - 'docs/ARCHITECT_PROJECT_GATE_EXPORTER.md'
-      - 'docs/ARCHITECT_PROJECT_GATE_EXPORTER_ARCH02.md'
-      - 'scripts/check-architect-producer-gate-adoption.py'
-      - 'scripts/export-architect-project-gate.py'
-      - 'scripts/architect_project_gate_exporter/**'
-      - 'tests/test_architect_producer_gate_adoption.py'
-      - 'tests/test_architect_project_gate_exporter*.py'
-      - '.github/workflows/validate-architect-producer-gate-adoption.yml'
-  workflow_dispatch:
+      - '.github/workflows/validate-architect-producer-gate-adoption-main.yml'
 
 permissions:
   contents: read
@@ -57,24 +33,14 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve exact revision
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            expected="${{ github.event.pull_request.head.sha }}"
-          else
-            expected="${{ github.sha }}"
-          fi
-          test -n "$expected"
-          echo "EXPECTED_SHA=$expected" >> "$GITHUB_ENV"
-      - name: Checkout exact event revision
+      - name: Checkout exact pull request head
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-      - name: Assert exact event revision
+      - name: Assert exact pull request head
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
