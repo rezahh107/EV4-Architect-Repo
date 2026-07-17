@@ -62,12 +62,16 @@ strict UTF-8 JSON parsing
 → Stage Evidence Bundle construction and validation
 → Producer Gate Export construction and validation
 → canonical SHA-256 self-verification
+→ exclusive non-blocking overwrite transaction lock
 → same-filesystem candidate staging, fsync, re-read, contract validation, and hash verification
 → pre-publication Git provenance equality recheck
 → atomic publication
-→ post-publication re-read, contract validation, and hash verification
+→ post-publication identity, byte, contract, and hash verification
 → final Git provenance equality and worktree recheck
-→ publication commit point and obsolete backup cleanup
+→ second final destination identity, byte, and hash verification
+→ publication commit point
+→ obsolete backup cleanup with operator-visible warnings
+→ post-commit destination identity, byte, and hash verification before success
 ```
 
 The active contracts are reused without local forks or version changes:
@@ -84,9 +88,13 @@ Acquisition mode: producer_emitted_gate_artifact
 
 Without `--overwrite`, the staged candidate is published with an atomic hard-link/no-replace primitive. If any file, directory, or symbolic link exists at the destination at the publication boundary, publication fails with `ARCH_EXPORT_OUTPUT_EXISTS`. Destination bytes remain unchanged, temporary files are removed, and `output_written` remains false.
 
-With explicit `--overwrite`, an existing regular output is first moved to a same-directory quarantine backup. The validated candidate is then published with the same no-replace primitive. Until post-publication validation and final provenance verification pass, any failure restores the prior output. If there was no prior output, rollback removes only the artifact whose filesystem identity matches this exporter run.
+With explicit `--overwrite`, cooperating exporter processes are serialized by an exclusive, non-blocking output transaction lock. Each transaction records the destination identity observed before lock acquisition. A transaction that loses the lock or observes identity drift before quarantine fails closed, so two overlapping overwrite exporters cannot both report authoritative success.
 
-Symbolic-link destinations and non-regular overwrite targets are rejected. Candidate and backup artifacts use unpredictable same-directory names, are included only in the exporter's bounded clean-worktree allowance, and are removed after rollback or commit. A cleanup interruption after the commit point does not invalidate the already verified new output.
+An existing regular output is moved to a same-directory quarantine backup while preserving its device/inode identity. The candidate is published with the same no-replace primitive and receives its own recorded device/inode identity. Before rollback restores a backup or removes a published candidate, the exporter verifies that the current destination is absent or still matches the identity owned by that transaction.
+
+If another process creates or replaces the destination, rollback never overwrites that concurrent artifact. The exporter fails with `ARCH_EXPORT_ROLLBACK_CONFLICT`, preserves the concurrent destination, and retains the previous output in its quarantine backup for operator recovery. The diagnostic identifies the retained backup by filename.
+
+Symbolic-link destinations and non-regular overwrite targets are rejected. Candidate and backup artifacts use unpredictable same-directory names and are included only in the exporter's bounded clean-worktree allowance. Backup cleanup is attempted twice after the commit point. A transient cleanup failure and retry, or retained backup residue after repeated failure, is reported through `cleanup_warnings` without invalidating the already verified output.
 
 ## Identity and hash rules
 
@@ -114,7 +122,7 @@ The exporter verifies at initial capture, immediately before publication, and ag
 
 The selected payload path, intended output path, staged candidate, and bounded overwrite backup may be untracked run artifacts. Any other dirty-worktree state fails closed. Absolute private checkout paths are not written into the export.
 
-A concurrent checkout, reset, commit, branch switch, or tracked contract/schema modification prevents success. Drift before publication writes nothing. Drift after publication triggers rollback and prevents the artifact from being reported as successful under stale provenance.
+A concurrent checkout, reset, commit, branch switch, or tracked contract/schema modification prevents success. Drift before publication writes nothing. Drift after publication triggers bounded rollback and prevents the artifact from being reported as successful under stale provenance.
 
 ## Handoff behavior
 
@@ -159,7 +167,10 @@ producer_commit
 handoff_target
 handoff_allowed
 output_written
+cleanup_warnings
 ```
+
+`cleanup_warnings` is an empty list when post-commit cleanup is complete. Retry or retained-quarantine diagnostics are returned explicitly when cleanup is degraded.
 
 On failure it reports a stable diagnostic code, failed stage, concise reason, repair owner, output-written state, and `handoff_prohibited: true`.
 
