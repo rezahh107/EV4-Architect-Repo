@@ -9,14 +9,9 @@ from typing import Any
 
 from .base import ExportError, canonical_bytes, inside
 from .ancestry import (
-    AncestryBinding,
-    _file_read_flags,
-    _identity_from_stat,
-    _output_lock_path,
-    _strict_json_bytes,
+    AncestryBinding, _file_read_flags, _identity_from_stat, _output_lock_path, _strict_json_bytes,
 )
 from .locking import OutputLock, _read_all, _write_all
-
 
 @dataclass
 class OutputTransaction:
