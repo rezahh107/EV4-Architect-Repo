@@ -144,7 +144,7 @@ def test_exact_byte_drift_is_detected_without_deletion(tmp_path: Path):
         transaction.close()
 
 
-def test_parent_renamed_outside_after_final_provenance_blocks_receipt(
+def test_parent_renamed_before_operational_commit_blocks_receipt_and_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     repo = tmp_path / "repo"
@@ -168,14 +168,15 @@ def test_parent_renamed_outside_after_final_provenance_blocks_receipt(
         run_unit_export(
             repo,
             monkeypatch,
-            "ancestry-after-final-git",
+            "ancestry-before-operational-commit",
             output,
             provenance_provider=drifting_provider,
             receipt_emitter=receipts.append,
         )
     assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+    assert exc.value.output_committed is False
     assert receipts == []
-    assert (outside / "out.json").exists()
+    assert not (outside / "out.json").exists()
 
 
 def test_unchanged_output_inode_does_not_hide_ancestry_drift(
