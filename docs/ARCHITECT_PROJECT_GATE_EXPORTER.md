@@ -6,7 +6,7 @@ Command classification: `PROPOSED_NEW_IMPLEMENTED`
 
 ## Purpose
 
-This repository-owned command converts the active machine-readable Architect Stage Payload into one complete Project Gate-ready JSON artifact:
+This repository-owned command converts the active machine-readable Architect Stage Payload into one Project Gate-ready JSON artifact:
 
 ```text
 Architect Stage Payload
@@ -15,28 +15,11 @@ Architect Stage Payload
 → architect-project-gate.json
 ```
 
-The command does not parse `FINAL BUILDER HANDOFF`, Markdown reports, or other prose to infer architecture facts. It accepts only the active Architect machine payload:
-
-```text
-ev4-architect-stage-payload@1.0.0
-```
-
-## Source payload
-
-The source artifact is a persisted JSON instance of `ev4-architect-stage-payload@1.0.0`, validated by:
-
-```text
-schemas/ev4-architect-stage-payload.v1.schema.json
-scripts/check-architect-stage-payload.py
-```
-
-Architect truth is carried by the payload's architecture identity, approved structure, intent maps, evidence register, unresolved evidence, forbidden work, boundary assertions, and Kernel decision records. `payload_status` controls whether the payload is complete or `insufficient_evidence`.
-
-The exporter never repairs or rewrites semantic content. Invalid input produces diagnostics only and no authoritative export receipt.
+It accepts only `ev4-architect-stage-payload@1.0.0`. It does not infer architecture facts from Markdown, `FINAL BUILDER HANDOFF`, or other prose.
 
 ## Official command
 
-Run from a clean `rezahh107/EV4-Architect-Repo` checkout on a named branch:
+Run from a clean named-branch checkout of `rezahh107/EV4-Architect-Repo`:
 
 ```bash
 python scripts/export-architect-project-gate.py \
@@ -45,80 +28,124 @@ python scripts/export-architect-project-gate.py \
   --output architect-project-gate.json
 ```
 
-`--run-id` is explicit because two independent Architect executions must not receive the same execution, bundle, or export identity merely because their semantic payload content is equal.
-
-The operator does not provide repository identity, branch/ref, commit SHA, schema identities, handoff target, validation status, payload hash, bundle hash, or export hash. These are derived or verified by the exporter.
+Repository identity, named ref, full commit SHA, active schema identities, handoff target and canonical hashes are derived or verified by the exporter.
 
 ## Overwrite policy
 
-`--overwrite` is intentionally fail-closed and returns:
+`--overwrite` is intentionally fail-closed:
 
 ```text
 ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED
 ```
 
-The exporter does not move an existing destination into quarantine and does not restore a backup over a destination. Python and the supported platform APIs do not provide a portable operation that atomically combines a device/inode ownership predicate with a destructive path replacement. An advisory lock cannot close that gap against editors, operators, or unrelated local processes.
+The exporter never quarantines, removes, restores or destructively replaces an existing destination. A prior artifact must be archived by the operator before a new no-clobber export is attempted. That manual archive is not treated as validation evidence.
 
-To replace an existing artifact, the operator must first move or archive it outside the exporter transaction, inspect the retained artifact, and then run the exporter without `--overwrite`. The exporter itself never treats that manual action as validation evidence.
+## Ancestry-bound POSIX publication
+
+The final file inode alone is not sufficient evidence that the artifact remains in the repository. On supported POSIX systems, the transaction binds the complete repository-root-to-output-parent namespace chain.
+
+The exporter:
+
+1. resolves and opens the repository root once with `O_DIRECTORY | O_NOFOLLOW`;
+2. traverses each output-parent component relative to the retained preceding directory descriptor;
+3. rejects symbolic links and non-directory components;
+4. retains descriptors and device/inode identities for the root and every traversed directory;
+5. creates the staged candidate relative to the retained output-parent descriptor;
+6. publishes with descriptor-relative `os.link(..., src_dir_fd=..., dst_dir_fd=..., follow_symlinks=False)`;
+7. opens and retains the published file descriptor relative to that same parent descriptor;
+8. verifies exact bytes, file identity, component identities and parent relationships before commit and receipt emission;
+9. independently walks `..` from the retained output parent to prove that the retained repository root remains an ancestor.
+
+A parent rename, exchange, removal, intermediate symlink replacement, repository-root identity change, or move outside the repository fails with a stable ancestry diagnostic. A rename outside the repository followed by a symlink at the original parent path cannot produce a success receipt, even when the output file inode itself is unchanged.
+
+Relevant diagnostics include:
+
+```text
+ARCH_EXPORT_ANCESTRY_BINDING_UNSUPPORTED
+ARCH_EXPORT_OUTPUT_ANCESTRY_UNSAFE
+ARCH_EXPORT_OUTPUT_ANCESTRY_INSPECTION_FAILED
+ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT
+ARCH_EXPORT_OUTPUT_ANCESTRY_CREATE_FAILED
+```
+
+## Platform support
+
+### POSIX/Linux
+
+POSIX ancestry binding is implemented with descriptor-relative filesystem operations, `fcntl.flock`, `O_DIRECTORY`, `O_NOFOLLOW`, `dir_fd`, and hard-link/no-replace publication. Exact-head Linux GitHub Actions are the executed platform evidence.
+
+### Windows
+
+Windows is intentionally unsupported for authoritative publication because the current implementation cannot establish the same complete descriptor-bound ancestry invariant with the available Python interfaces. It fails closed with:
+
+```text
+ARCH_EXPORT_ANCESTRY_BINDING_UNSUPPORTED
+```
+
+The prior Windows lock branch remains non-authoritative and does not weaken the ancestry requirement.
+
+### Other platforms
+
+Any platform lacking the required directory-descriptor, no-follow, descriptor-relative stat/link/unlink/mkdir, or locking behavior fails closed. There is no pathname-based fallback.
+
+## Destination preflight
+
+Destination inspection uses one guarded descriptor-relative `stat(..., follow_symlinks=False)` operation.
+
+- `FileNotFoundError` means the destination is absent.
+- a symbolic link is rejected with `ARCH_EXPORT_UNSAFE_OUTPUT_PATH`;
+- a non-regular destination is rejected with `ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID`;
+- other inspection failures are converted to `ARCH_EXPORT_OUTPUT_INSPECTION_FAILED`.
+
+Filesystem races do not escape as raw `OSError` or traceback from the CLI.
 
 ## Validation and publication sequence
 
 ```text
 strict UTF-8 JSON parsing
 → duplicate-key and non-finite-number rejection
-→ active Architect JSON Schema validation
 → official Architect semantic validation
-→ initial Git repository, named-ref, HEAD, and worktree verification
-→ Stage Evidence Bundle construction and validation
-→ Producer Gate Export construction and validation
+→ initial Git repository/ref/HEAD/worktree verification
+→ Stage Evidence Bundle and Producer Gate Export construction
+→ active contract validation
 → canonical SHA-256 self-verification
-→ shared exclusive output lock for every exporter mode
-→ same-filesystem candidate staging and fsync
-→ staged candidate re-read, contract validation, and hash verification
-→ pre-publication Git provenance equality recheck
-→ atomic hard-link/no-replace publication
-→ open and retain a descriptor for the published inode
-→ exact identity and byte verification through the retained descriptor
+→ lexical output containment check
+→ descriptor-bound repository/output-parent ancestry capture
+→ shared exclusive exporter lock
+→ single guarded destination stat
+→ descriptor-relative staged candidate creation, write and fsync
+→ descriptor-relative candidate reread and validation
+→ pre-publication Git provenance equality check
+→ pre-publication ancestry verification
+→ descriptor-relative hard-link/no-replace publication
+→ retained published-file descriptor
+→ post-publication ancestry, identity and exact-byte verification
 → post-publication contract and hash verification
-→ final Git provenance equality and worktree recheck
-→ second exact identity, byte, contract, and hash verification
-→ publication commit point
-→ historical receipt serialization and flush while the exporter lock is held
-→ descriptor close and lock release
+→ final Git provenance equality check
+→ final ancestry, identity, byte, contract and hash verification
+→ publication commit boundary
+→ success-boundary ancestry, identity and byte verification
+→ historical receipt serialization and flush while the lock is held
+→ descriptor and lock release
 ```
 
-The active contracts are reused without local forks or version changes:
+## Atomic no-clobber behavior
+
+All cooperating exporters targeting the same absolute output path use the same exclusive lock. Publication uses a hard-link/no-replace primitive relative to the retained output-parent descriptor.
+
+If a destination appears at the publication boundary, the exporter returns:
 
 ```text
-Architect payload: ev4-architect-stage-payload@1.0.0
-Stage bundle: stage-evidence-bundle.v1
-Producer export: producer-gate-export.v1
-Handoff target: ce-intake
-Acquisition mode: producer_emitted_gate_artifact
+ARCH_EXPORT_OUTPUT_EXISTS
 ```
 
-## Atomic output rules
+It never deletes the concurrent destination. Rollback remains namespace-nondestructive: it may remove only the transaction-private staged candidate and close transaction-owned descriptors.
 
-All supported exporter operations targeting the same absolute output path use the same exclusive transaction lock. This serializes overwrite and no-overwrite exporter processes with each other. The lock is not presented as protection against arbitrary non-cooperating writers.
-
-Without `--overwrite`, the staged candidate is published with an atomic hard-link/no-replace primitive. If any file appears at the destination before the publication primitive completes, publication fails with `ARCH_EXPORT_OUTPUT_EXISTS`; that destination remains unchanged.
-
-After publication, the exporter retains an open descriptor for the published inode and verifies:
-
-- descriptor device/inode identity;
-- current destination device/inode identity;
-- exact canonical bytes including the final newline;
-- strict JSON parsing;
-- active contract validity;
-- payload, bundle, and export hashes.
-
-If identity or byte drift occurs, the exporter fails closed. Rollback is namespace-nondestructive: it does not unlink, move, replace, or restore the destination. A post-publication artifact may remain for operator inspection, but it is not reported as an authoritative current-path output.
-
-Symbolic-link destinations and non-regular existing destinations are rejected. Candidate files use unpredictable same-directory names and are included only in the exporter's bounded clean-worktree allowance.
+Non-cooperating writers are not trusted. File identity drift, byte drift and ancestry drift prohibit a success receipt.
 
 ## Receipt semantics
 
-A success result is explicitly a historical commit receipt, not a continuing assertion about the current destination path:
+A successful result is a historical commit receipt:
 
 ```yaml
 receipt_scope: historical_commit
@@ -127,13 +154,11 @@ output_committed: true
 output_written: false
 ```
 
-`output_committed: true` means the transaction published and fully verified the artifact at its commit boundary.
+`output_committed: true` means that the artifact passed the complete file, ancestry, contract, hash and provenance checks at the commit boundary.
 
-`output_written` means the destination is still owned by the live transaction. Because the returned library result is observed after the transaction boundary ends, successful returned results use `output_written: false`.
+The receipt is serialized and flushed while the cooperating output lock and ancestry descriptors remain held. It is not a continuing assertion that arbitrary external writers cannot change the namespace after the historical boundary.
 
-The CLI serializes and flushes the historical receipt while the exporter lock is still held. The lock is released only after receipt serialization. The receipt still does not claim that arbitrary external writers cannot change the destination later.
-
-The result and failure reports distinguish:
+Reports distinguish:
 
 ```text
 output_written
@@ -147,69 +172,33 @@ current_destination_claim
 cleanup_warnings
 ```
 
-No backup is created by the fail-closed overwrite design, so `backup_retained` is false and `backup_path` is null. A concurrent replacement detected after no-clobber publication remains at the original destination path and is reported through `concurrent_destination_preserved`.
+No backup is created because overwrite is unsupported.
 
-## Cleanup behavior
+## Canonical identity and hashes
 
-Rollback and close may remove only the transaction's private staged candidate and close transaction-owned descriptors and locks. They never conditionally remove or replace the destination.
-
-Cleanup degradation is operator-visible through `cleanup_warnings`. A warning discovered only while releasing the lock is returned by the library API and emitted by the CLI as a `post_release_cleanup` receipt update on standard error.
-
-The prior backup retry and retained-backup cleanup paths no longer exist because the exporter never creates a rollback backup. Tests assert that overwrite rejection occurs before backup creation or backup cleanup.
-
-## Identity and hash rules
-
-Canonical content hashing uses UTF-8 JSON with sorted object keys, no insignificant whitespace, preserved Unicode, and rejection of `NaN`/`Infinity`.
+Canonical content uses UTF-8 JSON, sorted string keys, no insignificant whitespace, preserved Unicode, rejection of non-finite numbers, and one final newline in the published file.
 
 ```text
 payload_hash = SHA-256(canonical Architect payload)
-bundle_id = deterministic identity over repository + commit + run_id + payload_hash
+bundle_id = deterministic identity(repository + commit + run_id + payload_hash)
 bundle_hash = SHA-256(canonical Stage Evidence Bundle)
-export_id = deterministic identity over repository + commit + run_id + bundle_hash
+export_id = deterministic identity(repository + commit + run_id + bundle_hash)
 export_hash = SHA-256(canonical Producer Gate Export)
 ```
 
-Repeated export of the same unchanged run, payload, and source commit is byte-stable. A different `run_id` changes run, bundle, and export identities while preserving the semantic payload hash when the payload is unchanged.
+Repeated export of the same source commit, run ID and payload is byte-stable. A different `run_id` changes bundle/export identities.
 
-## Git and provenance rules
+## Git provenance
 
-The exporter verifies at initial capture, immediately before publication, and again before the commit receipt:
+The exporter verifies:
 
-- execution inside the Git repository root;
-- `origin` identifies `rezahh107/EV4-Architect-Repo`;
-- HEAD is attached to the same named branch;
-- HEAD remains the same full commit SHA;
-- no unrelated staged, unstaged, or untracked changes exist.
+- execution from the repository root;
+- `origin` identity;
+- attached named ref;
+- unchanged full HEAD SHA;
+- absence of unrelated staged, unstaged or untracked changes.
 
-The selected payload path, intended output path, and staged candidate may be untracked run artifacts. Any other dirty-worktree state fails closed. Absolute private checkout paths are not written into the export.
-
-Drift before publication writes nothing. Drift after publication prevents a success receipt and leaves the destination namespace untouched by rollback.
-
-## Platform support
-
-### POSIX
-
-The implementation uses `fcntl.flock` for the shared exporter lock and `os.link` for atomic no-clobber publication. Linux GitHub Actions provide the current executed platform evidence. `--overwrite` remains unsupported and fail-closed.
-
-### Windows
-
-The implementation uses `msvcrt.locking` for the shared exporter lock and Python's `os.link` no-clobber primitive. The Windows branch is implemented but is not independently executed by the current Linux-only workflow. `--overwrite` remains unsupported and fail-closed.
-
-### Other or unsupported platforms
-
-If neither supported locking API is present, the exporter fails with:
-
-```text
-ARCH_EXPORT_OUTPUT_LOCK_UNAVAILABLE
-```
-
-If atomic hard-link/no-clobber publication is unavailable, it fails with:
-
-```text
-ARCH_EXPORT_ATOMIC_NO_CLOBBER_UNSUPPORTED
-```
-
-No fallback weakens the invariant.
+The selected payload, intended output and transaction-private candidate are the only bounded untracked allowances. HEAD, ref, tracked-worktree or active-contract drift prevents a success receipt.
 
 ## Handoff behavior
 
@@ -226,15 +215,20 @@ payload_status: insufficient_evidence
 → valid insufficient-evidence export
 → handoff.allowed: false
 
-invalid payload or unreliable Git provenance
+invalid payload, unreliable Git provenance, filesystem race or ancestry drift
 → no successful receipt
 → handoff prohibited
 ```
 
-Unresolved items that belong only to later Builder, Responsive, or production boundaries remain visible and may produce `successful_with_flags`; they are not silently removed. Any unresolved item that blocks Architect payload acceptance or the CE transition prohibits handoff.
-
 ## Evidence boundary
 
-The automated test vectors are synthetic unit, fixture, contract, concurrency, and integration evidence only. They do not prove a real non-synthetic Architect run, current Project Gate adoption of the new source commit, CE semantic acceptance, Builder execution, browser/runtime validity, release readiness, or production readiness.
+The automated cases are synthetic unit, contract, concurrency, ancestry and integration evidence only. They do not prove:
 
-A real operator run and a fresh independent `ARCH-02` audit bound to the exact PR head remain required before stronger claims.
+- a real non-synthetic Architect run;
+- current Project Gate adoption of the resulting commit;
+- CE semantic acceptance;
+- Builder execution;
+- browser/runtime validity;
+- release or production readiness.
+
+A fresh independent PR Inspector review bound to the exact resulting PR head remains required.
