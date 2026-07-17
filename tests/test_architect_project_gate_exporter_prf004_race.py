@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/export-architect-project-gate.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts/export-architect-project-gate.py"
 spec = importlib.util.spec_from_file_location("architect_project_gate_exporter_prf004_race", SCRIPT)
 exporter = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
@@ -24,9 +23,7 @@ def provider(root, payload_path, output_path, allowed_paths):
     return git()
 
 
-def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
+def fake_pipeline(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(exporter, "validate_payload", lambda root, value: {"status": "valid"})
     monkeypatch.setattr(
         exporter,
@@ -43,6 +40,11 @@ def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
     monkeypatch.setattr(exporter, "validate_contracts", lambda root, value: None)
     monkeypatch.setattr(exporter, "verify_hashes", lambda value, hashes: None)
 
+
+def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    fake_pipeline(monkeypatch)
     payload = tmp_path / "payload.json"
     payload.write_text("{}\n", encoding="utf-8")
     output = tmp_path / "out.json"
@@ -53,7 +55,12 @@ def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
 
     def racing_open(path, flags, *args, **kwargs):
         nonlocal raced
-        if Path(path) == output and not raced:
+        if (
+            path == output.name
+            and kwargs.get("dir_fd") is not None
+            and flags & os.O_RDONLY == os.O_RDONLY
+            and not raced
+        ):
             raced = True
             os.replace(external, output)
         return real_open(path, flags, *args, **kwargs)
@@ -67,8 +74,43 @@ def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
             "open-race",
             provenance_provider=provider,
         )
-
     assert exc.value.code == "ARCH_EXPORT_PUBLICATION_IDENTITY_MISMATCH"
     assert exc.value.output_written is False
     assert exc.value.concurrent_destination_preserved is True
     assert output.read_text(encoding="utf-8") == '{"external":true}\n'
+
+
+def test_parent_rename_and_symlink_after_final_git_check_emits_no_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    fake_pipeline(monkeypatch)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    parent = repo / "run"
+    parent.mkdir()
+    outside = tmp_path / "outside"
+    payload = repo / "payload.json"
+    payload.write_text("{}\n", encoding="utf-8")
+    output = parent / "out.json"
+    receipts = []
+    calls = 0
+
+    def drifting_provider(root, payload_path, output_path, allowed_paths):
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            os.rename(parent, outside)
+            parent.symlink_to(outside, target_is_directory=True)
+        return git()
+
+    with pytest.raises(exporter.ExportError) as exc:
+        exporter.run_export(
+            repo,
+            payload,
+            output,
+            "ancestry-race",
+            provenance_provider=drifting_provider,
+            receipt_emitter=receipts.append,
+        )
+    assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+    assert receipts == []
