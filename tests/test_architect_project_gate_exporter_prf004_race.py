@@ -41,7 +41,7 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(exporter, "verify_hashes", lambda value, hashes: None)
 
 
-def test_link_to_descriptor_open_race_is_committed_warning_and_preserves_replacement(
+def test_link_to_descriptor_open_race_blocks_handoff_and_preserves_replacement(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     fake_pipeline(monkeypatch)
@@ -75,11 +75,19 @@ def test_link_to_descriptor_open_race_is_committed_warning_and_preserves_replace
     )
     assert result.artifact_committed is True
     assert result.output_committed is True
+    assert result.handoff_allowed is False
+    assert result.current_revision_accepted is False
+    assert result.canonical_destination_present is False
     assert result.current_destination_claim is False
-    assert result.result_status == "SUCCESS_WITH_CLEANUP_WARNING"
+    assert result.output_path == ""
+    assert result.result_status == "COMMITTED_HANDOFF_BLOCKED_WITH_WARNINGS"
     assert (
         "ARCH_EXPORT_POST_COMMIT_OBSERVATION_WARNING:ARCH_EXPORT_PUBLICATION_IDENTITY_MISMATCH"
         in result.cleanup_warnings
+    )
+    assert any(
+        item.startswith("ARCH_EXPORT_POST_COMMIT_PUBLICATION_BLOCKED:")
+        for item in result.acceptance_blockers
     )
     assert output.read_text(encoding="utf-8") == '{"external":true}\n'
 
