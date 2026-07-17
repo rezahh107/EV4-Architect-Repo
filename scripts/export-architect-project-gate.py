@@ -2,20 +2,40 @@
 """Emit the official Architect-owned Project Gate artifact."""
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+PACKAGE_DIR = SCRIPTS / "architect_project_gate_exporter"
+PACKAGE_NAME = "_ev4_architect_project_gate_exporter"
 
-from architect_project_gate_exporter import runner as _implementation
+if PACKAGE_NAME not in sys.modules:
+    package_spec = importlib.util.spec_from_file_location(
+        PACKAGE_NAME,
+        PACKAGE_DIR / "__init__.py",
+        submodule_search_locations=[str(PACKAGE_DIR)],
+    )
+    if package_spec is None or package_spec.loader is None:
+        raise ImportError("Architect Project Gate exporter package could not be loaded.")
+    package = importlib.util.module_from_spec(package_spec)
+    sys.modules[PACKAGE_NAME] = package
+    package_spec.loader.exec_module(package)
 
-globals().update({name: value for name, value in vars(_implementation).items() if not name.startswith("__")})
+_implementation = importlib.import_module(f"{PACKAGE_NAME}.runner")
+
+globals().update(
+    {name: value for name, value in vars(_implementation).items() if not name.startswith("__")}
+)
 
 _SYNC_RUNNER = (
-    "validate_payload", "build_export", "validate_contracts", "verify_hashes",
-    "inspect_repository", "OutputTransaction",
+    "validate_payload",
+    "build_export",
+    "validate_contracts",
+    "verify_hashes",
+    "inspect_repository",
+    "OutputTransaction",
 )
 _ORIGINAL_IMPLEMENTATION_RUN_EXPORT = _implementation.run_export
 
