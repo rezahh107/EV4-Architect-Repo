@@ -39,8 +39,10 @@ strict input parsing
 → descriptor-bound candidate creation and write
 → candidate reread
 → candidate contract and hash validation
-→ immediate prepublication repository/ref/HEAD/worktree equality check
-→ immediate prepublication ancestry verification
+→ prepublication repository/ref/HEAD/worktree equality check
+→ prepublication ancestry verification
+→ immediate operational-commit repository/ref/HEAD/worktree equality check
+→ immediate operational-commit ancestry verification
 ```
 
 A failure in this phase returns a non-zero exporter failure code, reports `artifact_committed: false`, and leaves no newly created canonical operational output. An unrelated pre-existing or concurrent destination is never deleted or replaced.
@@ -58,7 +60,7 @@ Before the link succeeds, the transaction is uncommitted. After the link succeed
 
 ### 3. Post-commit auxiliary work
 
-Published-descriptor observation, candidate release, directory synchronization, lock/descriptor cleanup, and receipt emission are post-commit operations. Their degradation is represented by stable warnings such as:
+Published-descriptor observation, candidate release, directory synchronization, receipt emission, and lock/descriptor cleanup are post-commit operations. Receipt emission remains inside the cooperating exporter lock so another exporter cannot interleave with the historical acknowledgment. Their degradation is represented by stable warnings such as:
 
 ```text
 ARCH_EXPORT_POST_COMMIT_OBSERVATION_WARNING:<diagnostic>
@@ -150,19 +152,25 @@ The repair preserves:
 - at-most-once candidate release;
 - retained fallback residue reporting;
 - descriptor-bound output ancestry;
-- cooperating-exporter locking.
+- cooperating-exporter locking through receipt emission.
 
 `ARCH02-F06` remains a non-blocking potential local lock-namespace interference risk. No lock implementation change is made without reproduced evidence.
 
 ## Exact-head CI
 
-The authoritative workflow validates relevant pull-request heads and relevant pushes to `main`.
+Repository security governance requires a PR-context workflow to use the literal exact PR-head reference. ARCH-02 therefore uses two event-specific carriers for the same authoritative validation command surface rather than weakening that control:
 
-- Pull requests check out `${{ github.event.pull_request.head.sha }}`.
-- Push and manual events check out `${{ github.sha }}`.
-- The workflow asserts `git rev-parse HEAD` equals the event-aware expected SHA.
+- `.github/workflows/validate-architect-producer-gate-adoption.yml`
+  - relevant `pull_request` events;
+  - checks out `${{ github.event.pull_request.head.sha }}`;
+  - asserts `git rev-parse HEAD` equals that exact PR head.
+- `.github/workflows/validate-architect-producer-gate-adoption-main.yml`
+  - relevant pushes to `main` and manual execution;
+  - checks out `${{ github.sha }}`;
+  - asserts `git rev-parse HEAD` equals the exact pushed or dispatched SHA;
+  - contains no pull-request-only event dereference.
 
-The workflow runs:
+Both carriers run the same authoritative commands:
 
 ```bash
 python -m py_compile scripts/export-architect-project-gate.py
@@ -171,6 +179,8 @@ python scripts/check-architect-producer-gate-adoption.py --format json
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py
 ```
+
+The PR carrier retains the complete pytest output as a short-lived artifact only when the exporter suite fails. This is diagnostic evidence, not a second validation authority.
 
 ## Evidence limitations
 
