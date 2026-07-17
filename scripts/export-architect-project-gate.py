@@ -59,15 +59,43 @@ class ExportResult:
     producer_commit: str
     handoff_target: str
     handoff_allowed: bool
-    output_written: bool = True
+    output_written: bool = False
+    output_committed: bool = False
+    destination_present: bool = False
+    concurrent_destination_preserved: bool = False
+    backup_retained: bool = False
+    backup_path: str | None = None
+    receipt_scope: str = "historical_commit"
+    current_destination_claim: bool = False
     cleanup_warnings: list[str] = field(default_factory=list)
 
 
 class ExportError(RuntimeError):
-    def __init__(self, code: str, stage: str, reason: str, owner: str, exit_code: int = 1, output_written: bool = False):
+    def __init__(
+        self,
+        code: str,
+        stage: str,
+        reason: str,
+        owner: str,
+        exit_code: int = 1,
+        output_written: bool = False,
+        output_committed: bool = False,
+        destination_present: bool = False,
+        concurrent_destination_preserved: bool = False,
+        backup_retained: bool = False,
+        backup_path: str | None = None,
+        cleanup_warnings: list[str] | None = None,
+    ):
         super().__init__(reason)
         self.code, self.stage, self.reason = code, stage, reason
-        self.owner, self.exit_code, self.output_written = owner, exit_code, output_written
+        self.owner, self.exit_code = owner, exit_code
+        self.output_written = output_written
+        self.output_committed = output_committed
+        self.destination_present = destination_present
+        self.concurrent_destination_preserved = concurrent_destination_preserved
+        self.backup_retained = backup_retained
+        self.backup_path = backup_path
+        self.cleanup_warnings = list(cleanup_warnings or [])
 
     def report(self) -> dict[str, Any]:
         return {
@@ -76,6 +104,12 @@ class ExportError(RuntimeError):
             "reason": self.reason,
             "repair_owner": self.owner,
             "output_written": self.output_written,
+            "output_committed": self.output_committed,
+            "destination_present": self.destination_present,
+            "concurrent_destination_preserved": self.concurrent_destination_preserved,
+            "backup_retained": self.backup_retained,
+            "backup_path": self.backup_path,
+            "cleanup_warnings": list(self.cleanup_warnings),
             "handoff_prohibited": True,
         }
 
@@ -446,18 +480,30 @@ def _identity(path: Path) -> tuple[int, int] | None:
     return observed.st_dev, observed.st_ino
 
 
-def _new_temp_path(path: Path, suffix: str) -> Path:
-    descriptor, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=suffix)
-    os.close(descriptor)
-    candidate = Path(name)
-    candidate.unlink()
-    return candidate
-
-
 def _output_lock_path(path: Path) -> Path:
-    normalized = os.path.normcase(str(path.resolve(strict=False)))
+    normalized = os.path.normcase(os.path.abspath(os.fspath(path)))
     key = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
     return Path(tempfile.gettempdir()) / "ev4-architect-output-locks" / f"{key}.lock"
+
+
+def _strict_json_bytes(data: bytes, stage: str) -> Any:
+    try:
+        text = data.decode("utf-8")
+        return json.loads(text, object_pairs_hook=_pairs, parse_constant=_reject_constant)
+    except UnicodeDecodeError as exc:
+        raise ExportError(
+            "ARCH_EXPORT_OUTPUT_NOT_UTF8",
+            stage,
+            "Published output is not UTF-8 JSON.",
+            "operator",
+        ) from exc
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise ExportError(
+            "ARCH_EXPORT_OUTPUT_MALFORMED_JSON",
+            stage,
+            f"Published output is not strict JSON: {exc}.",
+            "operator",
+        ) from exc
 
 
 @dataclass
@@ -470,29 +516,29 @@ class OutputLock:
         descriptor = os.open(self.path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             if fcntl is not None:
-                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(descriptor, fcntl.LOCK_EX)
             elif msvcrt is not None:
                 if os.fstat(descriptor).st_size == 0:
                     os.write(descriptor, b"0")
                     os.fsync(descriptor)
                 os.lseek(descriptor, 0, os.SEEK_SET)
-                msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+                msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
             else:
                 raise ExportError(
                     "ARCH_EXPORT_OUTPUT_LOCK_UNAVAILABLE",
                     "output_lock",
-                    "This platform does not provide a supported exclusive output lock.",
+                    "This platform does not provide the required exclusive output lock.",
                     "operator",
                 )
         except ExportError:
             os.close(descriptor)
             raise
-        except (BlockingIOError, OSError) as exc:
+        except OSError as exc:
             os.close(descriptor)
             raise ExportError(
-                "ARCH_EXPORT_OUTPUT_LOCKED",
+                "ARCH_EXPORT_OUTPUT_LOCK_FAILED",
                 "output_lock",
-                "Another exporter transaction already owns this output path.",
+                f"The output transaction lock could not be acquired: {type(exc).__name__}.",
                 "operator",
             ) from exc
         self.descriptor = descriptor
@@ -518,241 +564,247 @@ class OutputLock:
 class OutputTransaction:
     path: Path
     candidate: Path
-    overwrite: bool
-    initial_identity: tuple[int, int] | None
-    lock: OutputLock | None = None
-    original_identity: tuple[int, int] | None = None
-    backup: Path | None = None
-    backup_identity: tuple[int, int] | None = None
+    expected_bytes: bytes
+    lock: OutputLock
     published_identity: tuple[int, int] | None = None
+    published_descriptor: int | None = None
     published: bool = False
     committed: bool = False
+    backup: Path | None = None
     cleanup_warnings: list[str] = field(default_factory=list)
 
     @classmethod
     def stage(cls, path: Path, value: Any, overwrite: bool) -> "OutputTransaction":
         path.parent.mkdir(parents=True, exist_ok=True)
-        if os.path.lexists(path) and path.is_symlink():
-            raise ExportError("ARCH_EXPORT_UNSAFE_OUTPUT_PATH", "output_preflight", "Output must not be a symbolic link.", "operator")
-
-        initial_identity = _identity(path)
-        lock = OutputLock(_output_lock_path(path)) if overwrite else None
+        lock = OutputLock(_output_lock_path(path))
+        lock.acquire()
         temp: Path | None = None
         try:
-            if lock is not None:
-                lock.acquire()
-                if _identity(path) != initial_identity:
+            if os.path.lexists(path):
+                observed = os.lstat(path)
+                if stat.S_ISLNK(observed.st_mode):
                     raise ExportError(
-                        "ARCH_EXPORT_OUTPUT_CHANGED_BEFORE_LOCK",
-                        "output_lock",
-                        "Output identity changed while the overwrite transaction lock was being acquired.",
+                        "ARCH_EXPORT_UNSAFE_OUTPUT_PATH",
+                        "output_preflight",
+                        "Output must not be a symbolic link.",
                         "operator",
-                        output_written=os.path.lexists(path),
+                        destination_present=True,
                     )
-            with tempfile.NamedTemporaryFile("wb", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as handle:
+                if not stat.S_ISREG(observed.st_mode):
+                    raise ExportError(
+                        "ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID",
+                        "output_preflight",
+                        "Existing output must be a regular file.",
+                        "operator",
+                        destination_present=True,
+                    )
+            if overwrite:
+                raise ExportError(
+                    "ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED",
+                    "output_preflight",
+                    "--overwrite is disabled because this platform-neutral exporter cannot atomically prove path ownership and destructively replace or restore a destination.",
+                    "operator",
+                    destination_present=os.path.lexists(path),
+                )
+
+            expected_bytes = canonical_bytes(value) + b"\n"
+            with tempfile.NamedTemporaryFile(
+                "wb",
+                dir=path.parent,
+                prefix=f".{path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as handle:
                 temp = Path(handle.name)
-                handle.write(canonical_bytes(value) + b"\n")
+                handle.write(expected_bytes)
                 handle.flush()
                 os.fsync(handle.fileno())
             return cls(
                 path=path,
                 candidate=temp,
-                overwrite=overwrite,
-                initial_identity=initial_identity,
+                expected_bytes=expected_bytes,
                 lock=lock,
             )
         except Exception:
             if temp is not None:
                 temp.unlink(missing_ok=True)
-            if lock is not None:
-                lock.release()
+            lock.release()
             raise
 
     def allowed_paths(self) -> tuple[Path, ...]:
-        return tuple(path for path in (self.candidate, self.backup) if path is not None)
-
-    def _quarantine_existing(self) -> None:
-        if not self.overwrite:
-            return
-        try:
-            observed = os.lstat(self.path)
-        except FileNotFoundError:
-            if self.initial_identity is not None:
-                raise ExportError(
-                    "ARCH_EXPORT_OUTPUT_CHANGED_BEFORE_QUARANTINE",
-                    "atomic_write",
-                    "Existing output disappeared before quarantine.",
-                    "operator",
-                )
-            return
-        current_identity = (observed.st_dev, observed.st_ino)
-        if current_identity != self.initial_identity:
-            raise ExportError(
-                "ARCH_EXPORT_OUTPUT_CHANGED_BEFORE_QUARANTINE",
-                "atomic_write",
-                "Output identity changed before quarantine.",
-                "operator",
-                output_written=True,
-            )
-        if not stat.S_ISREG(observed.st_mode):
-            raise ExportError("ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID", "atomic_write", "Existing output must be a regular file.", "operator")
-
-        self.original_identity = current_identity
-        self.backup = _new_temp_path(self.path, ".bak")
-        try:
-            os.replace(self.path, self.backup)
-        except Exception:
-            self.backup = None
-            raise
-        self.backup_identity = _identity(self.backup)
-        if self.backup_identity != self.original_identity:
-            raise ExportError(
-                "ARCH_EXPORT_BACKUP_IDENTITY_MISMATCH",
-                "atomic_write",
-                "Quarantined output identity does not match the original output.",
-                "operator",
-            )
-        _fsync_directory(self.path.parent)
+        return (self.candidate,)
 
     def publish(self) -> None:
-        self._quarantine_existing()
+        candidate_identity = _identity(self.candidate)
+        if candidate_identity is None:
+            raise ExportError(
+                "ARCH_EXPORT_STAGED_CANDIDATE_MISSING",
+                "atomic_write",
+                "The staged candidate disappeared before publication.",
+                "operator",
+            )
         try:
             os.link(self.candidate, self.path, follow_symlinks=False)
         except FileExistsError as exc:
             raise ExportError(
                 "ARCH_EXPORT_OUTPUT_EXISTS",
                 "atomic_write",
-                "Output appeared at the atomic publication boundary; nothing from this run was published.",
+                "Output already exists at the atomic no-clobber publication boundary.",
                 "operator",
-                output_written=True,
+                destination_present=True,
             ) from exc
-        self.published_identity = _identity(self.path)
-        candidate_identity = _identity(self.candidate)
-        if self.published_identity is None or self.published_identity != candidate_identity:
+        except (NotImplementedError, OSError) as exc:
+            raise ExportError(
+                "ARCH_EXPORT_ATOMIC_NO_CLOBBER_UNSUPPORTED",
+                "atomic_write",
+                f"Atomic no-clobber publication is unavailable: {type(exc).__name__}.",
+                "operator",
+                destination_present=os.path.lexists(self.path),
+            ) from exc
+
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            descriptor = os.open(self.path, flags)
+        except OSError as exc:
+            raise ExportError(
+                "ARCH_EXPORT_PUBLISHED_OUTPUT_OPEN_FAILED",
+                "atomic_write",
+                f"The published output could not be opened safely: {type(exc).__name__}.",
+                "operator",
+                destination_present=os.path.lexists(self.path),
+            ) from exc
+
+        observed = os.fstat(descriptor)
+        published_identity = (observed.st_dev, observed.st_ino)
+        if published_identity != candidate_identity:
+            os.close(descriptor)
             raise ExportError(
                 "ARCH_EXPORT_PUBLICATION_IDENTITY_MISMATCH",
                 "atomic_write",
-                "Published output identity does not match the staged candidate.",
+                "The destination no longer identifies the staged candidate.",
                 "operator",
-                output_written=os.path.lexists(self.path),
+                destination_present=os.path.lexists(self.path),
+                concurrent_destination_preserved=os.path.lexists(self.path),
             )
+
+        self.published_descriptor = descriptor
+        self.published_identity = published_identity
         self.published = True
         self.candidate.unlink(missing_ok=True)
         _fsync_directory(self.path.parent)
 
-    def assert_published_identity(self, stage: str) -> None:
-        if not self.published or self.published_identity is None:
+    def _owned_bytes(self) -> bytes:
+        if self.published_descriptor is None:
+            raise ExportError(
+                "ARCH_EXPORT_PUBLICATION_NOT_OWNED",
+                "post_write_validation",
+                "No transaction-owned published descriptor is available.",
+                "operator",
+                destination_present=os.path.lexists(self.path),
+            )
+        os.lseek(self.published_descriptor, 0, os.SEEK_SET)
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(self.published_descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+
+    def verify_owned(self, stage: str) -> bytes:
+        if self.published_descriptor is None or self.published_identity is None:
             raise ExportError(
                 "ARCH_EXPORT_PUBLICATION_NOT_OWNED",
                 stage,
-                "No exporter-owned publication identity is available.",
+                "No transaction-owned publication identity is available.",
                 "operator",
-                output_written=os.path.lexists(self.path),
+                destination_present=os.path.lexists(self.path),
             )
-        if _identity(self.path) != self.published_identity:
+        descriptor_stat = os.fstat(self.published_descriptor)
+        descriptor_identity = (descriptor_stat.st_dev, descriptor_stat.st_ino)
+        current_identity = _identity(self.path)
+        if descriptor_identity != self.published_identity or current_identity != self.published_identity:
             raise ExportError(
                 "ARCH_EXPORT_OUTPUT_IDENTITY_DRIFT",
                 stage,
-                "Output identity changed after publication.",
+                "The destination path no longer identifies the transaction-owned output.",
                 "operator",
-                output_written=os.path.lexists(self.path),
+                destination_present=current_identity is not None,
+                concurrent_destination_preserved=(
+                    current_identity is not None and current_identity != self.published_identity
+                ),
             )
-
-    def _rollback_conflict(self) -> ExportError:
-        backup_name = self.backup.name if self.backup is not None else "none"
-        return ExportError(
-            "ARCH_EXPORT_ROLLBACK_CONFLICT",
-            "post_write_validation",
-            f"Concurrent output preserved; prior output quarantine retained as {backup_name}.",
-            "operator",
-            output_written=os.path.lexists(self.path),
-        )
+        observed_bytes = self._owned_bytes()
+        if observed_bytes != self.expected_bytes:
+            raise ExportError(
+                "ARCH_EXPORT_OUTPUT_BYTE_DRIFT",
+                stage,
+                "The transaction-owned output bytes changed after publication.",
+                "operator",
+                destination_present=True,
+            )
+        return observed_bytes
 
     def rollback(self) -> None:
-        rollback_error: OSError | None = None
-        conflict: ExportError | None = None
-        try:
-            current_identity = _identity(self.path)
-            if self.committed:
-                if current_identity != self.published_identity:
-                    conflict = self._rollback_conflict()
-            elif self.backup is not None:
-                backup_owned = (
-                    self.original_identity is not None
-                    and self.backup_identity == self.original_identity
-                    and _identity(self.backup) == self.backup_identity
-                )
-                if not backup_owned:
-                    conflict = self._rollback_conflict()
-                elif current_identity is None or (
-                    self.published_identity is not None and current_identity == self.published_identity
-                ):
-                    os.replace(self.backup, self.path)
-                    self.backup = None
-                    self.backup_identity = None
-                    _fsync_directory(self.path.parent)
-                else:
-                    conflict = self._rollback_conflict()
-            elif self.published:
-                if current_identity == self.published_identity:
-                    self.path.unlink(missing_ok=True)
-                    _fsync_directory(self.path.parent)
-                elif current_identity is not None:
-                    conflict = self._rollback_conflict()
-        except OSError as exc:
-            rollback_error = exc
-        finally:
-            self.candidate.unlink(missing_ok=True)
-        if conflict is not None:
-            raise conflict
-        if rollback_error is not None:
-            raise ExportError(
-                "ARCH_EXPORT_ROLLBACK_FAILED",
-                "post_write_validation",
-                "Export validation failed and the prior output state could not be restored.",
-                "operator",
-                output_written=os.path.lexists(self.path),
-            ) from rollback_error
+        # PRF-004: rollback is deliberately namespace-nondestructive. A failed
+        # post-publication artifact is retained for operator inspection and is
+        # never removed or replaced based on a previously observed identity.
+        self.candidate.unlink(missing_ok=True)
+        if self.published:
+            self.cleanup_warnings.append(
+                f"ARCH_EXPORT_FAILED_OUTPUT_RETAINED:{self.path.name}"
+            )
 
     def commit(self) -> list[str]:
-        self.assert_published_identity("publication_commit")
+        self.verify_owned("publication_commit")
         self.committed = True
-        self.candidate.unlink(missing_ok=True)
-        if self.backup is not None:
-            backup_owned = (
-                self.original_identity is not None
-                and self.backup_identity == self.original_identity
-                and _identity(self.backup) == self.backup_identity
-            )
-            if not backup_owned:
-                self.cleanup_warnings.append(
-                    f"ARCH_EXPORT_BACKUP_IDENTITY_DRIFT:{self.backup.name}"
-                )
-            else:
-                for attempt in range(1, 3):
-                    try:
-                        self.backup.unlink(missing_ok=True)
-                        self.backup = None
-                        self.backup_identity = None
-                        break
-                    except OSError as exc:
-                        self.cleanup_warnings.append(
-                            f"ARCH_EXPORT_BACKUP_CLEANUP_RETRY:{attempt}:{type(exc).__name__}"
-                        )
-                if self.backup is not None:
-                    self.cleanup_warnings.append(
-                        f"ARCH_EXPORT_BACKUP_RETAINED:{self.backup.name}"
-                    )
         _fsync_directory(self.path.parent)
         return list(self.cleanup_warnings)
 
     def close(self) -> list[str]:
         self.candidate.unlink(missing_ok=True)
-        if self.lock is not None:
-            warning = self.lock.release()
-            if warning is not None:
-                self.cleanup_warnings.append(warning)
+        if self.published_descriptor is not None:
+            try:
+                os.close(self.published_descriptor)
+            except OSError as exc:
+                self.cleanup_warnings.append(
+                    f"ARCH_EXPORT_OUTPUT_DESCRIPTOR_CLOSE_FAILED:{type(exc).__name__}"
+                )
+            self.published_descriptor = None
+        warning = self.lock.release()
+        if warning is not None:
+            self.cleanup_warnings.append(warning)
         return list(self.cleanup_warnings)
+
+
+def _historical_result(
+    export: dict[str, Any],
+    hashes: dict[str, str],
+    initial_git: GitProvenance,
+    root: Path,
+    output_path: Path,
+    cleanup_warnings: list[str],
+) -> ExportResult:
+    return ExportResult(
+        status=export["handoff"]["status"],
+        output_path=str(output_path.relative_to(root)).replace(os.sep, "/"),
+        export_id=export["export_id"],
+        payload_hash=hashes["payload_hash"],
+        bundle_hash=hashes["bundle_hash"],
+        export_hash=hashes["export_hash"],
+        producer_commit=initial_git.commit_sha,
+        handoff_target=TARGET,
+        handoff_allowed=export["handoff"]["allowed"],
+        output_written=False,
+        output_committed=True,
+        destination_present=True,
+        concurrent_destination_preserved=False,
+        backup_retained=False,
+        backup_path=None,
+        receipt_scope="historical_commit",
+        current_destination_claim=False,
+        cleanup_warnings=cleanup_warnings,
+    )
 
 
 def atomic_write(path: Path, value: Any, overwrite: bool) -> list[str]:
@@ -760,15 +812,19 @@ def atomic_write(path: Path, value: Any, overwrite: bool) -> list[str]:
     warnings: list[str] = []
     try:
         transaction.publish()
-        transaction.assert_published_identity("atomic_write_final_identity")
+        transaction.verify_owned("atomic_write_final_verification")
         warnings = transaction.commit()
-        transaction.assert_published_identity("atomic_write_postcommit_identity")
     except Exception as exc:
-        if not transaction.committed:
-            try:
-                transaction.rollback()
-            except ExportError as rollback_exc:
-                raise rollback_exc from exc
+        try:
+            transaction.rollback()
+        except Exception as rollback_exc:  # pragma: no cover - defensive only
+            raise ExportError(
+                "ARCH_EXPORT_ROLLBACK_FAILED",
+                "post_write_validation",
+                f"Nondestructive rollback cleanup failed: {type(rollback_exc).__name__}.",
+                "operator",
+                destination_present=os.path.lexists(path),
+            ) from exc
         raise
     finally:
         warnings = transaction.close()
@@ -782,14 +838,25 @@ def run_export(
     run_id: str,
     overwrite: bool = False,
     provenance_provider: Callable[[Path, Path, Path, Iterable[Path]], GitProvenance] = inspect_repository,
+    receipt_emitter: Callable[[ExportResult], None] | None = None,
 ) -> ExportResult:
     root, payload_path = root.resolve(), payload_path.resolve()
     output_path = inside(root, output_path)
     if output_path == payload_path:
-        raise ExportError("ARCH_EXPORT_INPUT_OUTPUT_COLLISION", "output_preflight", "Output must not replace the source payload.", "operator")
+        raise ExportError(
+            "ARCH_EXPORT_INPUT_OUTPUT_COLLISION",
+            "output_preflight",
+            "Output must not replace the source payload.",
+            "operator",
+        )
     payload = load_json(payload_path)
     if not isinstance(payload, dict):
-        raise ExportError("ARCH_EXPORT_PAYLOAD_NOT_OBJECT", "semantic_validation", "Architect payload must be an object.", "architect")
+        raise ExportError(
+            "ARCH_EXPORT_PAYLOAD_NOT_OBJECT",
+            "semantic_validation",
+            "Architect payload must be an object.",
+            "architect",
+        )
     validate_payload(root, payload)
     initial_git = provenance_provider(root, payload_path, output_path, ())
     export, hashes = build_export(payload, initial_git, run_id, _input_ref(root, payload_path))
@@ -797,59 +864,101 @@ def run_export(
     verify_hashes(export, hashes)
 
     transaction = OutputTransaction.stage(output_path, export, overwrite)
+    result: ExportResult | None = None
     try:
         staged = load_json(transaction.candidate)
         validate_contracts(root, staged)
         verify_hashes(staged, hashes)
 
-        prepublish_git = provenance_provider(root, payload_path, output_path, transaction.allowed_paths())
-        _assert_same_provenance(initial_git, prepublish_git, "prepublication_provenance")
+        prepublish_git = provenance_provider(
+            root,
+            payload_path,
+            output_path,
+            transaction.allowed_paths(),
+        )
+        _assert_same_provenance(
+            initial_git,
+            prepublish_git,
+            "prepublication_provenance",
+        )
 
         transaction.publish()
-        transaction.assert_published_identity("postpublication_identity")
-        reread = load_json(output_path)
+        owned_bytes = transaction.verify_owned("postpublication_identity_and_bytes")
+        reread = _strict_json_bytes(owned_bytes, "postpublication_validation")
         validate_contracts(root, reread)
         verify_hashes(reread, hashes)
 
-        final_git = provenance_provider(root, payload_path, output_path, transaction.allowed_paths())
+        final_git = provenance_provider(
+            root,
+            payload_path,
+            output_path,
+            transaction.allowed_paths(),
+        )
         _assert_same_provenance(initial_git, final_git, "final_provenance")
 
-        transaction.assert_published_identity("final_destination_identity")
-        final_reread = load_json(output_path)
+        final_bytes = transaction.verify_owned("final_destination_verification")
+        final_reread = _strict_json_bytes(final_bytes, "final_destination_validation")
         validate_contracts(root, final_reread)
         verify_hashes(final_reread, hashes)
-        transaction.assert_published_identity("final_destination_identity")
-        cleanup_warnings = transaction.commit()
-        transaction.assert_published_identity("postcommit_destination_identity")
-        committed_reread = load_json(output_path)
-        validate_contracts(root, committed_reread)
-        verify_hashes(committed_reread, hashes)
-        transaction.assert_published_identity("postcommit_destination_identity")
 
-        result = ExportResult(
-            status=export["handoff"]["status"],
-            output_path=str(output_path.relative_to(root)).replace(os.sep, "/"),
-            export_id=export["export_id"],
-            payload_hash=hashes["payload_hash"],
-            bundle_hash=hashes["bundle_hash"],
-            export_hash=hashes["export_hash"],
-            producer_commit=initial_git.commit_sha,
-            handoff_target=TARGET,
-            handoff_allowed=export["handoff"]["allowed"],
-            cleanup_warnings=cleanup_warnings,
+        cleanup_warnings = transaction.commit()
+        transaction.verify_owned("success_receipt_boundary")
+        result = _historical_result(
+            export,
+            hashes,
+            initial_git,
+            root,
+            output_path,
+            cleanup_warnings,
         )
-    except Exception as exc:
-        if not transaction.committed:
+        if receipt_emitter is not None:
             try:
-                transaction.rollback()
-            except ExportError as rollback_exc:
-                raise rollback_exc from exc
+                receipt_emitter(result)
+            except Exception as exc:
+                raise ExportError(
+                    "ARCH_EXPORT_RECEIPT_EMIT_FAILED",
+                    "success_receipt",
+                    f"The historical success receipt could not be emitted: {type(exc).__name__}.",
+                    "operator",
+                    output_committed=True,
+                    destination_present=os.path.lexists(output_path),
+                ) from exc
+    except Exception as exc:
+        try:
+            transaction.rollback()
+        except Exception as rollback_exc:
+            raise ExportError(
+                "ARCH_EXPORT_ROLLBACK_FAILED",
+                "post_write_validation",
+                f"Nondestructive rollback cleanup failed: {type(rollback_exc).__name__}.",
+                "operator",
+                output_committed=transaction.committed,
+                destination_present=os.path.lexists(output_path),
+            ) from exc
         if isinstance(exc, ExportError):
+            current_identity = _identity(output_path)
             exc.output_written = False
+            exc.output_committed = transaction.committed
+            exc.destination_present = current_identity is not None
+            exc.concurrent_destination_preserved = (
+                transaction.published_identity is not None
+                and current_identity is not None
+                and current_identity != transaction.published_identity
+            )
+            exc.cleanup_warnings = list(transaction.cleanup_warnings)
         raise
     finally:
         close_warnings = transaction.close()
 
+    if result is None:  # pragma: no cover - defensive only
+        raise ExportError(
+            "ARCH_EXPORT_RESULT_MISSING",
+            "success_receipt",
+            "Exporter completed without producing a receipt.",
+            "repository_owner",
+            output_committed=transaction.committed,
+            destination_present=os.path.lexists(output_path),
+        )
     if close_warnings != result.cleanup_warnings:
         result = ExportResult(
             status=result.status,
@@ -861,7 +970,14 @@ def run_export(
             producer_commit=result.producer_commit,
             handoff_target=result.handoff_target,
             handoff_allowed=result.handoff_allowed,
-            output_written=result.output_written,
+            output_written=False,
+            output_committed=True,
+            destination_present=result.destination_present,
+            concurrent_destination_preserved=False,
+            backup_retained=False,
+            backup_path=None,
+            receipt_scope="historical_commit",
+            current_destination_claim=False,
             cleanup_warnings=close_warnings,
         )
     return result
@@ -870,11 +986,16 @@ def run_export(
 def render(data: dict[str, Any], mode: str) -> str:
     if mode == "json":
         return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return "\n".join(f"{key}: {str(value).lower() if isinstance(value, bool) else value}" for key, value in data.items())
+    return "\n".join(
+        f"{key}: {str(value).lower() if isinstance(value, bool) else value}"
+        for key, value in data.items()
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Emit the official Architect Project Gate artifact.")
+    parser = argparse.ArgumentParser(
+        description="Emit the official Architect Project Gate artifact."
+    )
     parser.add_argument("--payload", type=Path, required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--output", type=Path, default=Path(DEFAULT_OUTPUT))
@@ -885,12 +1006,34 @@ def main(argv: list[str] | None = None) -> int:
     root = args.repo_root.resolve()
     payload = args.payload if args.payload.is_absolute() else root / args.payload
     output = args.output if args.output.is_absolute() else root / args.output
+
+    emitted = False
+
+    def emit_receipt(result: ExportResult) -> None:
+        nonlocal emitted
+        print(render(asdict(result), args.format), flush=True)
+        emitted = True
+
     try:
-        result = run_export(root, payload, output, args.run_id, args.overwrite)
-        print(render(asdict(result), args.format))
+        result = run_export(
+            root,
+            payload,
+            output,
+            args.run_id,
+            args.overwrite,
+            receipt_emitter=emit_receipt,
+        )
+        if not emitted:  # pragma: no cover - defensive only
+            emit_receipt(result)
+        if result.cleanup_warnings:
+            cleanup_update = {
+                "receipt_update": "post_release_cleanup",
+                "cleanup_warnings": result.cleanup_warnings,
+            }
+            print(render(cleanup_update, args.format), file=sys.stderr, flush=True)
         return 0 if result.handoff_allowed else 2
     except ExportError as exc:
-        print(render(exc.report(), args.format), file=sys.stderr)
+        print(render(exc.report(), args.format), file=sys.stderr, flush=True)
         return exc.exit_code
 
 
