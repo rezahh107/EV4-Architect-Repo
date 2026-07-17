@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption merged; Project Gate Architect-to-CE transition implemented at a pinned, fixture-verified scope; real non-synthetic handoff and current-live-head compatibility remain `insufficient_evidence`.
+Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption merged; operator-facing Architect Project Gate exporter implemented pending independent review; Project Gate Architect-to-CE transition implemented at a pinned, fixture-verified scope; real non-synthetic handoff and current-live-head compatibility remain `insufficient_evidence`.
 
 Role: `architecture_decision_system`
 
@@ -51,6 +51,7 @@ Implemented now:
 ```text
 Architect Stage Payload v1 schema and semantic validation
 Architect Producer Gate Export adoption merged in PR #14
+Architect-owned operator exporter for architect-project-gate.json
 Project Gate Architect-to-CE orchestration and CE intake validation at a pinned, synthetic-fixture-tested scope
 ```
 
@@ -86,6 +87,21 @@ Current project execution sequence:
 `/builder-feed-export` remains a legacy compatibility output, not the canonical Producer Gate Export.
 
 `/e2e-test` and `/e2e-screenshot-validation` are validation tracks, not mandatory per-run project execution stages for Producer Gate Export emission.
+
+## Official Project Gate Export Command
+
+The exporter accepts the real active Architect machine payload and produces one operator-facing Gate-ready file without manual JSON editing:
+
+```bash
+python scripts/export-architect-project-gate.py \
+  --payload path/to/architect-stage-payload.json \
+  --run-id <actual-architect-run-id> \
+  --output architect-project-gate.json
+```
+
+It derives repository identity, branch, exact commit, schema identities, handoff target, and canonical hashes from active repository and run evidence. Invalid payloads produce no export. Synthetic, blocked, or insufficient-evidence inputs cannot produce an allowed handoff.
+
+See `docs/ARCHITECT_PROJECT_GATE_EXPORTER.md` for deterministic identity, Git provenance, atomic writing, blocked-state, and evidence rules.
 
 ## Architect Handoff
 

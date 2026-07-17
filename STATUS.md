@@ -1,11 +1,11 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.15.4
-Status: stage_8_10_alignment_patch_history_preserved
+Version: 0.15.6
+Status: architect_project_gate_exporter_ci_green_pending_independent_review
 Last confirmed stage: Stage 8–10 hardening alignment patch + STATUS history preservation
-Current next step: Prepare or run `/e2e-screenshot-validation` when raster screenshot evidence is available; do not remove the E2E-001 textual-fixture limitation until screenshot-based validation passes.
+Current next step: Complete independent `ARCH-02` review for the Architect Project Gate exporter; the separate `/e2e-screenshot-validation` track remains pending raster screenshot evidence.
 Language: Persian reports, English technical labels allowed
-Last automation update: 2026-06-22
+Last automation update: 2026-07-16
 
 ---
 
@@ -47,6 +47,7 @@ Last automation update: 2026-06-22
 | /implementation | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 8 remains confirmed; next-anchor status/schema must follow active STATUS.md |
 | /final-audit | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 9 remains confirmed; scoped E2E validation vocabulary applies |
 | /handoff-export | confirmed_hardened_v1.0.0 + alignment_patch_v1.0.1 | Stage 10 remains confirmed; E2E payload state must not be hard-coded |
+| /project-gate-export | implemented_ci_green_pending_independent_review | Official repository-local exporter emits `architect-project-gate.json`; exact-head CI passed; real-run evidence and independent ARCH-02 review remain pending |
 | /elementor-knowledge-base-strategy | active_v1.0.0 | Hardened into `ev4-rag-strategy-contract@1.0.0`; owns current Stage Source Access Matrix, `/research` source-pinning ownership, source classes, retrieved fact schema, downstream permissions, freshness policy, EDIS boundary, conflict lifecycle, leakage probes, repair routes, self-audit, debug trace, and TUYA handoff |
 | /tuya-concept-reference | active_v1.0.0 | Hardened into `ev4-tuya-concept-reference@1.0.0`; explicitly `source_type: internal_concept_reference` and `fact_class: project_conceptual_model` |
 | /stage-8-10-alignment-patch | confirmed_hardening_patch_v1.0.1 | `stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md` |
@@ -376,10 +377,11 @@ Not validated by E2E-001:
 
 ## Current Next Step
 
-Preferred next action:
+Preferred next actions:
 
 ```text
-Prepare or run /e2e-screenshot-validation when raster screenshot evidence or a screenshot fixture is available.
+1. Complete independent ARCH-02 review for /project-gate-export.
+2. Prepare or run /e2e-screenshot-validation when raster screenshot evidence or a screenshot fixture is available.
 ```
 
 Do not remove the E2E-001 medium flag until screenshot-based validation produces a verifiable report.
@@ -394,7 +396,7 @@ anchor_schema: ev4-stage-anchor@1.1.0
 source_stage: /stage-8-10-alignment-patch
 target_stage: /e2e-screenshot-validation
 target_stage_hardening_status: draft
-project_status_version: 0.15.4
+project_status_version: 0.15.6
 payload_schema_in:
   - ev4-stage-hardening-alignment-patch@1.0.1
   - ev4-e2e-test-report@1.0.0
@@ -410,7 +412,7 @@ Carry-forward facts:
   - Stage 10 /handoff-export is confirmed_hardened_v1.0.0.
   - Stage 8–10 alignment patch v1.0.1 is active.
   - E2E-001 validates prompt-pack full-pipeline contract with minor textual-fixture limitation.
-  - STATUS.md 0.15.4 preserves the historical contract/audit sections that 0.15.1 compacted.
+  - STATUS.md 0.15.4 preserved the historical contract/audit sections that 0.15.1 compacted.
 - critical_unknowns:
   - pixel-accurate raster screenshot interpretation remains unvalidated.
   - real Elementor export JSON / EDIS remains unvalidated.
@@ -489,9 +491,39 @@ ARCHITECT_STAGE_PAYLOAD_V1:
   semantic_validator: added
   synthetic_fixtures: added
   ci_enforcement: added
-  architect_to_ce_transition: not_implemented
+  architect_to_ce_transition: implemented_externally_at_pinned_fixture_tested_scope
   real_fixture_validation: not_completed
   legacy_contracts_retired: false
 ```
 
 This addendum records PR #13 without replacing the existing historical status entries, hardening records, E2E limitations, unresolved items, or prior next-step history.
+
+---
+
+## ARCH-01 Architect Project Gate Exporter Addendum
+
+```yaml
+ARCH_01:
+  task_id: ARCH-01
+  command_classification: PROPOSED_NEW_IMPLEMENTED
+  exporter: scripts/export-architect-project-gate.py
+  output: architect-project-gate.json
+  source_payload: ev4-architect-stage-payload@1.0.0
+  stage_bundle: stage-evidence-bundle.v1
+  producer_gate_export: producer-gate-export.v1
+  handoff_target: ce-intake
+  canonical_hashing: implemented
+  git_provenance_verification: implemented
+  atomic_write_and_postwrite_validation: implemented
+  valid_blocked_invalid_tamper_repository_state_tests: added
+  exact_head_ci: passed_for_current_pr_head
+  exact_head_ci_workflows:
+    - validate-ai-governance
+    - validate-architect-producer-gate-adoption
+  independent_arch_02_review: pending
+  real_non_synthetic_run: not_yet_available
+  project_gate_current_head_adoption: insufficient_evidence
+  merge_status: not_merged
+```
+
+This addendum does not promote synthetic test vectors to real-run evidence and does not claim CE acceptance, Builder authorization, runtime validity, release readiness, or production readiness.
