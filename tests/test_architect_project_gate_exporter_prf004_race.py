@@ -41,7 +41,7 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(exporter, "verify_hashes", lambda value, hashes: None)
 
 
-def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
+def test_link_to_descriptor_open_race_is_committed_warning_and_preserves_replacement(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     fake_pipeline(monkeypatch)
@@ -66,21 +66,25 @@ def test_link_to_descriptor_open_race_preserves_concurrent_diagnostic(
         return real_open(path, flags, *args, **kwargs)
 
     monkeypatch.setattr(exporter.os, "open", racing_open)
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.run_export(
-            tmp_path,
-            payload,
-            output,
-            "open-race",
-            provenance_provider=provider,
-        )
-    assert exc.value.code == "ARCH_EXPORT_PUBLICATION_IDENTITY_MISMATCH"
-    assert exc.value.output_written is False
-    assert exc.value.concurrent_destination_preserved is True
+    result = exporter.run_export(
+        tmp_path,
+        payload,
+        output,
+        "open-race",
+        provenance_provider=provider,
+    )
+    assert result.artifact_committed is True
+    assert result.output_committed is True
+    assert result.current_destination_claim is False
+    assert result.result_status == "SUCCESS_WITH_CLEANUP_WARNING"
+    assert (
+        "ARCH_EXPORT_POST_COMMIT_OBSERVATION_WARNING:ARCH_EXPORT_PUBLICATION_IDENTITY_MISMATCH"
+        in result.cleanup_warnings
+    )
     assert output.read_text(encoding="utf-8") == '{"external":true}\n'
 
 
-def test_parent_rename_and_symlink_after_final_git_check_emits_no_receipt(
+def test_parent_rename_and_symlink_before_operational_commit_emits_no_receipt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     fake_pipeline(monkeypatch)
@@ -113,4 +117,6 @@ def test_parent_rename_and_symlink_after_final_git_check_emits_no_receipt(
             receipt_emitter=receipts.append,
         )
     assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+    assert exc.value.output_committed is False
     assert receipts == []
+    assert not (outside / "out.json").exists()
