@@ -55,4 +55,20 @@ jobs:
       - name: Run Architect Producer adoption tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_adoption.py
       - name: Run Architect Project Gate exporter tests
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py
+        id: exporter-tests
+        continue-on-error: true
+        run: |
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py > architect-exporter-pytest.log 2>&1
+      - name: Upload exporter failure diagnostics
+        if: steps.exporter-tests.outcome != 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-exporter-pytest-${{ github.event.pull_request.head.sha }}
+          path: architect-exporter-pytest.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce exporter test result
+        if: steps.exporter-tests.outcome != 'success'
+        run: |
+          cat architect-exporter-pytest.log
+          exit 1
