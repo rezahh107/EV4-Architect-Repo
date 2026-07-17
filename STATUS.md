@@ -2,8 +2,8 @@
 
 Version: 0.15.7
 Status: architect_project_gate_exporter_arch02_bounded_repair_pr_open
-Last confirmed stage: ARCH-01 merged; ARCH-02 bounded repair PR open
-Current next step: Validate the exact PR #29 head, keep the PR unmerged, then merge only after independent review; final exact-merged-main ARCH-02 closure remains pending.
+Last confirmed stage: ARCH-01 merged; ARCH-02 bounded repair PR open with exact PR-head CI passed
+Current next step: Keep PR #29 unmerged until owner review, then merge it and run final ARCH-02 closure against the exact resulting main SHA.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-07-17
 
@@ -49,7 +49,7 @@ ARCH_02:
   identity_decision:
     ARCH02-F02: PATH_IS_INTENTIONAL_IDENTITY_INPUT
   real_run_evidence: pending
-  exact_repair_pr_head_ci: pending_for_current_head
+  exact_repair_pr_head_ci: passed_for_current_pr_head
   exact_merged_main_closure: pending
   project_gate_a2c_integration: pending
   repair_pr_merge_status: unmerged
