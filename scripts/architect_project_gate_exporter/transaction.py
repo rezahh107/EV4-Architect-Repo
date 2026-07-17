@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import errno
+import hashlib
 import os
 import secrets
 import stat
@@ -9,17 +11,266 @@ from typing import Any
 
 from .base import ExportError, canonical_bytes, inside
 from .ancestry import (
-    AncestryBinding, _file_read_flags, _identity_from_stat, _output_lock_path, _strict_json_bytes,
+    AncestryBinding,
+    _file_read_flags,
+    _identity_from_stat,
+    _output_lock_path,
 )
 from .locking import OutputLock, _read_all, _write_all
+
+_CANDIDATE_ALLOCATION_ATTEMPTS = 128
+_UNNAMED_UNSUPPORTED_ERRNOS = {
+    errno.EINVAL,
+    errno.EISDIR,
+    errno.ENOSYS,
+    errno.EOPNOTSUPP,
+    getattr(errno, "ENOTSUP", errno.EOPNOTSUPP),
+    errno.EPERM,
+}
+
+
+def _append_warning(warnings: list[str], warning: str) -> None:
+    if warning not in warnings:
+        warnings.append(warning)
+
+
+def _candidate_residue_directory_path(root: Path) -> Path:
+    key = hashlib.sha256(os.fsencode(str(root.resolve()))).hexdigest()[:16]
+    uid = str(os.getuid()) if hasattr(os, "getuid") else "process"
+    return root.resolve().parent / f".ev4-architect-candidates-{uid}-{key}"
+
+
+def _candidate_name(destination_name: str, token: str) -> str:
+    return f".{destination_name}.{token}.tmp"
+
+
+def _directory_flags() -> int:
+    return (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+    )
+
+
+def _open_unnamed_candidate(parent_descriptor: int) -> int | None:
+    o_tmpfile = getattr(os, "O_TMPFILE", 0)
+    if os.name != "posix" or not o_tmpfile:
+        return None
+    try:
+        return os.open(
+            ".",
+            os.O_RDWR | o_tmpfile | getattr(os, "O_CLOEXEC", 0),
+            0o600,
+            dir_fd=parent_descriptor,
+        )
+    except OSError as exc:
+        if exc.errno in _UNNAMED_UNSUPPORTED_ERRNOS:
+            return None
+        raise ExportError(
+            "ARCH_EXPORT_STAGED_CANDIDATE_CREATE_FAILED",
+            "atomic_write",
+            f"Unnamed staged candidate creation failed: {type(exc).__name__}.",
+            "operator",
+        ) from exc
+
+
+def _open_residue_directory(root: Path, parent_descriptor: int) -> tuple[Path, int]:
+    path = _candidate_residue_directory_path(root)
+    try:
+        os.mkdir(path, mode=0o700)
+    except FileExistsError:
+        pass
+    except OSError as exc:
+        raise ExportError(
+            "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+            "atomic_write",
+            f"Candidate residue directory could not be created safely: {type(exc).__name__}.",
+            "operator",
+        ) from exc
+
+    try:
+        path_stat = os.lstat(path)
+    except OSError as exc:
+        raise ExportError(
+            "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+            "atomic_write",
+            f"Candidate residue directory could not be inspected safely: {type(exc).__name__}.",
+            "operator",
+        ) from exc
+    if not stat.S_ISDIR(path_stat.st_mode) or stat.S_ISLNK(path_stat.st_mode):
+        raise ExportError(
+            "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+            "atomic_write",
+            "Candidate residue path is not a real directory.",
+            "operator",
+        )
+    if hasattr(os, "getuid") and path_stat.st_uid != os.getuid():
+        raise ExportError(
+            "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+            "atomic_write",
+            "Candidate residue directory is not owned by the current user.",
+            "operator",
+        )
+    if stat.S_IMODE(path_stat.st_mode) & 0o077:
+        raise ExportError(
+            "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+            "atomic_write",
+            "Candidate residue directory permissions are not private.",
+            "operator",
+        )
+
+    try:
+        descriptor = os.open(path, _directory_flags())
+    except OSError as exc:
+        raise ExportError(
+            "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+            "atomic_write",
+            f"Candidate residue directory could not be opened safely: {type(exc).__name__}.",
+            "operator",
+        ) from exc
+    try:
+        opened = os.fstat(descriptor)
+        parent = os.fstat(parent_descriptor)
+        if (
+            not stat.S_ISDIR(opened.st_mode)
+            or _identity_from_stat(opened) != _identity_from_stat(path_stat)
+            or opened.st_dev != parent.st_dev
+        ):
+            raise ExportError(
+                "ARCH_EXPORT_CANDIDATE_PRIMITIVE_UNSUPPORTED",
+                "atomic_write",
+                "Candidate residue directory is not safely bound to the output filesystem.",
+                "operator",
+            )
+        return path, descriptor
+    except Exception:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        raise
+
+
+@dataclass
+class CandidateOwnership:
+    descriptor: int | None
+    identity: tuple[int, int]
+    residue_path: Path | None
+    state: str = "owned"
+    residue_reported: bool = False
+
+
+def _record_residue_state(candidate: CandidateOwnership, warnings: list[str]) -> None:
+    if candidate.residue_path is None or candidate.residue_reported:
+        return
+    candidate.residue_reported = True
+    try:
+        observed = os.lstat(candidate.residue_path)
+    except FileNotFoundError:
+        _append_warning(warnings, "ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:MISSING")
+        return
+    except OSError as exc:
+        _append_warning(
+            warnings,
+            f"ARCH_EXPORT_CANDIDATE_RESIDUE_STATUS_UNKNOWN:{type(exc).__name__}",
+        )
+        return
+    if _identity_from_stat(observed) == candidate.identity:
+        _append_warning(warnings, "ARCH_EXPORT_CANDIDATE_RESIDUE_RETAINED")
+    else:
+        _append_warning(warnings, "ARCH_EXPORT_CANDIDATE_CLEANUP_CONFLICT")
+
+
+def _release_candidate(candidate: CandidateOwnership, warnings: list[str]) -> None:
+    if candidate.state != "owned":
+        return
+    descriptor, candidate.descriptor = candidate.descriptor, None
+    candidate.state = "released"
+    if descriptor is not None:
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            _append_warning(
+                warnings,
+                f"ARCH_EXPORT_CANDIDATE_RELEASE_FAILED:{type(exc).__name__}",
+            )
+    _record_residue_state(candidate, warnings)
+
+
+def _allocate_candidate(
+    root: Path,
+    destination_name: str,
+    parent_descriptor: int,
+) -> CandidateOwnership:
+    descriptor = _open_unnamed_candidate(parent_descriptor)
+    if descriptor is not None:
+        try:
+            return CandidateOwnership(
+                descriptor=descriptor,
+                identity=_identity_from_stat(os.fstat(descriptor)),
+                residue_path=None,
+            )
+        except Exception:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+            raise
+
+    residue_root, residue_descriptor = _open_residue_directory(root, parent_descriptor)
+    try:
+        flags = (
+            os.O_RDWR
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_CLOEXEC", 0)
+        )
+        for _ in range(_CANDIDATE_ALLOCATION_ATTEMPTS):
+            name = _candidate_name(destination_name, secrets.token_hex(16))
+            try:
+                descriptor = os.open(name, flags, 0o600, dir_fd=residue_descriptor)
+            except FileExistsError:
+                continue
+            except OSError as exc:
+                raise ExportError(
+                    "ARCH_EXPORT_STAGED_CANDIDATE_CREATE_FAILED",
+                    "atomic_write",
+                    f"Staged candidate creation failed: {type(exc).__name__}.",
+                    "operator",
+                ) from exc
+            try:
+                return CandidateOwnership(
+                    descriptor=descriptor,
+                    identity=_identity_from_stat(os.fstat(descriptor)),
+                    residue_path=residue_root / name,
+                )
+            except Exception:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
+                raise
+        raise ExportError(
+            "ARCH_EXPORT_STAGED_CANDIDATE_CREATE_FAILED",
+            "atomic_write",
+            "Could not allocate an unpredictable staged candidate name without disturbing existing entries.",
+            "operator",
+        )
+    finally:
+        try:
+            os.close(residue_descriptor)
+        except OSError:
+            pass
+
 
 @dataclass
 class OutputTransaction:
     root: Path
     path: Path
     destination_name: str
-    candidate: Path
-    candidate_name: str
+    candidate: CandidateOwnership
     expected_bytes: bytes
     ancestry: AncestryBinding
     lock: OutputLock
@@ -43,7 +294,7 @@ class OutputTransaction:
         path = inside(root, path)
         ancestry: AncestryBinding | None = None
         lock: OutputLock | None = None
-        candidate_name: str | None = None
+        candidate: CandidateOwnership | None = None
         try:
             ancestry = AncestryBinding.bind(root, path.parent)
             lock = OutputLock(_output_lock_path(path))
@@ -91,95 +342,82 @@ class OutputTransaction:
                     "operator",
                     destination_present=destination_present,
                 )
+            if destination_present:
+                raise ExportError(
+                    "ARCH_EXPORT_OUTPUT_EXISTS",
+                    "output_preflight",
+                    "Output already exists.",
+                    "operator",
+                    destination_present=True,
+                )
 
             expected_bytes = canonical_bytes(value) + b"\n"
-            for _ in range(128):
-                candidate_name = f".{path.name}.{secrets.token_hex(16)}.tmp"
-                flags = (
-                    os.O_WRONLY
-                    | os.O_CREAT
-                    | os.O_EXCL
-                    | getattr(os, "O_NOFOLLOW", 0)
-                    | getattr(os, "O_CLOEXEC", 0)
-                )
-                try:
-                    descriptor = os.open(
-                        candidate_name,
-                        flags,
-                        0o600,
-                        dir_fd=ancestry.parent.descriptor,
-                    )
-                    break
-                except FileExistsError:
-                    continue
-                except OSError as exc:
-                    raise ExportError(
-                        "ARCH_EXPORT_STAGED_CANDIDATE_CREATE_FAILED",
-                        "atomic_write",
-                        f"Staged candidate creation failed: {type(exc).__name__}.",
-                        "operator",
-                    ) from exc
-            else:
-                raise ExportError(
-                    "ARCH_EXPORT_STAGED_CANDIDATE_CREATE_FAILED",
-                    "atomic_write",
-                    "Could not allocate an unpredictable staged candidate name.",
-                    "operator",
-                )
+            candidate = _allocate_candidate(root, path.name, ancestry.parent.descriptor)
             try:
-                _write_all(descriptor, expected_bytes)
-                os.fsync(descriptor)
+                assert candidate.descriptor is not None
+                _write_all(candidate.descriptor, expected_bytes)
+                os.fsync(candidate.descriptor)
             except OSError as exc:
+                warnings: list[str] = []
+                _release_candidate(candidate, warnings)
                 raise ExportError(
                     "ARCH_EXPORT_STAGED_CANDIDATE_WRITE_FAILED",
                     "atomic_write",
                     f"Staged candidate write failed: {type(exc).__name__}.",
                     "operator",
+                    cleanup_warnings=warnings,
                 ) from exc
-            finally:
-                os.close(descriptor)
             return cls(
                 root=root,
                 path=path,
                 destination_name=path.name,
-                candidate=path.parent / candidate_name,
-                candidate_name=candidate_name,
+                candidate=candidate,
                 expected_bytes=expected_bytes,
                 ancestry=ancestry,
                 lock=lock,
             )
-        except ExportError:
-            if candidate_name is not None and ancestry is not None:
-                try:
-                    os.unlink(candidate_name, dir_fd=ancestry.parent.descriptor)
-                except FileNotFoundError:
-                    pass
-                except OSError:
-                    pass
+        except ExportError as exc:
+            if candidate is not None:
+                _release_candidate(candidate, exc.cleanup_warnings)
             if lock is not None:
-                lock.release()
+                warning = lock.release()
+                if warning is not None:
+                    _append_warning(exc.cleanup_warnings, warning)
             if ancestry is not None:
-                ancestry.close()
+                for warning in ancestry.close():
+                    _append_warning(exc.cleanup_warnings, warning)
             raise
         except OSError as exc:
-            if candidate_name is not None and ancestry is not None:
-                try:
-                    os.unlink(candidate_name, dir_fd=ancestry.parent.descriptor)
-                except OSError:
-                    pass
+            warnings: list[str] = []
+            if candidate is not None:
+                _release_candidate(candidate, warnings)
             if lock is not None:
-                lock.release()
+                warning = lock.release()
+                if warning is not None:
+                    _append_warning(warnings, warning)
             if ancestry is not None:
-                ancestry.close()
+                for warning in ancestry.close():
+                    _append_warning(warnings, warning)
             raise ExportError(
                 "ARCH_EXPORT_OUTPUT_PREFLIGHT_FAILED",
                 "output_preflight",
                 f"Output preflight failed: {type(exc).__name__}.",
                 "operator",
+                cleanup_warnings=warnings,
             ) from exc
 
+    @property
+    def candidate_name(self) -> str | None:
+        return self.candidate.residue_path.name if self.candidate.residue_path is not None else None
+
     def allowed_paths(self) -> tuple[Path, ...]:
-        return (self.candidate,)
+        if self.candidate.residue_path is None:
+            return ()
+        try:
+            self.candidate.residue_path.relative_to(self.root)
+        except ValueError:
+            return ()
+        return (self.candidate.residue_path,)
 
     def _destination_stat(self, stage: str) -> os.stat_result | None:
         try:
@@ -202,39 +440,40 @@ class OutputTransaction:
         observed = self._destination_stat(stage)
         return _identity_from_stat(observed) if observed is not None else None
 
-    def _unlink_candidate(self) -> None:
-        try:
-            os.unlink(self.candidate_name, dir_fd=self.ancestry.parent.descriptor)
-        except FileNotFoundError:
-            pass
-        except OSError as exc:
-            self.cleanup_warnings.append(
-                f"ARCH_EXPORT_CANDIDATE_CLEANUP_FAILED:{type(exc).__name__}"
+    def _owned_candidate_descriptor(self, stage: str) -> int:
+        if self.candidate.state != "owned" or self.candidate.descriptor is None:
+            raise ExportError(
+                "ARCH_EXPORT_CANDIDATE_OWNERSHIP_LOST",
+                stage,
+                "The transaction no longer owns a staged candidate descriptor.",
+                "operator",
+                cleanup_warnings=list(self.cleanup_warnings),
             )
+        try:
+            observed = _identity_from_stat(os.fstat(self.candidate.descriptor))
+        except OSError as exc:
+            raise ExportError(
+                "ARCH_EXPORT_CANDIDATE_OWNERSHIP_LOST",
+                stage,
+                f"The staged candidate descriptor is unavailable: {type(exc).__name__}.",
+                "operator",
+                cleanup_warnings=list(self.cleanup_warnings),
+            ) from exc
+        if observed != self.candidate.identity:
+            raise ExportError(
+                "ARCH_EXPORT_CANDIDATE_OWNERSHIP_LOST",
+                stage,
+                "The staged candidate descriptor identity changed.",
+                "operator",
+                cleanup_warnings=list(self.cleanup_warnings),
+            )
+        return self.candidate.descriptor
 
     def read_candidate(self, stage: str = "staged_candidate_validation") -> bytes:
         self.ancestry.verify(stage)
+        descriptor = self._owned_candidate_descriptor(stage)
         try:
-            descriptor = os.open(
-                self.candidate_name,
-                _file_read_flags(),
-                dir_fd=self.ancestry.parent.descriptor,
-            )
-        except FileNotFoundError as exc:
-            raise ExportError(
-                "ARCH_EXPORT_STAGED_CANDIDATE_MISSING",
-                stage,
-                "The staged candidate disappeared before validation.",
-                "operator",
-            ) from exc
-        except OSError as exc:
-            raise ExportError(
-                "ARCH_EXPORT_STAGED_CANDIDATE_READ_FAILED",
-                stage,
-                f"Staged candidate could not be opened safely: {type(exc).__name__}.",
-                "operator",
-            ) from exc
-        try:
+            os.lseek(descriptor, 0, os.SEEK_SET)
             return _read_all(descriptor)
         except OSError as exc:
             raise ExportError(
@@ -242,40 +481,20 @@ class OutputTransaction:
                 stage,
                 f"Staged candidate read failed: {type(exc).__name__}.",
                 "operator",
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
-        finally:
-            os.close(descriptor)
 
     def publish(self) -> None:
         self.ancestry.verify("prepublication_ancestry")
-        try:
-            candidate_stat = os.stat(
-                self.candidate_name,
-                dir_fd=self.ancestry.parent.descriptor,
-                follow_symlinks=False,
-            )
-        except FileNotFoundError as exc:
-            raise ExportError(
-                "ARCH_EXPORT_STAGED_CANDIDATE_MISSING",
-                "atomic_write",
-                "The staged candidate disappeared before publication.",
-                "operator",
-            ) from exc
-        except OSError as exc:
-            raise ExportError(
-                "ARCH_EXPORT_STAGED_CANDIDATE_INSPECTION_FAILED",
-                "atomic_write",
-                f"Staged candidate inspection failed: {type(exc).__name__}.",
-                "operator",
-            ) from exc
-        candidate_identity = _identity_from_stat(candidate_stat)
+        candidate_descriptor = self._owned_candidate_descriptor("atomic_write")
+        candidate_identity = self.candidate.identity
+        source = f"/proc/self/fd/{candidate_descriptor}"
         try:
             os.link(
-                self.candidate_name,
+                source,
                 self.destination_name,
-                src_dir_fd=self.ancestry.parent.descriptor,
                 dst_dir_fd=self.ancestry.parent.descriptor,
-                follow_symlinks=False,
+                follow_symlinks=True,
             )
         except FileExistsError as exc:
             raise ExportError(
@@ -284,16 +503,20 @@ class OutputTransaction:
                 "Output already exists at the atomic no-clobber publication boundary.",
                 "operator",
                 destination_present=True,
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
         except (NotImplementedError, OSError) as exc:
             raise ExportError(
                 "ARCH_EXPORT_ATOMIC_NO_CLOBBER_UNSUPPORTED",
                 "atomic_write",
-                f"Atomic descriptor-relative no-clobber publication is unavailable: {type(exc).__name__}.",
+                f"Descriptor-derived atomic no-clobber publication is unavailable: {type(exc).__name__}.",
                 "operator",
                 destination_present=self._destination_stat("atomic_write") is not None,
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
 
+        self.published = True
+        self.published_identity = candidate_identity
         try:
             descriptor = os.open(
                 self.destination_name,
@@ -311,21 +534,29 @@ class OutputTransaction:
                 concurrent_destination_preserved=(
                     current_identity is not None and current_identity != candidate_identity
                 ),
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
         try:
             observed = os.fstat(descriptor)
         except OSError as exc:
-            os.close(descriptor)
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
             raise ExportError(
                 "ARCH_EXPORT_PUBLISHED_OUTPUT_INSPECTION_FAILED",
                 "atomic_write",
                 f"Published output descriptor inspection failed: {type(exc).__name__}.",
                 "operator",
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
         published_identity = _identity_from_stat(observed)
         current_identity = self.destination_identity("atomic_write")
         if published_identity != candidate_identity or current_identity != candidate_identity:
-            os.close(descriptor)
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
             raise ExportError(
                 "ARCH_EXPORT_PUBLICATION_IDENTITY_MISMATCH",
                 "atomic_write",
@@ -335,11 +566,10 @@ class OutputTransaction:
                 concurrent_destination_preserved=(
                     current_identity is not None and current_identity != candidate_identity
                 ),
+                cleanup_warnings=list(self.cleanup_warnings),
             )
         self.published_descriptor = descriptor
-        self.published_identity = published_identity
-        self.published = True
-        self._unlink_candidate()
+        _release_candidate(self.candidate, self.cleanup_warnings)
         try:
             os.fsync(self.ancestry.parent.descriptor)
         except OSError:
@@ -354,6 +584,7 @@ class OutputTransaction:
                 "No transaction-owned published descriptor is available.",
                 "operator",
                 destination_present=self._destination_stat("post_write_validation") is not None,
+                cleanup_warnings=list(self.cleanup_warnings),
             )
         try:
             os.lseek(self.published_descriptor, 0, os.SEEK_SET)
@@ -367,6 +598,7 @@ class OutputTransaction:
                 destination_present=(
                     self._destination_stat("post_write_validation") is not None
                 ),
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
 
     def verify_owned(self, stage: str) -> bytes:
@@ -378,6 +610,7 @@ class OutputTransaction:
                 "No transaction-owned publication identity is available.",
                 "operator",
                 destination_present=self._destination_stat(stage) is not None,
+                cleanup_warnings=list(self.cleanup_warnings),
             )
         try:
             descriptor_identity = _identity_from_stat(os.fstat(self.published_descriptor))
@@ -387,6 +620,7 @@ class OutputTransaction:
                 stage,
                 f"Published output descriptor inspection failed: {type(exc).__name__}.",
                 "operator",
+                cleanup_warnings=list(self.cleanup_warnings),
             ) from exc
         current_identity = self.destination_identity(stage)
         if descriptor_identity != self.published_identity or current_identity != self.published_identity:
@@ -399,6 +633,7 @@ class OutputTransaction:
                 concurrent_destination_preserved=(
                     current_identity is not None and current_identity != self.published_identity
                 ),
+                cleanup_warnings=list(self.cleanup_warnings),
             )
         observed_bytes = self._owned_bytes()
         if observed_bytes != self.expected_bytes:
@@ -408,15 +643,17 @@ class OutputTransaction:
                 "The transaction-owned output bytes changed after publication.",
                 "operator",
                 destination_present=True,
+                cleanup_warnings=list(self.cleanup_warnings),
             )
         return observed_bytes
 
     def rollback(self) -> None:
-        self._unlink_candidate()
+        _release_candidate(self.candidate, self.cleanup_warnings)
         if self.published:
-            warning = f"ARCH_EXPORT_FAILED_OUTPUT_RETAINED:{self.path.name}"
-            if warning not in self.cleanup_warnings:
-                self.cleanup_warnings.append(warning)
+            _append_warning(
+                self.cleanup_warnings,
+                f"ARCH_EXPORT_FAILED_OUTPUT_RETAINED:{self.path.name}",
+            )
 
     def commit(self) -> list[str]:
         self.verify_owned("publication_commit")
@@ -428,17 +665,19 @@ class OutputTransaction:
         return list(self.cleanup_warnings)
 
     def close(self) -> list[str]:
-        self._unlink_candidate()
+        _release_candidate(self.candidate, self.cleanup_warnings)
         if self.published_descriptor is not None:
+            descriptor, self.published_descriptor = self.published_descriptor, None
             try:
-                os.close(self.published_descriptor)
+                os.close(descriptor)
             except OSError as exc:
-                self.cleanup_warnings.append(
-                    f"ARCH_EXPORT_OUTPUT_DESCRIPTOR_CLOSE_FAILED:{type(exc).__name__}"
+                _append_warning(
+                    self.cleanup_warnings,
+                    f"ARCH_EXPORT_OUTPUT_DESCRIPTOR_CLOSE_FAILED:{type(exc).__name__}",
                 )
-            self.published_descriptor = None
         warning = self.lock.release()
         if warning is not None:
-            self.cleanup_warnings.append(warning)
-        self.cleanup_warnings.extend(self.ancestry.close())
+            _append_warning(self.cleanup_warnings, warning)
+        for warning in self.ancestry.close():
+            _append_warning(self.cleanup_warnings, warning)
         return list(self.cleanup_warnings)
