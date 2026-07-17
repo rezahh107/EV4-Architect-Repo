@@ -1,16 +1,17 @@
 # Architect Project Gate Exporter — ARCH-02 Operational Contract
 
-Status: `bounded_repair`
+Status: `bounded_repair_pending_fresh_pr_inspector_rereview`
 
 Prompt: `P-003-CONTINUATION`
 
 Logical task: `ARCH-02`
 
-This document is the repository-local ARCH-02 addendum to `docs/ARCHITECT_PROJECT_GATE_EXPORTER.md`. Where the earlier document describes post-publication checks as acceptance-invalidating, this addendum supersedes that sequence.
+This repository-local addendum supersedes earlier ARCH-02 wording where any
+post-publication degradation was treated as ordinary warning-bearing success.
+Historical artifact commitment, canonical repository destination proof, and
+current Git-revision acceptance are separate states.
 
 ## Official command
-
-Run from a clean named-branch checkout of `rezahh107/EV4-Architect-Repo`:
 
 ```bash
 python scripts/export-architect-project-gate.py \
@@ -21,13 +22,12 @@ python scripts/export-architect-project-gate.py \
 
 `--overwrite` remains unsupported and fail-closed.
 
-## Operational commit boundary
-
-The transaction has three phases.
+## Transaction phases
 
 ### 1. Pre-commit validation
 
-Every check capable of invalidating semantic, contract, hash, repository, provenance, or ancestry acceptance completes before the canonical filename is published:
+Every check available before publication completes before the canonical name is
+created:
 
 ```text
 strict input parsing
@@ -37,140 +37,186 @@ strict input parsing
 → contract validation
 → canonical hash self-verification
 → descriptor-bound candidate creation and write
-→ candidate reread
+→ retained-candidate reread
 → candidate contract and hash validation
 → prepublication repository/ref/HEAD/worktree equality check
 → prepublication ancestry verification
-→ immediate operational-commit repository/ref/HEAD/worktree equality check
-→ immediate operational-commit ancestry verification
+→ operational-commit repository/ref/HEAD/worktree equality check
+→ operational-commit ancestry verification
 ```
 
-A failure in this phase returns a non-zero exporter failure code, reports `artifact_committed: false`, and leaves no newly created canonical operational output. An unrelated pre-existing or concurrent destination is never deleted or replaced.
+A failure in this phase returns a non-zero exporter failure, reports no
+historical commit, and leaves no newly created canonical operational output.
+Existing and concurrent destinations are never removed or replaced.
 
-### 2. Atomic operational commit
+### 2. Historical atomic commit
 
-The operational commit point is the successful descriptor-derived hard-link/no-replace publication of the already validated candidate into the canonical destination name.
+The successful descriptor-derived hard-link/no-replace operation remains the
+historical commit point:
 
 ```text
 os.link(/proc/self/fd/<owned-candidate-fd>, canonical-name, no-replace)
 → artifact_committed: true
 ```
 
-Before the link succeeds, the transaction is uncommitted. After the link succeeds, the validated artifact is historically committed. The exporter never attempts pathname-based destructive rollback.
+The exporter never attempts pathname-based destructive rollback after this
+point.
 
-### 3. Post-commit auxiliary work
+### 3. Post-link acceptance gate
 
-Published-descriptor observation, candidate release, directory synchronization, receipt emission, and lock/descriptor cleanup are post-commit operations. Receipt emission remains inside the cooperating exporter lock so another exporter cannot interleave with the historical acknowledgment. Their degradation is represented by stable warnings such as:
+Immediately after the link, the exporter separately proves:
 
-```text
-ARCH_EXPORT_POST_COMMIT_OBSERVATION_WARNING:<diagnostic>
-ARCH_EXPORT_RECEIPT_EMIT_FAILED:<exception>
-ARCH_EXPORT_OUTPUT_DESCRIPTOR_CLOSE_FAILED:<exception>
-```
+1. the active repository, named ref, HEAD and tracked worktree still match the
+   provenance embedded in the artifact;
+2. the transaction-owned destination descriptor still identifies the staged
+   candidate bytes;
+3. the bound output parent still belongs to the canonical repository ancestry;
+4. the claimed repository-relative destination still contains the committed
+   artifact.
 
-A post-commit warning does not convert the committed artifact into a failed or rolled-back export. The canonical entry is retained. The result remains a historical commit receipt and does not claim that an unrelated external writer cannot later replace the pathname.
-
-## Explicit result model
-
-Successful and valid blocked exports expose these fields:
+Failure of this gate does not erase the historical commit. It forces:
 
 ```yaml
-result_status: SUCCESS | SUCCESS_WITH_RECEIPT_WARNING | SUCCESS_WITH_CLEANUP_WARNING | SUCCESS_WITH_WARNINGS
 artifact_committed: true
-receipt_emitted: true | false
-cleanup_complete: true | false
-handoff_allowed: true | false
-output_committed: true
-receipt_scope: historical_commit
-current_destination_claim: false
-cleanup_warnings: []
+handoff_allowed: false
+current_revision_accepted: false
+result_status: COMMITTED_HANDOFF_BLOCKED | COMMITTED_HANDOFF_BLOCKED_WITH_WARNINGS
 ```
 
-Presence of the filename alone is not the success contract. Operators must read the command result.
+If canonical destination proof fails, the result also reports:
+
+```yaml
+canonical_destination_present: false
+output_path: ""
+committed_output_location: bound_parent_outside_canonical_ancestry | canonical_destination_unverified
+```
+
+The empty `output_path` intentionally prevents a false claim that the
+repository-relative canonical path contains the artifact.
+
+## Result fields
+
+```yaml
+result_status: string
+artifact_committed: true | false
+receipt_emitted: true | false
+cleanup_complete: true | false
+current_revision_accepted: true | false
+canonical_destination_present: true | false
+committed_output_location: string
+handoff_allowed: true | false
+output_committed: true | false
+output_path: string
+acceptance_blockers: []
+cleanup_warnings: []
+receipt_scope: historical_commit
+current_destination_claim: false
+```
+
+`acceptance_blockers` are not cleanup warnings. They prevent an allowed handoff
+when exact revision or canonical location cannot be proven.
 
 ## Exit codes
 
-| Condition | Exit code | Canonical output |
+| Condition | Exit code | Artifact state |
 |---|---:|---|
-| valid allowed export | `0` | committed |
-| valid blocked export | `2` | committed, `handoff_allowed: false` |
-| valid insufficient-evidence export | `2` | committed, `handoff_allowed: false` |
-| pre-commit validation/publication failure | non-zero, normally `1` | no newly committed output |
-| post-commit receipt or cleanup warning | same semantic exit code as the committed export | retained and historically committed |
+| valid allowed export | `0` | committed and accepted |
+| valid blocked export | `2` | committed, handoff prohibited |
+| valid insufficient-evidence export | `2` | committed, handoff prohibited |
+| committed but post-link acceptance blocked | `2` | committed, handoff prohibited |
+| pre-commit failure | non-zero, normally `1` | no newly committed output |
+| receipt or cleanup warning without acceptance blocker | semantic exit code of the artifact | committed |
 
-## ARCH02-F02 identity decision
+## PRF-001 — canonical ancestry at publication
 
-Decision: `PATH_IS_INTENTIONAL_IDENTITY_INPUT`.
+A parent rename after the final pre-link ancestry check can cause the hard link
+to be created through the retained descriptor in a directory no longer located
+under the canonical repository path.
 
-The active Stage Evidence Bundle contract places source provenance inside the canonical bundle:
+The repair preserves the link as historical evidence but blocks handoff unless
+post-link descriptor ownership and canonical ancestry are both re-proven. It
+never deletes the detached artifact or any recreated canonical path.
+
+Mutation coverage performs this sequence:
+
+1. bind the output parent;
+2. complete the final ancestry check;
+3. rename the bound parent outside the repository;
+4. recreate the original parent pathname;
+5. permit descriptor-relative publication;
+6. verify `handoff_allowed: false`;
+7. verify no root-relative canonical destination claim is emitted.
+
+## PRF-002 — Git provenance at publication
+
+The final pre-link Git observation alone cannot prove that repository state did
+not change before `os.link`.
+
+After the historical link, the exporter repeats repository/ref/HEAD/worktree
+observation and compares it with the artifact provenance. Any mismatch records:
 
 ```text
-final_stage_bundle.evidence[architect-stage-payload-canonical].source.reference
-final_stage_bundle.provenance.source
+ARCH_EXPORT_POST_COMMIT_PROVENANCE_BLOCKED:<diagnostic>
 ```
 
-Both fields contain `input_ref`. The active common schema defines no observation-only envelope outside the hashed Stage Evidence Bundle. Therefore the local Architect exporter preserves the current contract:
+The artifact remains historically committed, but `current_revision_accepted`
+and `handoff_allowed` are false.
+
+## PRF-003 — output-lock cleanup taxonomy
+
+The lock release implementation emits:
 
 ```text
-payload_hash
-  excludes input_ref
-
-bundle_id
-  excludes input_ref
-  = repository + commit + run_id + payload_hash
-
-bundle_hash
-  includes the complete Stage Evidence Bundle
-  therefore includes input_ref
-
-export_id
-  includes bundle_hash
-
-export_hash
-  includes the complete Producer Gate Export
+ARCH_EXPORT_OUTPUT_LOCK_RELEASE_FAILED:<exception>
 ```
 
-Consequences:
+The cleanup classifier recognizes that exact prefix. A release failure therefore
+produces:
 
-- identical payload bytes, repository commit, run ID, and input path produce byte-stable output;
-- relocating identical payload bytes changes `bundle_hash`, `export_id`, and `export_hash` intentionally;
-- relocation does not change `payload_hash` or `bundle_id`;
-- the pathname is provenance-bearing identity input, not non-identity display metadata.
+```yaml
+artifact_committed: true
+cleanup_complete: false
+result_status: SUCCESS_WITH_CLEANUP_WARNING
+```
 
-Removing the path from the hashed bundle would require a shared common-contract decision or a new observation-only contract field. ARCH-02 does not make that cross-repository change.
+No output rollback or destination deletion occurs.
 
-## Filesystem and concurrency invariants
+## PATH_IS_INTENTIONAL_IDENTITY_INPUT
 
-The repair preserves:
+The ARCH02-F02 decision remains unchanged. `input_ref` is part of canonical
+Stage Evidence Bundle provenance.
+
+```text
+payload_hash: excludes input_ref
+bundle_id: excludes input_ref
+bundle_hash: includes input_ref
+export_id: includes bundle_hash
+export_hash: includes complete Producer Gate Export
+```
+
+Relocating identical payload bytes therefore intentionally changes
+`bundle_hash`, `export_id`, and `export_hash`, while preserving `payload_hash`
+and `bundle_id`.
+
+## Preserved filesystem and concurrency invariants
 
 - atomic no-clobber publication;
 - no overwrite;
 - no destination deletion;
 - no check-then-unlink rollback;
-- no removal of a concurrent winner or replacement;
+- concurrent winner and replacement preservation;
 - descriptor/inode candidate ownership;
 - at-most-once candidate release;
 - retained fallback residue reporting;
 - descriptor-bound output ancestry;
-- cooperating-exporter locking through receipt emission.
-
-`ARCH02-F06` remains a non-blocking potential local lock-namespace interference risk. No lock implementation change is made without reproduced evidence.
+- cooperating-exporter locking through receipt emission;
+- valid blocked and insufficient-evidence exit code `2`.
 
 ## Exact-head CI
 
-Repository security governance requires a PR-context workflow to use the literal exact PR-head reference. ARCH-02 therefore uses two event-specific carriers for the same authoritative validation command surface rather than weakening that control:
-
-- `.github/workflows/validate-architect-producer-gate-adoption.yml`
-  - relevant `pull_request` events;
-  - checks out `${{ github.event.pull_request.head.sha }}`;
-  - asserts `git rev-parse HEAD` equals that exact PR head.
-- `.github/workflows/validate-architect-producer-gate-adoption-main.yml`
-  - relevant pushes to `main` and manual execution;
-  - checks out `${{ github.sha }}`;
-  - asserts `git rev-parse HEAD` equals the exact pushed or dispatched SHA;
-  - contains no pull-request-only event dereference.
-
-Both carriers run the same authoritative commands:
+The pull-request workflow checks out and asserts the literal PR head. The
+pushed-main workflow uses `github.sha` and contains no PR-only dereference.
+Both run:
 
 ```bash
 python -m py_compile scripts/export-architect-project-gate.py
@@ -180,18 +226,19 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_producer_gate_ad
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_project_gate_exporter*.py
 ```
 
-The PR carrier retains the complete pytest output as a short-lived artifact only when the exporter suite fails. This is diagnostic evidence, not a second validation authority.
+## Remaining evidence limitations
 
-## Evidence limitations
+This repair does not establish:
 
-The bounded repair does not prove or implement:
-
+- final independent PR Inspector acceptance;
+- merge authorization or repository-hosted merge enforcement;
+- exact merged-main closure;
 - a real non-synthetic Architect Stage Payload run;
-- Project Gate adoption of the repaired Architect commit;
+- Project Gate adoption;
 - CE acceptance;
-- Builder execution;
-- browser/runtime validity;
-- release or production readiness;
-- Windows authoritative publication.
+- Builder or Golden Path execution;
+- Windows authoritative publication;
+- release or production readiness.
 
-`real_run_evidence` remains `pending`. Final ARCH-02 closure requires validation against the exact merged `main` SHA after the repair PR is merged.
+All three findings remain `implemented_pending_rereview` until a fresh PR
+Inspector review is bound to the final PR head.
