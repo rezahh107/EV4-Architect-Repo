@@ -90,6 +90,8 @@ Without `--overwrite`, the staged candidate is published with an atomic hard-lin
 
 With explicit `--overwrite`, cooperating exporter processes are serialized by an exclusive, non-blocking output transaction lock. Each transaction records the destination identity observed before lock acquisition. A transaction that loses the lock or observes identity drift before quarantine fails closed, so two overlapping overwrite exporters cannot both report authoritative success.
 
+The lock coordinates exporter processes on the same host. Non-cooperating writers are not trusted; device/inode and final byte/hash checks detect their interference and convert it into a conflict rather than an authoritative success.
+
 An existing regular output is moved to a same-directory quarantine backup while preserving its device/inode identity. The candidate is published with the same no-replace primitive and receives its own recorded device/inode identity. Before rollback restores a backup or removes a published candidate, the exporter verifies that the current destination is absent or still matches the identity owned by that transaction.
 
 If another process creates or replaces the destination, rollback never overwrites that concurrent artifact. The exporter fails with `ARCH_EXPORT_ROLLBACK_CONFLICT`, preserves the concurrent destination, and retains the previous output in its quarantine backup for operator recovery. The diagnostic identifies the retained backup by filename.
