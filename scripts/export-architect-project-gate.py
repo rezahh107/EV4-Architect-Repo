@@ -941,9 +941,12 @@ def run_export(
             exc.output_committed = transaction.committed
             exc.destination_present = current_identity is not None
             exc.concurrent_destination_preserved = (
-                transaction.published_identity is not None
-                and current_identity is not None
-                and current_identity != transaction.published_identity
+                exc.concurrent_destination_preserved
+                or (
+                    transaction.published_identity is not None
+                    and current_identity is not None
+                    and current_identity != transaction.published_identity
+                )
             )
             exc.cleanup_warnings = list(transaction.cleanup_warnings)
         raise
