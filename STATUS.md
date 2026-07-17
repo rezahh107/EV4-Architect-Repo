@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.15.7
-Status: architect_project_gate_exporter_arch02_bounded_repair_pr_open
-Last confirmed stage: ARCH-01 merged; ARCH-02 bounded repair PR open with exact PR-head CI passed
-Current next step: Keep PR #29 unmerged until owner review, then merge it and run final ARCH-02 closure against the exact resulting main SHA.
+Version: 0.15.8
+Status: architect_project_gate_exporter_prf001_prf003_repair_pending_rereview
+Last confirmed stage: ARCH-01 merged; bounded PR #29 repair implemented with implementation-head CI passed
+Current next step: Validate the final PR #29 head, keep it unmerged, and obtain a fresh independent PR Inspector review bound to that exact head.
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-07-17
 
@@ -11,9 +11,10 @@ Last automation update: 2026-07-17
 
 ## Current Authority
 
-This file is the sole mutable authority for the current project, validation, and next-step state.
+This file is the sole mutable authority for current project, validation-track,
+and next-step status. It does not authorize merge or replace independent review.
 
-The complete preceding status history is preserved byte-for-byte at:
+The complete pre-ARCH-02 status history remains preserved byte-for-byte at:
 
 ```text
 status-history/STATUS.pre-ARCH02.md
@@ -35,35 +36,54 @@ ARCH_01:
   exporter: scripts/export-architect-project-gate.py
   output: architect-project-gate.json
 
-ARCH_02:
-  task_id: ARCH-02
-  prompt_id: P-003-CONTINUATION
-  execution_phase: BOUNDED_REPAIR
-  audit_status: bounded_repair_pr_open
-  repair_pull_request: 29
+P_003_CONTINUATION:
+  canonical_action_kind: repair_and_verify
+  protocol_version: v1.11.0
+  pull_request: 29
   working_branch: fix/architect-project-gate-exporter-audit
-  confirmed_repairs:
-    - ARCH02-F01
-    - ARCH02-F03
-    - ARCH02-F05
-  identity_decision:
+  reviewed_head_sha: 73dcdc5c2eeb3c179bf048bfd1dcba1a0040e339
+  review_validity_at_start: CURRENT
+  mutation_only_head: 6f1798f314e99e562bb2c33eb22b5c0faecaf3a9
+  mutation_evidence:
+    exporter_suite: failed_as_required
+    test_result: 3_failed_85_passed
+    workflow_run: 29605692256
+    workflow_job: 87968240574
+  validated_implementation_head: 317d159fea77df382a3ff81c2aaf6719f35fa169
+  implementation_head_validation:
+    validate_architect_producer_gate_adoption:
+      workflow_run: 29606129307
+      conclusion: success
+    validate_ai_governance:
+      workflow_run: 29606129312
+      conclusion: success
+  findings:
+    PRF-001: implemented_pending_rereview
+    PRF-002: implemented_pending_rereview
+    PRF-003: implemented_pending_rereview
+  invariant_decisions:
+    historical_commit_separate_from_handoff_acceptance: true
+    canonical_destination_required_for_allowed_handoff: true
+    post_link_current_revision_acceptance_required: true
+    output_lock_release_failure_is_cleanup_incomplete: true
     ARCH02-F02: PATH_IS_INTENTIONAL_IDENTITY_INPUT
-  real_run_evidence: pending
-  exact_repair_pr_head_ci: passed_for_current_pr_head
-  exact_merged_main_closure: pending
-  project_gate_a2c_integration: pending
+  final_status_commit_ci: external_exact_head_evidence_required
+  fresh_pr_inspector_rereview_required: true
   repair_pr_merge_status: unmerged
-  optional_risk:
-    ARCH02-F06: non_blocking_potential_risk_not_reproduced
+  approval_status: not_performed
+  deployment_status: not_performed
 ```
 
 ## Current Contract Interpretation
 
 ```text
-ARCH-01 implementation is merged through PR #28.
-ARCH-02 is a bounded Architect-owned repair in PR #29.
-The successful atomic no-clobber publication of a fully prevalidated candidate is the operational commit point.
-Post-commit receipt, observation, or cleanup degradation is warning-bearing success, not destructive rollback or false artifact failure.
+Atomic descriptor-derived no-clobber publication remains the historical artifact commit point.
+Historical commitment alone does not authorize handoff.
+An allowed handoff additionally requires post-link canonical ancestry, destination ownership, and current Git revision acceptance.
+If canonical destination proof fails, output_path is empty and committed_output_location reports the unverified or detached state.
+If post-link Git provenance differs, the artifact remains committed but current_revision_accepted and handoff_allowed are false.
+Receipt and cleanup warnings remain non-destructive; output-lock release failure sets cleanup_complete false.
+No pathname-based destructive rollback is introduced.
 input_ref remains provenance-bearing identity input under the active Stage Evidence Bundle contract.
 ```
 
@@ -71,15 +91,20 @@ input_ref remains provenance-bearing identity input under the active Stage Evide
 
 The current state does not claim:
 
-- final ARCH-02 closure;
-- exact merged-main validation for the repair;
+- final closure of PRF-001, PRF-002, or PRF-003;
+- independent approval completion;
+- merge authorization or repository-hosted merge enforcement;
+- exact merged-main validation;
 - a real non-synthetic Architect Stage Payload run;
-- current Project Gate adoption of the repaired Architect commit;
+- Project Gate adoption or pin update;
 - PG-A2C completion;
 - CE acceptance;
-- Builder execution;
-- browser or runtime validity;
+- Builder or Golden Path execution;
+- Windows authoritative publication;
+- browser/runtime validity;
 - release readiness;
 - production readiness.
 
-`real_run_evidence` remains `pending`. Project Gate pin updates remain Project Gate-owned work after the Architect repair is merged and independently closed.
+Final PR-head CI evidence belongs in the PR review record because writing its
+result into this file would itself create a new, unvalidated head. Project Gate
+work remains Project Gate-owned after merge and independent ARCH-02 closure.
