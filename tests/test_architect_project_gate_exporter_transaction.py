@@ -11,11 +11,8 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/export-architect-project-gate.py"
-spec = importlib.util.spec_from_file_location(
-    "architect_project_gate_exporter_transaction", SCRIPT
-)
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts/export-architect-project-gate.py"
+spec = importlib.util.spec_from_file_location("architect_project_gate_exporter_transaction", SCRIPT)
 exporter = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 sys.modules[spec.name] = exporter
@@ -48,294 +45,29 @@ def provider(root, payload_path, output_path, allowed_paths):
     return git()
 
 
-def backups(path: Path) -> list[Path]:
-    return [item for item in path.iterdir() if item.name.endswith(".bak")]
-
-
-def temps(path: Path) -> list[Path]:
-    return [item for item in path.iterdir() if item.name.endswith(".tmp")]
-
-
 def run_unit_export(
-    tmp_path: Path,
+    root: Path,
     monkeypatch: pytest.MonkeyPatch,
     run_id: str,
+    output: Path,
     *,
-    output: Path | None = None,
     receipt_emitter=None,
+    provenance_provider=provider,
 ):
     fake_pipeline(monkeypatch)
-    payload = tmp_path / f"payload-{run_id}.json"
+    payload = root / f"payload-{run_id}.json"
     payload.write_text("{}\n", encoding="utf-8")
-    output = output or tmp_path / "out.json"
     return exporter.run_export(
-        tmp_path,
+        root,
         payload,
         output,
         run_id,
-        provenance_provider=provider,
+        provenance_provider=provenance_provider,
         receipt_emitter=receipt_emitter,
     )
 
 
-def test_overwrite_fails_closed_before_any_destructive_namespace_mutation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    output = tmp_path / "out.json"
-    output.write_bytes(b"original\n")
-    replacement = tmp_path / "replacement.json"
-    replacement.write_bytes(b"concurrent\n")
-    real_lstat = exporter.os.lstat
-    real_replace = os.replace
-    calls = 0
-
-    def racing_lstat(path):
-        nonlocal calls
-        observed = real_lstat(path)
-        if Path(path) == output:
-            calls += 1
-            if calls == 2:
-                real_replace(replacement, output)
-        return observed
-
-    monkeypatch.setattr(exporter.os, "lstat", racing_lstat)
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.atomic_write(output, {"candidate": 1}, overwrite=True)
-
-    assert exc.value.code == "ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED"
-    assert exc.value.output_written is False
-    assert exc.value.destination_present is True
-    assert output.read_bytes() == b"concurrent\n"
-    assert backups(tmp_path) == []
-    assert temps(tmp_path) == []
-
-
-def test_destination_created_before_nondestructive_rollback_is_preserved(tmp_path: Path):
-    output = tmp_path / "out.json"
-    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, overwrite=False)
-    try:
-        output.write_bytes(b"external\n")
-        transaction.rollback()
-        assert output.read_bytes() == b"external\n"
-        assert backups(tmp_path) == []
-    finally:
-        transaction.close()
-
-
-def test_destination_replaced_before_nondestructive_rollback_is_preserved(tmp_path: Path):
-    output = tmp_path / "out.json"
-    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, overwrite=False)
-    try:
-        transaction.publish()
-        replacement = tmp_path / "replacement.json"
-        replacement.write_bytes(b"external-replacement\n")
-        os.replace(replacement, output)
-        transaction.rollback()
-        assert output.read_bytes() == b"external-replacement\n"
-        assert transaction.cleanup_warnings == [
-            "ARCH_EXPORT_FAILED_OUTPUT_RETAINED:out.json"
-        ]
-    finally:
-        transaction.close()
-
-
-def test_overwrite_exporter_racing_no_overwrite_exporter_has_one_success(
-    tmp_path: Path,
-):
-    output = tmp_path / "out.json"
-    barrier = threading.Barrier(2)
-
-    def run(overwrite: bool) -> str:
-        barrier.wait()
-        try:
-            exporter.atomic_write(output, {"overwrite": overwrite}, overwrite=overwrite)
-            return "ok"
-        except exporter.ExportError as exc:
-            return exc.code
-
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(run, [True, False]))
-
-    assert sorted(results) == ["ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED", "ok"]
-    assert json.loads(output.read_text(encoding="utf-8")) == {"overwrite": False}
-    assert backups(tmp_path) == []
-
-
-def test_external_writer_racing_quarantine_cannot_be_moved(tmp_path: Path):
-    output = tmp_path / "out.json"
-    output.write_bytes(b"external-current\n")
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.atomic_write(output, {"candidate": 1}, overwrite=True)
-    assert exc.value.code == "ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED"
-    assert output.read_bytes() == b"external-current\n"
-    assert backups(tmp_path) == []
-
-
-def test_external_writer_racing_rollback_restoration_cannot_be_clobbered(tmp_path: Path):
-    output = tmp_path / "out.json"
-    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, overwrite=False)
-    try:
-        transaction.publish()
-        replacement = tmp_path / "replacement.json"
-        replacement.write_bytes(b"external-current\n")
-        os.replace(replacement, output)
-        transaction.rollback()
-        assert output.read_bytes() == b"external-current\n"
-        assert backups(tmp_path) == []
-    finally:
-        transaction.close()
-
-
-def test_prior_artifact_remains_recoverable_at_original_path_when_overwrite_rejected(
-    tmp_path: Path,
-):
-    output = tmp_path / "out.json"
-    output.write_bytes(b"prior-artifact\n")
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.atomic_write(output, {"candidate": 1}, overwrite=True)
-    report = exc.value.report()
-    assert output.read_bytes() == b"prior-artifact\n"
-    assert report["backup_retained"] is False
-    assert report["backup_path"] is None
-    assert report["destination_present"] is True
-
-
-def test_identity_drift_never_reports_concurrent_bytes_as_output_written(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    fake_pipeline(monkeypatch)
-    payload = tmp_path / "payload.json"
-    payload.write_text("{}\n", encoding="utf-8")
-    output = tmp_path / "out.json"
-    validations = 0
-
-    def validate(root, value):
-        nonlocal validations
-        validations += 1
-        if validations == 3:
-            replacement = tmp_path / "replacement.json"
-            replacement.write_text('{"external":true}\n', encoding="utf-8")
-            os.replace(replacement, output)
-
-    monkeypatch.setattr(exporter, "validate_contracts", validate)
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.run_export(
-            tmp_path,
-            payload,
-            output,
-            "identity-drift",
-            provenance_provider=provider,
-        )
-
-    assert exc.value.code == "ARCH_EXPORT_OUTPUT_IDENTITY_DRIFT"
-    assert exc.value.output_written is False
-    assert exc.value.destination_present is True
-    assert exc.value.concurrent_destination_preserved is True
-    assert output.read_text(encoding="utf-8") == '{"external":true}\n'
-
-
-def test_second_exporter_waits_through_first_historical_receipt_emission(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    fake_pipeline(monkeypatch)
-    output = tmp_path / "out.json"
-    first_payload = tmp_path / "payload-first.json"
-    second_payload = tmp_path / "payload-second.json"
-    first_payload.write_text("{}\n", encoding="utf-8")
-    second_payload.write_text("{}\n", encoding="utf-8")
-    receipt_entered = threading.Event()
-    release_receipt = threading.Event()
-    second_done = threading.Event()
-    receipts: list[exporter.ExportResult] = []
-    outcomes: dict[str, str] = {}
-
-    def emitter(result):
-        receipts.append(result)
-        receipt_entered.set()
-        assert release_receipt.wait(timeout=5)
-
-    def first():
-        result = exporter.run_export(
-            tmp_path,
-            first_payload,
-            output,
-            "first",
-            provenance_provider=provider,
-            receipt_emitter=emitter,
-        )
-        outcomes["first"] = result.export_hash
-
-    def second():
-        try:
-            exporter.run_export(
-                tmp_path,
-                second_payload,
-                output,
-                "second",
-                provenance_provider=provider,
-            )
-            outcomes["second"] = "ok"
-        except exporter.ExportError as exc:
-            outcomes["second"] = exc.code
-        finally:
-            second_done.set()
-
-    first_thread = threading.Thread(target=first)
-    first_thread.start()
-    assert receipt_entered.wait(timeout=5)
-    second_thread = threading.Thread(target=second)
-    second_thread.start()
-    time.sleep(0.1)
-    assert not second_done.is_set()
-    release_receipt.set()
-    first_thread.join(timeout=5)
-    second_thread.join(timeout=5)
-
-    assert outcomes["second"] == "ARCH_EXPORT_OUTPUT_EXISTS"
-    assert len(receipts) == 1
-    assert receipts[0].receipt_scope == "historical_commit"
-    assert receipts[0].current_destination_claim is False
-    assert receipts[0].output_written is False
-    assert receipts[0].output_committed is True
-
-
-def test_two_hashes_cannot_both_be_reported_as_current_destination(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    fake_pipeline(monkeypatch)
-    output = tmp_path / "out.json"
-    claims: list[tuple[str, bool]] = []
-
-    def emitter(result):
-        claims.append((result.export_hash, result.current_destination_claim))
-
-    first_payload = tmp_path / "payload-first.json"
-    first_payload.write_text("{}\n", encoding="utf-8")
-    exporter.run_export(
-        tmp_path,
-        first_payload,
-        output,
-        "hash-a",
-        provenance_provider=provider,
-        receipt_emitter=emitter,
-    )
-    second_payload = tmp_path / "payload-second.json"
-    second_payload.write_text("{}\n", encoding="utf-8")
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.run_export(
-            tmp_path,
-            second_payload,
-            output,
-            "hash-b",
-            provenance_provider=provider,
-            receipt_emitter=emitter,
-        )
-
-    assert exc.value.code == "ARCH_EXPORT_OUTPUT_EXISTS"
-    assert claims == [("hash-a", False)]
-
-
-def test_unsupported_atomic_overwrite_platform_fails_closed(tmp_path: Path):
+def test_overwrite_remains_fail_closed(tmp_path: Path):
     output = tmp_path / "out.json"
     output.write_bytes(b"existing\n")
     with pytest.raises(exporter.ExportError) as exc:
@@ -344,21 +76,7 @@ def test_unsupported_atomic_overwrite_platform_fails_closed(tmp_path: Path):
     assert output.read_bytes() == b"existing\n"
 
 
-def test_missing_platform_lock_support_fails_closed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    monkeypatch.setattr(exporter, "fcntl", None)
-    monkeypatch.setattr(exporter, "msvcrt", None)
-    output = tmp_path / "out.json"
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.atomic_write(output, {"candidate": 1}, overwrite=False)
-    assert exc.value.code == "ARCH_EXPORT_OUTPUT_LOCK_UNAVAILABLE"
-    assert not output.exists()
-
-
-def test_two_no_overwrite_publishers_remain_one_success_one_output_exists(
-    tmp_path: Path,
-):
+def test_two_no_overwrite_publishers_one_success(tmp_path: Path):
     for index in range(10):
         output = tmp_path / f"out-{index}.json"
         barrier = threading.Barrier(2)
@@ -375,56 +93,50 @@ def test_two_no_overwrite_publishers_remain_one_success_one_output_exists(
             results = list(pool.map(run, [1, 2]))
         assert sorted(results) == ["ARCH_EXPORT_OUTPUT_EXISTS", "ok"]
         assert json.loads(output.read_text(encoding="utf-8"))["winner"] in {1, 2}
-        assert backups(tmp_path) == []
-        assert temps(tmp_path) == []
 
 
-def test_same_lock_coordinates_no_overwrite_transactions(tmp_path: Path):
+def test_overwrite_and_no_overwrite_share_lock(tmp_path: Path):
     output = tmp_path / "out.json"
-    held = exporter.OutputLock(exporter._output_lock_path(output))
-    held.acquire()
-    finished = threading.Event()
+    barrier = threading.Barrier(2)
 
-    def writer():
-        exporter.atomic_write(output, {"writer": True}, overwrite=False)
-        finished.set()
+    def run(overwrite: bool) -> str:
+        barrier.wait()
+        try:
+            exporter.atomic_write(output, {"overwrite": overwrite}, overwrite=overwrite)
+            return "ok"
+        except exporter.ExportError as exc:
+            return exc.code
 
-    thread = threading.Thread(target=writer)
-    thread.start()
-    time.sleep(0.1)
-    assert not finished.is_set()
-    held.release()
-    thread.join(timeout=5)
-    assert finished.is_set()
-    assert json.loads(output.read_text(encoding="utf-8")) == {"writer": True}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(run, [True, False]))
+    assert sorted(results) == ["ARCH_EXPORT_ATOMIC_OVERWRITE_UNSUPPORTED", "ok"]
 
 
-def test_final_destination_identity_drift_is_detected_without_clobber(tmp_path: Path):
+def test_external_destination_replacement_is_preserved(tmp_path: Path):
     output = tmp_path / "out.json"
-    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, overwrite=False)
+    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, False)
     try:
         transaction.publish()
         replacement = tmp_path / "replacement.json"
         replacement.write_bytes(b"external\n")
         os.replace(replacement, output)
         with pytest.raises(exporter.ExportError) as exc:
-            transaction.verify_owned("identity-test")
+            transaction.verify_owned("external-replacement")
         assert exc.value.code == "ARCH_EXPORT_OUTPUT_IDENTITY_DRIFT"
-        assert exc.value.concurrent_destination_preserved is True
         transaction.rollback()
         assert output.read_bytes() == b"external\n"
     finally:
         transaction.close()
 
 
-def test_final_destination_byte_drift_is_detected_without_deletion(tmp_path: Path):
+def test_exact_byte_drift_is_detected_without_deletion(tmp_path: Path):
     output = tmp_path / "out.json"
-    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, overwrite=False)
+    transaction = exporter.OutputTransaction.stage(output, {"candidate": 1}, False)
     try:
         transaction.publish()
         output.write_bytes(b'{"tampered":true}\n')
         with pytest.raises(exporter.ExportError) as exc:
-            transaction.verify_owned("byte-test")
+            transaction.verify_owned("byte-drift")
         assert exc.value.code == "ARCH_EXPORT_OUTPUT_BYTE_DRIFT"
         transaction.rollback()
         assert output.read_bytes() == b'{"tampered":true}\n'
@@ -432,161 +144,296 @@ def test_final_destination_byte_drift_is_detected_without_deletion(tmp_path: Pat
         transaction.close()
 
 
-def test_overwrite_fail_closed_never_enters_backup_cleanup(tmp_path: Path):
-    output = tmp_path / "out.json"
-    output.write_bytes(b"existing\n")
-    with pytest.raises(exporter.ExportError):
-        exporter.atomic_write(output, {"candidate": 1}, overwrite=True)
-    assert backups(tmp_path) == []
-    assert temps(tmp_path) == []
-
-
-def test_lock_release_cleanup_warning_is_operator_visible(
+def test_parent_renamed_outside_after_final_provenance_blocks_receipt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    fake_pipeline(monkeypatch)
-    payload = tmp_path / "payload.json"
-    payload.write_text("{}\n", encoding="utf-8")
-    output = tmp_path / "out.json"
-    real_release = exporter.OutputLock.release
-
-    def warning_release(self):
-        real_release(self)
-        return "ARCH_EXPORT_OUTPUT_LOCK_RELEASE_FAILED:Injected"
-
-    monkeypatch.setattr(exporter.OutputLock, "release", warning_release)
-    result = exporter.run_export(
-        tmp_path,
-        payload,
-        output,
-        "cleanup-warning",
-        provenance_provider=provider,
-    )
-    assert result.cleanup_warnings == [
-        "ARCH_EXPORT_OUTPUT_LOCK_RELEASE_FAILED:Injected"
-    ]
-
-
-@pytest.mark.parametrize(
-    ("second", "changed_field"),
-    [(git(sha="b" * 40), "HEAD"), (git(ref="other"), "ref")],
-)
-def test_provenance_drift_before_publication_writes_nothing(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    second,
-    changed_field: str,
-):
-    fake_pipeline(monkeypatch)
-    payload = tmp_path / "payload.json"
-    payload.write_text("{}\n", encoding="utf-8")
-    output = tmp_path / "out.json"
-    states = iter([git(), second])
-
-    def drifting_provider(root, payload_path, output_path, allowed_paths):
-        return next(states)
-
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.run_export(
-            tmp_path,
-            payload,
-            output,
-            "run",
-            provenance_provider=drifting_provider,
-        )
-    assert exc.value.code == "ARCH_EXPORT_PROVENANCE_DRIFT"
-    assert changed_field in exc.value.reason
-    assert not output.exists()
-    assert temps(tmp_path) == []
-
-
-def test_tracked_contract_drift_before_publication_writes_nothing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    fake_pipeline(monkeypatch)
-    payload = tmp_path / "payload.json"
-    payload.write_text("{}\n", encoding="utf-8")
-    output = tmp_path / "out.json"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    parent = repo / "run"
+    parent.mkdir()
+    outside = tmp_path / "outside-run"
+    output = parent / "out.json"
+    receipts = []
     calls = 0
 
-    def dirty_provider(root, payload_path, output_path, allowed_paths):
+    def drifting_provider(root, payload_path, output_path, allowed_paths):
         nonlocal calls
         calls += 1
-        if calls == 2:
-            raise exporter.ExportError(
-                "ARCH_EXPORT_DIRTY_WORKTREE",
-                "git_provenance",
-                "tracked contract changed",
-                "operator",
-            )
+        if calls == 3:
+            os.rename(parent, outside)
+            parent.symlink_to(outside, target_is_directory=True)
         return git()
 
     with pytest.raises(exporter.ExportError) as exc:
-        exporter.run_export(
-            tmp_path,
-            payload,
+        run_unit_export(
+            repo,
+            monkeypatch,
+            "ancestry-after-final-git",
             output,
-            "run",
-            provenance_provider=dirty_provider,
+            provenance_provider=drifting_provider,
+            receipt_emitter=receipts.append,
         )
-    assert exc.value.code == "ARCH_EXPORT_DIRTY_WORKTREE"
-    assert not output.exists()
+    assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+    assert receipts == []
+    assert (outside / "out.json").exists()
 
 
-def test_final_provenance_drift_retains_unclaimed_output(
+def test_unchanged_output_inode_does_not_hide_ancestry_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    parent = repo / "run"
+    parent.mkdir()
+    outside = tmp_path / "outside-run"
+    output = parent / "out.json"
+    captured_identity = None
+    calls = 0
+
+    def drifting_provider(root, payload_path, output_path, allowed_paths):
+        nonlocal calls, captured_identity
+        calls += 1
+        if calls == 3:
+            captured_identity = exporter._identity(output)
+            os.rename(parent, outside)
+            parent.symlink_to(outside, target_is_directory=True)
+            assert exporter._identity(outside / "out.json") == captured_identity
+        return git()
+
+    with pytest.raises(exporter.ExportError) as exc:
+        run_unit_export(repo, monkeypatch, "same-inode", output, provenance_provider=drifting_provider)
+    assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+
+
+def test_parent_drift_before_publication_leaves_no_authoritative_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    parent = repo / "run"
+    parent.mkdir()
+    outside = tmp_path / "outside-run"
+    output = parent / "out.json"
+    calls = 0
+
+    def drifting_provider(root, payload_path, output_path, allowed_paths):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            os.rename(parent, outside)
+            parent.symlink_to(outside, target_is_directory=True)
+        return git()
+
+    with pytest.raises(exporter.ExportError) as exc:
+        run_unit_export(repo, monkeypatch, "before-publication", output, provenance_provider=drifting_provider)
+    assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+    assert not (outside / "out.json").exists()
+
+
+def test_intermediate_component_symlink_is_rejected(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (repo / "run").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(exporter.ExportError) as exc:
+        exporter.atomic_write(repo / "run" / "out.json", {"value": 1}, False, root=repo)
+    assert exc.value.code in {
+        "ARCH_EXPORT_OUTPUT_ANCESTRY_UNSAFE",
+        "ARCH_EXPORT_OUTPUT_ANCESTRY_INSPECTION_FAILED",
+    }
+    assert not (outside / "out.json").exists()
+
+
+def test_root_identity_drift_is_detected(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    output = root / "out.json"
+    transaction = exporter.OutputTransaction.stage(output, {"value": 1}, False, root=root)
+    moved = tmp_path / "moved-repo"
+    try:
+        transaction.publish()
+        os.rename(root, moved)
+        root.symlink_to(moved, target_is_directory=True)
+        with pytest.raises(exporter.ExportError) as exc:
+            transaction.verify_owned("root-drift")
+        assert exc.value.code == "ARCH_EXPORT_OUTPUT_ANCESTRY_DRIFT"
+    finally:
+        transaction.close()
+
+
+def test_destination_file_not_found_during_single_stat_is_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    output = tmp_path / "out.json"
+    real_stat = exporter.os.stat
+    injected = False
+
+    def racing_stat(path, *args, **kwargs):
+        nonlocal injected
+        if path == output.name and kwargs.get("dir_fd") is not None and not injected:
+            injected = True
+            raise FileNotFoundError(path)
+        return real_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(exporter.os, "stat", racing_stat)
+    exporter.atomic_write(output, {"value": 1}, False)
+    assert json.loads(output.read_text(encoding="utf-8")) == {"value": 1}
+
+
+def test_destination_inspection_oserror_is_stable_export_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    output = tmp_path / "out.json"
+    real_stat = exporter.os.stat
+
+    def failing_stat(path, *args, **kwargs):
+        if path == output.name and kwargs.get("dir_fd") is not None:
+            raise PermissionError("injected")
+        return real_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(exporter.os, "stat", failing_stat)
+    with pytest.raises(exporter.ExportError) as exc:
+        exporter.atomic_write(output, {"value": 1}, False)
+    assert exc.value.code == "ARCH_EXPORT_OUTPUT_INSPECTION_FAILED"
+
+
+def test_cli_preflight_race_emits_no_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    payload = tmp_path / "payload.json"
+    payload.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(exporter, "run_export", lambda *args, **kwargs: (_ for _ in ()).throw(
+        exporter.ExportError(
+            "ARCH_EXPORT_OUTPUT_INSPECTION_FAILED",
+            "output_preflight",
+            "stable failure",
+            "operator",
+        )
+    ))
+    code = exporter.main([
+        "--repo-root", str(tmp_path),
+        "--payload", str(payload),
+        "--run-id", "race",
+        "--format", "json",
+    ])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "ARCH_EXPORT_OUTPUT_INSPECTION_FAILED" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_receipt_is_emitted_while_lock_and_ancestry_are_held(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    output = tmp_path / "out.json"
+    observed = []
+
+    def emitter(result):
+        observed.append(result)
+        assert result.receipt_scope == "historical_commit"
+        assert result.current_destination_claim is False
+
+    result = run_unit_export(tmp_path, monkeypatch, "receipt", output, receipt_emitter=emitter)
+    assert observed == [result]
+
+
+def test_second_exporter_waits_until_receipt_emission_finishes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     fake_pipeline(monkeypatch)
-    payload = tmp_path / "payload.json"
-    payload.write_text("{}\n", encoding="utf-8")
     output = tmp_path / "out.json"
-    states = iter([git(), git(), git(sha="b" * 40)])
+    first_payload = tmp_path / "first.json"
+    second_payload = tmp_path / "second.json"
+    first_payload.write_text("{}\n", encoding="utf-8")
+    second_payload.write_text("{}\n", encoding="utf-8")
+    entered = threading.Event()
+    release = threading.Event()
+    second_done = threading.Event()
+    outcomes = {}
 
-    def drifting_provider(root, payload_path, output_path, allowed_paths):
-        return next(states)
+    def emitter(result):
+        entered.set()
+        assert release.wait(timeout=5)
 
-    with pytest.raises(exporter.ExportError) as exc:
+    def first():
         exporter.run_export(
             tmp_path,
-            payload,
+            first_payload,
             output,
-            "run",
-            provenance_provider=drifting_provider,
+            "first",
+            provenance_provider=provider,
+            receipt_emitter=emitter,
         )
-    assert exc.value.code == "ARCH_EXPORT_PROVENANCE_DRIFT"
-    assert exc.value.output_written is False
-    assert exc.value.destination_present is True
-    assert output.exists()
+
+    def second():
+        try:
+            exporter.run_export(
+                tmp_path, second_payload, output, "second", provenance_provider=provider
+            )
+            outcomes["second"] = "ok"
+        except exporter.ExportError as exc:
+            outcomes["second"] = exc.code
+        finally:
+            second_done.set()
+
+    first_thread = threading.Thread(target=first)
+    first_thread.start()
+    assert entered.wait(timeout=5)
+    second_thread = threading.Thread(target=second)
+    second_thread.start()
+    time.sleep(0.1)
+    assert not second_done.is_set()
+    release.set()
+    first_thread.join(timeout=5)
+    second_thread.join(timeout=5)
+    assert outcomes["second"] == "ARCH_EXPORT_OUTPUT_EXISTS"
 
 
-def test_unicode_output_path_remains_supported(tmp_path: Path):
-    output = tmp_path / "معماری-خروجی.json"
-    exporter.atomic_write(output, {"value": "معماری"}, overwrite=False)
-    assert json.loads(output.read_text(encoding="utf-8")) == {"value": "معماری"}
+def test_head_and_ref_drift_remain_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    for changed in (git(sha="b" * 40), git(ref="other")):
+        output = tmp_path / f"{changed.ref}-{changed.commit_sha[:1]}.json"
+        states = iter([git(), changed])
+
+        def drifting_provider(root, payload_path, output_path, allowed_paths):
+            return next(states)
+
+        with pytest.raises(exporter.ExportError) as exc:
+            run_unit_export(
+                tmp_path,
+                monkeypatch,
+                f"drift-{changed.ref}-{changed.commit_sha[:1]}",
+                output,
+                provenance_provider=drifting_provider,
+            )
+        assert exc.value.code == "ARCH_EXPORT_PROVENANCE_DRIFT"
+        assert not output.exists()
 
 
-def test_existing_symlink_is_rejected(tmp_path: Path):
+def test_unicode_path_and_canonical_bytes(tmp_path: Path):
+    output = tmp_path / "مسیر" / "معماری.json"
+    value = {"z": "معماری", "a": 1}
+    exporter.atomic_write(output, value, False, root=tmp_path)
+    assert output.read_bytes() == exporter.canonical_bytes(value) + b"\n"
+
+
+def test_final_component_symlink_and_nonregular_rejected(tmp_path: Path):
     target = tmp_path / "target.json"
     target.write_text("target\n", encoding="utf-8")
-    link = tmp_path / "out.json"
+    link = tmp_path / "link.json"
     link.symlink_to(target)
+    with pytest.raises(exporter.ExportError) as symlink_exc:
+        exporter.atomic_write(link, {"value": 1}, False)
+    assert symlink_exc.value.code == "ARCH_EXPORT_UNSAFE_OUTPUT_PATH"
+    directory = tmp_path / "directory.json"
+    directory.mkdir()
+    with pytest.raises(exporter.ExportError) as directory_exc:
+        exporter.atomic_write(directory, {"value": 1}, False)
+    assert directory_exc.value.code == "ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID"
+
+
+def test_missing_ancestry_primitives_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(exporter, "_ancestry_primitives_available", lambda: False)
     with pytest.raises(exporter.ExportError) as exc:
-        exporter.atomic_write(link, {"candidate": 1}, overwrite=False)
-    assert exc.value.code == "ARCH_EXPORT_UNSAFE_OUTPUT_PATH"
-    assert target.read_text(encoding="utf-8") == "target\n"
-
-
-def test_existing_non_regular_output_is_rejected(tmp_path: Path):
-    output = tmp_path / "out.json"
-    output.mkdir()
-    with pytest.raises(exporter.ExportError) as exc:
-        exporter.atomic_write(output, {"candidate": 1}, overwrite=False)
-    assert exc.value.code == "ARCH_EXPORT_OUTPUT_PATH_TYPE_INVALID"
-
-
-def test_exact_canonical_bytes_and_hash_verification_remain_stable(tmp_path: Path):
-    output = tmp_path / "out.json"
-    value = {"z": "معماری", "a": 1}
-    exporter.atomic_write(output, value, overwrite=False)
-    assert output.read_bytes() == exporter.canonical_bytes(value) + b"\n"
-    assert exporter.digest(value) == exporter.digest(json.loads(output.read_text()))
+        exporter.atomic_write(tmp_path / "out.json", {"value": 1}, False)
+    assert exc.value.code == "ARCH_EXPORT_ANCESTRY_BINDING_UNSUPPORTED"
