@@ -29,6 +29,13 @@ PREDECESSOR = {
     "/score-audit": "/score-evidence",
 }
 ACTIVE_UNKNOWN_STATES = {"carried", "score_capped", "blocking", "downstream_only"}
+NEXT_STAGE = {
+    "/decompose": "/architectures",
+    "/architectures": "/score-evidence",
+    "/score-evidence": "/score-audit",
+    "/score-audit": "/recommend",
+}
+ANCHOR_SCHEMA = "ev4-stage-anchor@1.2.0"
 
 
 def load_json(path: Path):
@@ -146,7 +153,6 @@ class Validator:
             diagnostics += self._semantic_score_evidence(payload, ctx)
         if stage == "/score-audit":
             diagnostics += self._semantic_score_audit(payload, ctx)
-        diagnostics += self._semantic_anchor(artifact, ctx)
         return diagnostics
 
     def _semantic_decompose(self, artifact, payload):
@@ -388,64 +394,120 @@ class Validator:
             diagnostics.append(diag("ASB-LINEAGE-VALIDATOR-VERSION-MISMATCH", "ASB-R07", current_stage, base_path, VALIDATOR_VERSION, str(upstream["receipt"].get("validator_version")), source_stage))
         return diagnostics
 
-    def _semantic_anchor(self, artifact, ctx):
-        anchor = artifact.get("stage_anchor")
-        if not anchor:
-            return []
-        stage = artifact["stage_id"]
-        expected_receipt = self.expected_receipt(artifact, ctx.get("self_sha", ""), stage)
+    def validate_anchor(self, anchor, artifact, receipt, artifact_sha, path_base="$"):
+        stage = artifact.get("stage_id", "unknown")
         diagnostics = []
-        artifact_fields = {
-            "artifact_id": artifact["artifact_id"],
-            "artifact_schema": artifact["artifact_schema"],
-            "artifact_sha256": ctx.get("self_sha"),
+        if not isinstance(anchor, dict):
+            return {"status": "invalid", "diagnostics": [diag("ASB-ANCHOR-NOT-OBJECT", "ASB-R06", stage, path_base, "object", type(anchor).__name__, stage)]}
+        required = ["anchor_schema", "anchor_type", "allowed_next_stage", "source_artifact", "source_validation"]
+        for field in required:
+            if field not in anchor:
+                diagnostics.append(diag("ASB-ANCHOR-MISSING-FIELD", "ASB-R06", stage, f"{path_base}/{field}", "present", "missing", stage))
+        if diagnostics:
+            return {"status": "invalid", "diagnostics": sort_diags(diagnostics)}
+        expected_artifact = {
+            "artifact_id": artifact.get("artifact_id"),
+            "artifact_schema": artifact.get("artifact_schema"),
+            "artifact_sha256": artifact_sha,
             "stage_id": stage,
         }
-        for field, expected in artifact_fields.items():
-            observed = anchor["source_artifact"].get(field)
+        for field, expected in expected_artifact.items():
+            observed = anchor.get("source_artifact", {}).get(field)
             if observed != expected:
                 diagnostics.append(
                     diag(
                         f"ASB-ANCHOR-SOURCE-ARTIFACT-{field.upper()}-MISMATCH".replace("_", "-"),
                         "ASB-R07",
                         stage,
-                        f"$/stage_anchor/source_artifact/{field}",
+                        f"{path_base}/source_artifact/{field}",
                         str(expected),
                         str(observed),
                         stage,
                     )
                 )
-        validation_fields = {
-            "receipt_id": expected_receipt["receipt_id"],
+        expected_validation = {
+            "receipt_id": receipt.get("receipt_id"),
             "receipt_schema": RECEIPT_SCHEMA,
             "validator_id": VALIDATOR_ID,
             "validator_version": VALIDATOR_VERSION,
             "status": "valid",
         }
-        for field, expected in validation_fields.items():
-            observed = anchor["source_validation"].get(field)
+        for field, expected in expected_validation.items():
+            observed = anchor.get("source_validation", {}).get(field)
             if observed != expected:
                 diagnostics.append(
                     diag(
                         f"ASB-ANCHOR-SOURCE-VALIDATION-{field.upper()}-MISMATCH".replace("_", "-"),
                         "ASB-R06" if field == "status" else "ASB-R07",
                         stage,
-                        f"$/stage_anchor/source_validation/{field}",
+                        f"{path_base}/source_validation/{field}",
                         str(expected),
                         str(observed),
                         stage,
                     )
                 )
-        if anchor["anchor_type"] == "NEXT STAGE ANCHOR" and anchor["source_validation"]["status"] != "valid":
-            diagnostics.append(diag("ASB-ANCHOR-VALID-RECEIPT-REQUIRED", "ASB-R06", stage, "$/stage_anchor/source_validation/status", "valid", str(anchor["source_validation"]["status"]), stage))
-        return diagnostics
+        if anchor.get("anchor_schema") != ANCHOR_SCHEMA:
+            diagnostics.append(diag("ASB-ANCHOR-SCHEMA-MISMATCH", "ASB-R06", stage, f"{path_base}/anchor_schema", ANCHOR_SCHEMA, str(anchor.get("anchor_schema")), stage))
+        expected_type = "NEXT STAGE ANCHOR" if receipt.get("status") == "valid" else "REPAIR ANCHOR"
+        if anchor.get("anchor_type") != expected_type:
+            diagnostics.append(diag("ASB-ANCHOR-TYPE-MISMATCH", "ASB-R06", stage, f"{path_base}/anchor_type", expected_type, str(anchor.get("anchor_type")), stage))
+        if anchor.get("anchor_type") == "NEXT STAGE ANCHOR" and anchor.get("allowed_next_stage") != NEXT_STAGE.get(stage):
+            diagnostics.append(diag("ASB-ANCHOR-NEXT-STAGE-MISMATCH", "ASB-R06", stage, f"{path_base}/allowed_next_stage", str(NEXT_STAGE.get(stage)), str(anchor.get("allowed_next_stage")), stage))
+        return {"status": "valid" if not diagnostics else "invalid", "diagnostics": sort_diags(diagnostics)}
+
+    def make_anchor(self, artifact, receipt, artifact_sha):
+        stage = artifact["stage_id"]
+        return {
+            "anchor_schema": ANCHOR_SCHEMA,
+            "anchor_type": "NEXT STAGE ANCHOR" if receipt["status"] == "valid" else "REPAIR ANCHOR",
+            "allowed_next_stage": NEXT_STAGE.get(stage) if receipt["status"] == "valid" else None,
+            "repair_target_stage": None if receipt["status"] == "valid" else stage,
+            "source_artifact": {
+                "artifact_id": artifact["artifact_id"],
+                "artifact_schema": artifact["artifact_schema"],
+                "artifact_sha256": artifact_sha,
+                "stage_id": stage,
+            },
+            "source_validation": {
+                "receipt_id": receipt["receipt_id"],
+                "receipt_schema": RECEIPT_SCHEMA,
+                "validator_id": VALIDATOR_ID,
+                "validator_version": VALIDATOR_VERSION,
+                "status": receipt["status"],
+            },
+        }
+
+    def context_from_upstreams(self, artifact_paths, receipt_paths):
+        ctx = {"artifacts": {}, "lineage": {}}
+        diagnostics = []
+        for artifact_path, receipt_path in zip(artifact_paths, receipt_paths):
+            artifact_file = Path(artifact_path)
+            receipt_file = Path(receipt_path)
+            artifact = load_json(artifact_file)
+            receipt = load_json(receipt_file)
+            digest = sha(artifact_file)
+            stage = artifact.get("stage_id")
+            expected = self.expected_receipt(artifact, digest, stage)
+            for field in ["receipt_id", "receipt_schema", "validator_id", "validator_version", "artifact_id", "artifact_schema", "artifact_sha256", "stage_id", "status"]:
+                if receipt.get(field) != expected.get(field):
+                    diagnostics.append(diag(f"ASB-UPSTREAM-RECEIPT-{field.upper()}-MISMATCH".replace("_", "-"), "ASB-R07", stage, f"$/{receipt_file.name}/{field}", str(expected.get(field)), str(receipt.get(field)), stage))
+            if receipt.get("status") != "valid":
+                diagnostics.append(diag("ASB-UPSTREAM-RECEIPT-STATUS-NOT-VALID", "ASB-R06", stage, f"$/{receipt_file.name}/status", "valid", str(receipt.get("status")), stage))
+            if not diagnostics:
+                ctx["artifacts"][stage] = artifact
+                ctx["lineage"][stage] = {"artifact": artifact, "sha": digest, "receipt": receipt}
+        return ctx, diagnostics
 
     def validate_sequence(self, directory):
         sequence_dir = Path(directory)
         present = {}
         diagnostics = []
         for stage in ORDER:
-            files = sorted(sequence_dir.glob(f"{STAGE_FILE_PREFIX[stage]}*.json"))
+            files = sorted(
+                path
+                for path in sequence_dir.glob(f"{STAGE_FILE_PREFIX[stage]}*.json")
+                if not path.name.endswith(".receipt.json") and not path.name.endswith(".anchor.json")
+            )
             if len(files) > 1:
                 diagnostics.append(
                     diag(
@@ -463,6 +525,19 @@ class Validator:
         if diagnostics:
             return {"status": "invalid", "diagnostics": sort_diags(diagnostics), "receipts": []}
         existing = [stage for stage in ORDER if stage in present]
+        if not existing:
+            diagnostics.append(
+                diag(
+                    "ASB-EMPTY-SEQUENCE",
+                    "ASB-R05",
+                    "sequence",
+                    "$",
+                    "at least /decompose artifact",
+                    "empty sequence directory",
+                    "/decompose",
+                )
+            )
+            return {"status": "invalid", "diagnostics": sort_diags(diagnostics), "receipts": []}
         if existing:
             last_index = ORDER.index(existing[-1])
             for stage in ORDER[: last_index + 1]:
@@ -508,6 +583,22 @@ def validate_fixture_suite(validator):
     base = ROOT / "fixtures/architect-pipeline-stage-boundary"
     valid = validator.validate_sequence(base / "valid/complete-sequence")
     checked = [valid]
+    anchor_sequence_dir = base / "valid/complete-sequence-receipts-anchors"
+    anchor_sequence = validator.validate_sequence(anchor_sequence_dir)
+    checked.append(anchor_sequence)
+    anchor_checks = []
+    if anchor_sequence["status"] == "valid":
+        for stage in ORDER:
+            prefix = STAGE_FILE_PREFIX[stage]
+            anchor_checks.append(
+                validator.validate_anchor(
+                    load_json(anchor_sequence_dir / f"{prefix}.anchor.json"),
+                    load_json(anchor_sequence_dir / f"{prefix}.json"),
+                    load_json(anchor_sequence_dir / f"{prefix}.receipt.json"),
+                    sha(anchor_sequence_dir / f"{prefix}.json"),
+                )
+            )
+        checked.extend(anchor_checks)
     bad = []
     for directory in sorted((base / "invalid").iterdir()):
         if not directory.is_dir():
@@ -528,10 +619,14 @@ def validate_fixture_suite(validator):
         if result["status"] == "valid":
             bad.append(str(directory.relative_to(ROOT)))
     return {
-        "status": "valid" if valid["status"] == "valid" and not bad else "invalid",
+        "status": "valid" if valid["status"] == "valid" and anchor_sequence["status"] == "valid" and all(item["status"] == "valid" for item in anchor_checks) and not bad else "invalid",
         "diagnostics": []
-        if not bad
-        else [diag("ASB-FIXTURE-EXPECTED-INVALID-PASSED", "ASB-R07", "fixture", "$/fixtures", "invalid fixture failure", ",".join(bad))],
+        if not bad and anchor_sequence["status"] == "valid" and all(item["status"] == "valid" for item in anchor_checks)
+        else sort_diags(
+            ([] if not bad else [diag("ASB-FIXTURE-EXPECTED-INVALID-PASSED", "ASB-R07", "fixture", "$/fixtures", "invalid fixture failure", ",".join(bad))])
+            + anchor_sequence.get("diagnostics", [])
+            + [diagnostic for item in anchor_checks for diagnostic in item.get("diagnostics", [])]
+        ),
         "checked": len(checked),
     }
 
@@ -540,17 +635,56 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact")
     parser.add_argument("--write-receipt")
+    parser.add_argument("--upstream-artifact", action="append", default=[])
+    parser.add_argument("--upstream-receipt", action="append", default=[])
+    parser.add_argument("--anchor")
+    parser.add_argument("--anchor-source-artifact")
+    parser.add_argument("--anchor-source-receipt")
     parser.add_argument("--sequence")
+    parser.add_argument("--write-receipts")
+    parser.add_argument("--write-anchors")
     parser.add_argument("--fixtures", action="store_true")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     args = parser.parse_args()
     validator = Validator(ROOT)
-    if args.artifact:
-        output = validator.validate_path(args.artifact)
+    if args.anchor:
+        if not args.anchor_source_artifact or not args.anchor_source_receipt:
+            parser.error("--anchor requires --anchor-source-artifact and --anchor-source-receipt")
+        artifact_path = Path(args.anchor_source_artifact)
+        artifact = load_json(artifact_path)
+        receipt = load_json(Path(args.anchor_source_receipt))
+        output = validator.validate_anchor(load_json(Path(args.anchor)), artifact, receipt, sha(artifact_path))
+    elif args.artifact:
+        if len(args.upstream_artifact) != len(args.upstream_receipt):
+            parser.error("--upstream-artifact and --upstream-receipt counts must match")
+        ctx, upstream_diagnostics = validator.context_from_upstreams(args.upstream_artifact, args.upstream_receipt)
+        artifact_path = Path(args.artifact)
+        artifact = load_json(artifact_path)
+        digest = sha(artifact_path)
+        output = validator.validate(artifact, artifact_path, digest, {**ctx, "self_sha": digest})
+        if upstream_diagnostics:
+            output["diagnostics"] = sort_diags(upstream_diagnostics + output["diagnostics"])
+            output["status"] = "invalid"
         if args.write_receipt:
             Path(args.write_receipt).write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     elif args.sequence:
         output = validator.validate_sequence(args.sequence)
+        if args.write_receipts or args.write_anchors:
+            receipt_dir = Path(args.write_receipts) if args.write_receipts else None
+            anchor_dir = Path(args.write_anchors) if args.write_anchors else None
+            if receipt_dir:
+                receipt_dir.mkdir(parents=True, exist_ok=True)
+            if anchor_dir:
+                anchor_dir.mkdir(parents=True, exist_ok=True)
+            for receipt in output.get("receipts", []):
+                stage = receipt["stage_id"]
+                if receipt_dir:
+                    (receipt_dir / f"{STAGE_FILE_PREFIX[stage]}.receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+                if anchor_dir and receipt["status"] == "valid":
+                    artifact_path = Path(args.sequence) / f"{STAGE_FILE_PREFIX[stage]}.json"
+                    artifact = load_json(artifact_path)
+                    anchor = validator.make_anchor(artifact, receipt, sha(artifact_path))
+                    (anchor_dir / f"{STAGE_FILE_PREFIX[stage]}.anchor.json").write_text(json.dumps(anchor, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     elif args.fixtures:
         output = validate_fixture_suite(validator)
     else:

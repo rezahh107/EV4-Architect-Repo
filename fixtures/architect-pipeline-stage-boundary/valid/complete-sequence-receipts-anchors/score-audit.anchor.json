@@ -1,0 +1,19 @@
+{
+  "allowed_next_stage": "/recommend",
+  "anchor_schema": "ev4-stage-anchor@1.2.0",
+  "anchor_type": "NEXT STAGE ANCHOR",
+  "repair_target_stage": null,
+  "source_artifact": {
+    "artifact_id": "art-s5",
+    "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+    "artifact_sha256": "f1ca166ee0b2ac0adf938296cece318cbb7ac2584489e8c299c5753425ce30ff",
+    "stage_id": "/score-audit"
+  },
+  "source_validation": {
+    "receipt_id": "asb-receipt-art-s5-f1ca166ee0b2",
+    "receipt_schema": "ev4-architect-stage-validation-receipt@1.0.0",
+    "status": "valid",
+    "validator_id": "architect-pipeline-stage-boundary-validator",
+    "validator_version": "1.0.0"
+  }
+}

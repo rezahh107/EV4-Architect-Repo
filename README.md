@@ -185,13 +185,13 @@ If an executable validator/tool is available:
 - write the canonical Stage Artifact;
 - execute the official validator;
 - obtain the receipt;
-- emit the receipt-bound NEXT STAGE ANCHOR only after status=valid.
+- emit the separate receipt-bound NEXT STAGE ANCHOR only after status=valid.
 
 If execution is unavailable:
 - do not claim machine validation;
-- do not emit a validated NEXT STAGE ANCHOR;
+- do not emit a validated separate NEXT STAGE ANCHOR;
 - return validation_required or insufficient_evidence;
 - provide the exact manual validator command;
 - preserve the Artifact for external validation.
 
-Validation command: `python scripts/check-architect-pipeline-stage-boundary.py --fixtures`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.
+Validation command: `python scripts/check-architect-pipeline-stage-boundary.py --fixtures`. For Stage 3-5 standalone validation, provide explicit `--upstream-artifact` and `--upstream-receipt` inputs; for anchors, validate the separate anchor with `--anchor`, `--anchor-source-artifact`, and `--anchor-source-receipt`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.

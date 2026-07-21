@@ -1,0 +1,19 @@
+{
+  "allowed_next_stage": "/score-evidence",
+  "anchor_schema": "ev4-stage-anchor@1.2.0",
+  "anchor_type": "NEXT STAGE ANCHOR",
+  "repair_target_stage": null,
+  "source_artifact": {
+    "artifact_id": "art-s3",
+    "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+    "artifact_sha256": "1c9951914ab6305c2abc344d8ddb10381d5d39e0329833d2d0bf27051620c051",
+    "stage_id": "/architectures"
+  },
+  "source_validation": {
+    "receipt_id": "asb-receipt-art-s3-1c9951914ab6",
+    "receipt_schema": "ev4-architect-stage-validation-receipt@1.0.0",
+    "status": "valid",
+    "validator_id": "architect-pipeline-stage-boundary-validator",
+    "validator_version": "1.0.0"
+  }
+}

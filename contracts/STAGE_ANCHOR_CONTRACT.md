@@ -254,7 +254,7 @@ A valid anchor passes if:
 
 ## Receipt-Bound Stage Anchor v1.2.0
 
-New Stage 2-5 outputs after activation use `ev4-stage-anchor@1.2.0` when they claim a validated next-stage boundary. Historical `ev4-stage-anchor@1.1.0` records remain readable as historical evidence only and are not silently upgraded.
+New Stage 2-5 outputs after activation use `ev4-stage-anchor@1.2.0` when they claim a validated next-stage boundary. The v1.2.0 anchor is a separate handoff artifact produced after Stage Artifact validation; it is not embedded inside the Stage Artifact bytes whose SHA-256 appears in the validation receipt. Historical `ev4-stage-anchor@1.1.0` records remain readable as historical evidence only and are not silently upgraded.
 
 Required binding:
 
@@ -272,4 +272,13 @@ source_validation:
   status:
 ```
 
-Rules: a `NEXT STAGE ANCHOR` may be emitted only when the machine-generated receipt status is `valid`; `invalid` or `insufficient_evidence` emits a `REPAIR ANCHOR`; the next stage verifies expected previous stage, artifact ID, schema, exact SHA-256, receipt status, and validator identity/version. A self-authored `gate_results: pass` is not a receipt. Changed artifact bytes invalidate the prior receipt and downstream Anchor. Do not claim chat runtime validation unless the validator actually executed.
+Rules: a `NEXT STAGE ANCHOR` may be emitted only when the machine-generated receipt status is `valid`; `invalid` or `insufficient_evidence` emits a `REPAIR ANCHOR`; the next stage verifies expected previous stage, artifact ID, schema, exact SHA-256, receipt ID, receipt schema, receipt status, and validator identity/version. A self-authored `gate_results: pass` is not a receipt. Changed artifact bytes invalidate the prior receipt and downstream Anchor. Do not claim chat runtime validation unless the validator actually executed.
+
+Canonical validation command for a separate anchor:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py \
+  --anchor path/to/stage.anchor.json \
+  --anchor-source-artifact path/to/stage.json \
+  --anchor-source-receipt path/to/stage.receipt.json
+```

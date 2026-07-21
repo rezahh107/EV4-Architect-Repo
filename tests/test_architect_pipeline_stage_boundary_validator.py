@@ -104,24 +104,6 @@ def test_lineage_mutations_fail_for_stage3_stage4_and_stage5_refs():
             assert f"ASB-LINEAGE-{field.upper().replace('_', '-')}-MISMATCH" in codes(result)
 
 
-def test_anchor_mutations_have_field_specific_diagnostics():
-    fields = {
-        "T27-anchor-source_artifact-artifact_id": "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-ID-MISMATCH",
-        "T27-anchor-source_artifact-artifact_schema": "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-SCHEMA-MISMATCH",
-        "T27-anchor-source_artifact-artifact_sha256": "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-SHA256-MISMATCH",
-        "T27-anchor-source_artifact-stage_id": "ASB-ANCHOR-SOURCE-ARTIFACT-STAGE-ID-MISMATCH",
-        "T27-anchor-source_validation-receipt_id": "ASB-ANCHOR-SOURCE-VALIDATION-RECEIPT-ID-MISMATCH",
-        "T27-anchor-source_validation-validator_version": "ASB-ANCHOR-SOURCE-VALIDATION-VALIDATOR-VERSION-MISMATCH",
-        "T27-anchor-source_validation-status": "ASB-ANCHOR-SOURCE-VALIDATION-STATUS-MISMATCH",
-    }
-    validator = asb.Validator(ROOT)
-    for case_id, code in fields.items():
-        artifact = next((ROOT / "fixtures/architect-pipeline-stage-boundary/invalid" / case_id).glob("*.json"))
-        result = validator.validate_path(artifact)
-        assert result["status"] == "invalid"
-        assert code in codes(result)
-
-
 def test_anchor_schema_constrained_validation_fields_fail_schema_validation():
     validator = asb.Validator(ROOT)
     for case_id in ["T27-anchor-source_validation-receipt_schema", "T27-anchor-source_validation-validator_id"]:
@@ -133,7 +115,7 @@ def test_anchor_schema_constrained_validation_fields_fail_schema_validation():
 
 def test_anchor_and_stage5_fail_closed():
     validator = asb.Validator(ROOT)
-    for case_id, code in {"T14": "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-SHA256-MISMATCH", "T15": "ASB-ANCHOR-VALID-RECEIPT-REQUIRED", "T17": "ASB-STAGE5-MISSING-VALID-STAGE4"}.items():
+    for case_id, code in {"T14": "SCHEMA_VALIDATION_FAILED", "T15": "SCHEMA_VALIDATION_FAILED", "T17": "ASB-STAGE5-MISSING-VALID-STAGE4"}.items():
         artifact = next((ROOT / "fixtures/architect-pipeline-stage-boundary/invalid" / case_id).glob("*.json"))
         result = validator.validate_path(artifact)
         assert result["status"] == "invalid"
@@ -160,6 +142,127 @@ def test_receipt_digest_changes_with_exact_bytes_and_cli_writes_receipt(tmp_path
     completed = run("--artifact", str(first_artifact), "--write-receipt", str(output))
     assert completed.returncode == 0
     assert json.loads(output.read_text())["status"] == "valid"
+
+
+def test_valid_receipt_bound_anchor_standalone_path_and_field_mutations(tmp_path):
+    fixture = ROOT / "fixtures/architect-pipeline-stage-boundary/valid/complete-sequence-receipts-anchors"
+    artifact = fixture / "architectures.json"
+    receipt = fixture / "architectures.receipt.json"
+    anchor = fixture / "architectures.anchor.json"
+    valid = run("--anchor", str(anchor), "--anchor-source-artifact", str(artifact), "--anchor-source-receipt", str(receipt), "--format", "json")
+    assert valid.returncode == 0
+    assert json.loads(valid.stdout)["status"] == "valid"
+
+    mutations = {
+        ("source_artifact", "artifact_id"): "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-ID-MISMATCH",
+        ("source_artifact", "artifact_schema"): "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-SCHEMA-MISMATCH",
+        ("source_artifact", "artifact_sha256"): "ASB-ANCHOR-SOURCE-ARTIFACT-ARTIFACT-SHA256-MISMATCH",
+        ("source_artifact", "stage_id"): "ASB-ANCHOR-SOURCE-ARTIFACT-STAGE-ID-MISMATCH",
+        ("source_validation", "receipt_id"): "ASB-ANCHOR-SOURCE-VALIDATION-RECEIPT-ID-MISMATCH",
+        ("source_validation", "receipt_schema"): "ASB-ANCHOR-SOURCE-VALIDATION-RECEIPT-SCHEMA-MISMATCH",
+        ("source_validation", "validator_id"): "ASB-ANCHOR-SOURCE-VALIDATION-VALIDATOR-ID-MISMATCH",
+        ("source_validation", "validator_version"): "ASB-ANCHOR-SOURCE-VALIDATION-VALIDATOR-VERSION-MISMATCH",
+        ("source_validation", "status"): "ASB-ANCHOR-SOURCE-VALIDATION-STATUS-MISMATCH",
+    }
+    for (section, field), code in mutations.items():
+        payload = json.loads(anchor.read_text())
+        payload[section][field] = "0" * 64 if field == "artifact_sha256" else "mutated"
+        mutated = tmp_path / f"{section}-{field}.json"
+        mutated.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        result = run("--anchor", str(mutated), "--anchor-source-artifact", str(artifact), "--anchor-source-receipt", str(receipt), "--format", "json")
+        assert result.returncode == 1
+        assert code in codes(json.loads(result.stdout))
+
+
+def test_standalone_stage3_stage4_stage5_validation_with_upstream_receipts():
+    fixture = ROOT / "fixtures/architect-pipeline-stage-boundary/valid/complete-sequence-receipts-anchors"
+    stage3 = run(
+        "--artifact", str(fixture / "architectures.json"),
+        "--upstream-artifact", str(fixture / "decompose.json"),
+        "--upstream-receipt", str(fixture / "decompose.receipt.json"),
+        "--format", "json",
+    )
+    assert stage3.returncode == 0
+    assert json.loads(stage3.stdout)["status"] == "valid"
+    stage4 = run(
+        "--artifact", str(fixture / "score-evidence.json"),
+        "--upstream-artifact", str(fixture / "architectures.json"),
+        "--upstream-receipt", str(fixture / "architectures.receipt.json"),
+        "--format", "json",
+    )
+    assert stage4.returncode == 0
+    assert json.loads(stage4.stdout)["status"] == "valid"
+    stage5 = run(
+        "--artifact", str(fixture / "score-audit.json"),
+        "--upstream-artifact", str(fixture / "score-evidence.json"),
+        "--upstream-receipt", str(fixture / "score-evidence.receipt.json"),
+        "--format", "json",
+    )
+    assert stage5.returncode == 0
+    assert json.loads(stage5.stdout)["status"] == "valid"
+
+
+def test_standalone_validation_rejects_missing_stale_mismatched_or_fabricated_receipts(tmp_path):
+    fixture = ROOT / "fixtures/architect-pipeline-stage-boundary/valid/complete-sequence-receipts-anchors"
+    missing = run("--artifact", str(fixture / "architectures.json"), "--format", "json")
+    assert missing.returncode == 1
+    assert "ASB-UPSTREAM-VALIDATION-REQUIRED" in codes(json.loads(missing.stdout))
+
+    stale = json.loads((fixture / "decompose.receipt.json").read_text())
+    stale["artifact_sha256"] = "0" * 64
+    stale_path = tmp_path / "stale.receipt.json"
+    stale_path.write_text(json.dumps(stale, indent=2, sort_keys=True) + "\n")
+    result = run(
+        "--artifact", str(fixture / "architectures.json"),
+        "--upstream-artifact", str(fixture / "decompose.json"),
+        "--upstream-receipt", str(stale_path),
+        "--format", "json",
+    )
+    assert result.returncode == 1
+    assert "ASB-UPSTREAM-RECEIPT-ARTIFACT-SHA256-MISMATCH" in codes(json.loads(result.stdout))
+
+    fabricated = dict(stale)
+    fabricated.update({"artifact_sha256": stale["artifact_sha256"], "receipt_id": "fabricated", "status": "valid"})
+    fabricated_path = tmp_path / "fabricated.receipt.json"
+    fabricated_path.write_text(json.dumps(fabricated, indent=2, sort_keys=True) + "\n")
+    fabricated_result = run(
+        "--artifact", str(fixture / "architectures.json"),
+        "--upstream-artifact", str(fixture / "decompose.json"),
+        "--upstream-receipt", str(fabricated_path),
+        "--format", "json",
+    )
+    assert fabricated_result.returncode == 1
+    fabricated_codes = codes(json.loads(fabricated_result.stdout))
+    assert "ASB-UPSTREAM-RECEIPT-RECEIPT-ID-MISMATCH" in fabricated_codes
+    assert "ASB-UPSTREAM-RECEIPT-ARTIFACT-SHA256-MISMATCH" in fabricated_codes
+
+
+def test_empty_sequence_fails_closed_with_stable_diagnostic(tmp_path):
+    result = run("--sequence", str(tmp_path), "--format", "json")
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "invalid"
+    assert payload["diagnostics"][0]["code"] == "ASB-EMPTY-SEQUENCE"
+
+
+def test_sequence_writes_deterministic_receipts_and_separate_anchors(tmp_path):
+    sequence = ROOT / "fixtures/architect-pipeline-stage-boundary/valid/complete-sequence"
+    receipts = tmp_path / "receipts"
+    anchors = tmp_path / "anchors"
+    completed = run("--sequence", str(sequence), "--write-receipts", str(receipts), "--write-anchors", str(anchors), "--format", "json")
+    assert completed.returncode == 0
+    for prefix in ["decompose", "architectures", "score-evidence", "score-audit"]:
+        receipt = receipts / f"{prefix}.receipt.json"
+        anchor = anchors / f"{prefix}.anchor.json"
+        assert receipt.exists()
+        assert anchor.exists()
+        second_receipts = tmp_path / "receipts-second"
+        second_anchors = tmp_path / "anchors-second"
+    completed_second = run("--sequence", str(sequence), "--write-receipts", str(second_receipts), "--write-anchors", str(second_anchors), "--format", "json")
+    assert completed_second.returncode == 0
+    for prefix in ["decompose", "architectures", "score-evidence", "score-audit"]:
+        assert (receipts / f"{prefix}.receipt.json").read_text() == (second_receipts / f"{prefix}.receipt.json").read_text()
+        assert (anchors / f"{prefix}.anchor.json").read_text() == (second_anchors / f"{prefix}.anchor.json").read_text()
 
 
 def test_fixture_cli_and_json_sequence_output():

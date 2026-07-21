@@ -44,10 +44,49 @@ If the executable validator is available, write the canonical Artifact, execute 
 
 If execution is unavailable, do not claim machine validation, do not emit a validated `NEXT STAGE ANCHOR`, return `validation_required` or `insufficient_evidence`, provide the exact manual validator command, and preserve the Artifact for external validation.
 
+## Anchor hash scope
+
+`ev4-stage-anchor@1.2.0` is a separate handoff artifact produced after Stage Artifact validation. The Stage Artifact SHA-256 is calculated over the exact UTF-8 bytes of the Stage Artifact file only; the anchor is not embedded in that hashed file and is not part of the artifact digest scope. This avoids a circular design where a file would need to contain the SHA-256 or Receipt ID derived from its own complete bytes.
+
 ## Commands
 
+Single-stage validation without upstream lineage, valid for `/decompose`:
+
 ```bash
-python scripts/check-architect-pipeline-stage-boundary.py --artifact path/to/artifact.json --write-receipt path/to/receipt.json
-python scripts/check-architect-pipeline-stage-boundary.py --sequence path/to/sequence-directory --format json
+python scripts/check-architect-pipeline-stage-boundary.py --artifact path/to/decompose.json --write-receipt path/to/decompose.receipt.json
+```
+
+Standalone validation for Stages 3-5 requires explicit upstream artifact and receipt inputs:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py \
+  --artifact path/to/architectures.json \
+  --upstream-artifact path/to/decompose.json \
+  --upstream-receipt path/to/decompose.receipt.json \
+  --write-receipt path/to/architectures.receipt.json
+```
+
+Canonical sequence validation can deterministically write every generated receipt and separate receipt-bound anchor:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py \
+  --sequence path/to/sequence-directory \
+  --write-receipts path/to/receipts-directory \
+  --write-anchors path/to/anchors-directory \
+  --format json
+```
+
+Validate a separate anchor against authoritative generated evidence:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py \
+  --anchor path/to/architectures.anchor.json \
+  --anchor-source-artifact path/to/architectures.json \
+  --anchor-source-receipt path/to/architectures.receipt.json
+```
+
+Fixture-suite validation:
+
+```bash
 python scripts/check-architect-pipeline-stage-boundary.py --fixtures
 ```
