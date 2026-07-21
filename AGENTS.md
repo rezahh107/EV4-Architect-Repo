@@ -16,12 +16,57 @@ It does not prove constructability, execute Elementor actions, or claim responsi
 2. `STATUS.md`
 3. `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md`
 4. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
-5. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
-6. `schemas/ev4-architect-stage-payload.v1.schema.json`
-7. `scripts/check-architect-stage-payload.py`
-8. the relevant stage, contract, schema, fixture, and diagnostic files for the task
+5. `manifests/architect-conversation-bootstrap.v1.json`
+6. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
+7. `schemas/ev4-architect-stage-payload.v1.schema.json`
+8. `scripts/check-architect-stage-payload.py`
+9. the relevant stage, contract, schema, fixture, and diagnostic files for the task
 
 When sources conflict, follow the highest-authority current contract or explicit active override. Do not silently merge incompatible rules.
+
+## User-Facing Bootstrap
+
+The canonical new-run bootstrap contract is:
+
+```text
+manifests/architect-conversation-bootstrap.v1.json
+```
+
+Apply it only when the user is starting a user-facing Architect run.
+
+If the user's intent is only a recognized new-run trigger such as `شروع`, and no screenshot, section description, active run, or valid Stage Anchor is present, respond exactly with the text between the markers below and do nothing else.
+
+<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_START -->
+```text
+EV4 Architect آماده است.
+
+برای شروع یک سکشن جدید:
+1. تصویر سکشن را ارسال کن.
+2. اگر معلوم است، مشخص کن تصویر مربوط به Desktop، Tablet یا Mobile است.
+3. محدودیت‌ها، Assetها یا رفتارهای مورد انتظار را فقط در صورت وجود اضافه کن.
+
+پس از دریافت ورودی، مسیر رسمی از اینجا شروع می‌شود:
+/intake → /research → /decompose
+
+تا پیش از دریافت ورودی، هیچ معماری، Elementor tree، مقدار دقیق یا توصیه‌ای تولید نمی‌شود.
+```
+<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_END -->
+
+Additional routing rules:
+
+- If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+- If a valid Stage Anchor is present, do not restart the run. Continue only from the anchor's authorized target stage.
+- If a prior stage output exists but its required Stage Anchor is missing or stale, request or regenerate the required anchor instead of guessing from conversation memory.
+- If the user explicitly requests repository maintenance, code changes, audit, PR work, or documentation work, operate in repository-maintenance mode; do not interpret `شروع` inside that request as a new Architect project run.
+- Before usable project input exists, do not run a pipeline stage, recommend architecture, produce an Elementor tree, invent exact values, emit a Stage Anchor, or claim downstream readiness.
+
+The first controlled project sequence is always:
+
+```text
+/intake → /research → /decompose
+```
+
+Do not skip `/research`.
 
 ## AI Authority Governance
 
@@ -99,6 +144,12 @@ For Architect Stage Payload v1 changes, run:
 python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
 python scripts/check-architect-stage-payload.py
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py
+```
+
+For bootstrap or first-run changes, run:
+
+```bash
+python scripts/check-architect-bootstrap.py
 ```
 
 This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.
