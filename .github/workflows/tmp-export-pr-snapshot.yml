@@ -19,13 +19,15 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Assert Head and integrate required main
+      - name: Preserve workflow files and integrate required main
         shell: bash
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          cp .github/workflows/validate-architect-pipeline-stage-boundary.yml /tmp/validate-workflow.baseline.yml
+          cp .github/workflows/tmp-export-pr-snapshot.yml /tmp/apply-workflow.baseline.yml
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "a4b6a8c57d906c69b6f5b4bc79969ffcfbac701a"
           git config user.name "github-actions[bot]"
@@ -58,15 +60,6 @@ jobs:
           test "$(sha256sum /tmp/architect-repair.tar.xz | awk '{print $1}')" = "1de9cbe77e807d4125f1a39fe1004ba652dbb1e935b50e51507d7a95f3a69a55"
           tar -xJf /tmp/architect-repair.tar.xz -C .
           rm -f fixtures/architect-pipeline-stage-boundary/invalid/T23-stage-file-mismatch/architectures.json
-          rm -f .github/repair-payload.part00 \
-                .github/repair-payload.part01 \
-                .github/repair-payload.part02 \
-                .github/repair-payload.part02a \
-                .github/repair-payload.part02b \
-                .github/repair-payload.part03 \
-                .github/repair-payload.part04 \
-                .github/repair-payload.part05
-          rm -f .github/workflows/tmp-export-pr-snapshot.yml
 
       - name: Run bounded validation before publication
         shell: bash
@@ -85,11 +78,32 @@ jobs:
           python scripts/check-decision-escape-routes.py
           test -z "$(find . -type d \( -name __pycache__ -o -name .pytest_cache \) -print -quit)"
 
-      - name: Publish one integrated repair commit
+      - name: Prepare non-workflow repair commit
         shell: bash
         run: |
           set -euo pipefail
+          cp .github/workflows/validate-architect-pipeline-stage-boundary.yml /tmp/validate-architect-pipeline-stage-boundary.final.yml
+          cp /tmp/validate-workflow.baseline.yml .github/workflows/validate-architect-pipeline-stage-boundary.yml
+          cp /tmp/apply-workflow.baseline.yml .github/workflows/tmp-export-pr-snapshot.yml
+          rm -f .github/repair-payload.part00 \
+                .github/repair-payload.part01 \
+                .github/repair-payload.part02 \
+                .github/repair-payload.part02a \
+                .github/repair-payload.part02b \
+                .github/repair-payload.part03 \
+                .github/repair-payload.part04 \
+                .github/repair-payload.part05
           git add -A
           git status --short
+          git diff --cached --name-only | grep -v '^.github/workflows/' >/tmp/non-workflow-paths.txt
+          test "$(git diff --cached --name-only | grep -c '^.github/workflows/' || true)" = "0"
           git commit -m "fix: close Architect validation transaction findings [repair-applied]"
           git push origin HEAD:codex/fix-fail-late-stage-artifact-validation
+
+      - name: Upload final validation workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: architect-final-validation-workflow-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/validate-architect-pipeline-stage-boundary.final.yml
+          if-no-files-found: error
+          retention-days: 1
