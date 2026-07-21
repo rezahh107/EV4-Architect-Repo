@@ -1,9 +1,9 @@
 name: Apply bounded Architect repair
 
 on:
-  push:
+  pull_request:
     branches:
-      - codex/fix-fail-late-stage-artifact-validation
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,20 +11,21 @@ permissions:
 
 jobs:
   apply-bounded-repair:
-    if: ${{ !contains(github.event.head_commit.message, '[repair-applied]') }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check out exact triggering Head
+      - name: Check out exact PR Head
         uses: actions/checkout@v4
         with:
-          ref: codex/fix-fail-late-stage-artifact-validation
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Assert Head and integrate required main
         shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "a4b6a8c57d906c69b6f5b4bc79969ffcfbac701a"
           git config user.name "github-actions[bot]"
