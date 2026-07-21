@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - codex/fix-fail-late-stage-artifact-validation
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -16,7 +19,7 @@ jobs:
       - name: Check out exact commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - name: Prepare repository snapshot
         shell: bash
@@ -27,7 +30,7 @@ jobs:
       - name: Upload repository snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: ev4-architect-pr-snapshot-${{ github.sha }}
+          name: ev4-architect-pr-snapshot-${{ github.event.pull_request.head.sha || github.sha }}
           path: /tmp/ev4-architect-snapshot
           if-no-files-found: error
           include-hidden-files: true
