@@ -1,14 +1,15 @@
 {
   "final_project_gate_export_stage": "/project-gate-export",
   "intermediate_stage_artifact_boundary": {
-    "anchor_schema": "ev4-stage-anchor@1.2.0",
+    "anchor_schema": "ev4-stage-anchor@1.3.0",
     "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-    "authorization_source": "generated_validation_bundle_manifest",
-    "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-    "bundle_schema": "ev4-architect-validation-bundle@1.0.0",
+    "authorization_source": "independently_regenerated_validation_bundle",
+    "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+    "bundle_schema": "ev4-architect-validation-bundle@1.1.0",
     "canonical_command": "validate-run",
     "compatibility": "additive_nonbreaking_for_final_payload",
     "downstream_enforcement": "insufficient_evidence",
+    "failure_event_schema": "ev4-architect-validation-failure-event@1.0.0",
     "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
     "runtime_enforcement": "insufficient_evidence",
     "stage_ids": [
@@ -17,7 +18,8 @@
       "/score-evidence",
       "/score-audit"
     ],
-    "validator": "scripts/check-architect-pipeline-stage-boundary.py"
+    "validator": "scripts/check-architect-pipeline-stage-boundary.py",
+    "verification_command": "validate-bundle"
   },
   "legacy_compatibility_outputs": [
     {
