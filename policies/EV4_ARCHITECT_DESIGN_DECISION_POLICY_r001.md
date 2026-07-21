@@ -1,15 +1,17 @@
 # EV4 Architect Design Decision Policy
 
 **Policy ID:** `EV4-ARCHITECT-DESIGN-DECISION-POLICY-r001`  
-**Status:** `READY_FOR_TEMPORARY_ARCHITECT_USE`  
+**Status:** `MANUAL_SUPPLEMENTAL_REFERENCE_ONLY`  
 **Intended consumer:** EV4 Architect language-model sessions  
 **Repository role:** `architecture_decision_system`  
-**Operating mode:** Silent internal decision support inside the existing Architect pipeline  
-**Primary objective:** Improve the quality, completeness, evidence discipline, and professional detail of architecture decisions before Architect output is handed to Constructability Engineer review.
+**Operating mode:** Manual supplemental reference inside the existing Architect pipeline; not an activation or enforcement carrier  
+**Primary objective:** Help Architect interpret and document architecture decisions within existing authority, without activating new decision routes or replacing repository contracts, Kernel decisions, schemas, validators, or stage controls.
 
 **Authority note:** This policy is supplemental. Current repository instructions, active overrides, canonical contracts, schemas, validators, stage requirements, locked identities, and explicit user decisions remain higher authority.
 
 **Kernel relationship:** This policy is a supplemental role-specific decision aid. It does not replace, emulate, supersede, bypass, or weaken the EV4 Decision Kernel, Kernel decision cards, required Kernel consultation, decision lineage, or any active Kernel-owned rule. When a Kernel decision applies, the Kernel remains authoritative and this policy may only help the role interpret or apply that decision within its own boundaries.
+
+**Domain-artifact boundary:** EV4 Domain artifacts are optional external evidence. Use them only when the current task explicitly supplies an exact artifact identity, Domain ID, revision, stable reference or digest, and approval/validation context. When that identity is absent, treat Domain-specific evidence as `unavailable_or_unverified`, use this policy and repository-authoritative sources only, and do not search for, invent, select, or silently substitute external Domain files.
 
 ---
 
@@ -175,7 +177,7 @@ Use the strongest relevant facts available in this order:
 1. explicit current task-scoped user requirements;
 2. observable content, interaction, and design intent;
 3. exact target-project facts supplied in the session;
-4. applicable EV4 Domain guidance;
+4. exactly identified and explicitly supplied EV4 Domain guidance, when its revision and approval/validation context are available;
 5. official web, accessibility, platform, or Elementor documentation within its actual scope;
 6. established professional patterns;
 7. a bounded architecture assumption.
@@ -241,6 +243,27 @@ Distinguish among:
 One observation must not silently justify unrelated architecture parameters. For example, observing three columns does not by itself justify Grid, equal card heights, fixed widths, desktop-only ordering, or specific responsive behavior.
 
 When a consequential parameter lacks sufficient basis, either preserve it as an explicit bounded assumption or record it as an evidence gap for later review.
+
+
+### 4.2 External Domain-artifact input
+
+EV4 Domain artifacts are not repository-authoritative merely because a file name, heading, or attachment describes them as approved.
+
+Use a Domain artifact only when the current task supplies enough exact identity to distinguish it from stale, modified, or incompatible alternatives. At minimum, preserve the supplied:
+
+- Domain ID;
+- artifact/revision identity;
+- stable reference or digest when provided;
+- registry or approval context when provided;
+- compatibility scope when provided.
+
+If these facts are absent:
+
+- do not make Domain artifacts mandatory;
+- do not choose an external file from conversation history, repository search, or similarity of names;
+- mark Domain-specific evidence as `unavailable_or_unverified`;
+- continue with repository-authoritative contracts and this supplemental reference where possible;
+- preserve any decision that materially requires the missing Domain evidence as an explicit evidence gap.
 
 ---
 
@@ -327,13 +350,13 @@ When a consequential parameter lacks sufficient basis, either preserve it as an 
 
 ## 7. Core architecture decision policies
 
-## 7.1 `reference_interpretation_and_intent_extraction`
+### 7.1 `reference_interpretation_and_intent_extraction`
 
-### Trigger
+#### Trigger
 
 A screenshot, mockup, reference site, sketch, or written description is used to infer architecture.
 
-### Required context
+#### Required context
 
 - reference role: exact target, inspiration, partial reference, or evidence only;
 - viewport or state represented;
@@ -345,7 +368,7 @@ A screenshot, mockup, reference site, sketch, or written description is used to 
 - missing states;
 - target-project constraints.
 
-### Selection rules
+#### Selection rules
 
 Treat reference features as one of:
 
@@ -366,23 +389,23 @@ Do not infer:
 - semantic role from typography alone;
 - target-project capability from visible output.
 
-### Minimal question when necessary
+#### Minimal question when necessary
 
 > Is this reference an exact target, a visual direction, or only evidence for part of the section?
 
-### Architect output responsibility
+#### Architect output responsibility
 
 Record what is binding, what is inferred, what is assumed, and what remains unresolved.
 
 ---
 
-## 7.2 `candidate_generation_and_distinction`
+### 7.2 `candidate_generation_and_distinction`
 
-### Trigger
+#### Trigger
 
 The Architect must generate alternative architectures.
 
-### Candidate dimensions
+#### Candidate dimensions
 
 Candidates may differ by:
 
@@ -399,7 +422,7 @@ Candidates may differ by:
 - accessibility risk;
 - performance cost.
 
-### Eligibility rules
+#### Eligibility rules
 
 A candidate is eligible when:
 
@@ -411,7 +434,7 @@ A candidate is eligible when:
 - unresolved implementation questions can be isolated for CE;
 - complexity is proportionate to the goal.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 Reject a candidate when it:
 
@@ -426,13 +449,13 @@ Reject a candidate when it:
 
 ---
 
-## 7.3 `structural_architecture_selection`
+### 7.3 `structural_architecture_selection`
 
-### Trigger
+#### Trigger
 
 The approved architecture must define structural regions and parent-child relationships.
 
-### Candidate options
+#### Candidate options
 
 - existing/primary region;
 - normal-flow grouping;
@@ -444,7 +467,7 @@ The approved architecture must define structural regions and parent-child relati
 - positioned decorative/overlay layer;
 - verified specialized structural element.
 
-### Required context
+#### Required context
 
 - section responsibilities;
 - direct children;
@@ -458,15 +481,15 @@ The approved architecture must define structural regions and parent-child relati
 - containment and overlay needs;
 - reuse boundaries.
 
-### Existing region or normal flow
+#### Existing region or normal flow
 
 Prefer when ordinary document flow preserves the content relationship and another wrapper would not own a new responsibility.
 
-### Neutral Div
+#### Neutral Div
 
 Choose when a grouping or boundary is required but dedicated Flex/Grid behavior is not the architecture responsibility.
 
-### Flexbox
+#### Flexbox
 
 Choose when:
 
@@ -475,7 +498,7 @@ Choose when:
 - source order remains meaningful;
 - independent row-and-column tracks are not required.
 
-### Grid
+#### Grid
 
 Choose when:
 
@@ -484,11 +507,11 @@ Choose when:
 - repeated content needs two-dimensional control;
 - a one-axis model would require fragile width arithmetic or excess wrappers.
 
-### Nested combination
+#### Nested combination
 
 Choose only when each level owns a distinct responsibility.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - Grid selected only because columns are visible;
 - Flex selected only because items are horizontal;
@@ -497,53 +520,53 @@ Choose only when each level owns a distinct responsibility.
 - nesting used to compensate for unclear ownership;
 - source order sacrificed for visual convenience.
 
-### Architect output
+#### Architect output
 
 Define the approved tree and responsibility of each node. Do not claim exact Elementor controls are proven unless project evidence establishes them.
 
 ---
 
-## 7.4 `text_semantics_and_content_hierarchy`
+### 7.4 `text_semantics_and_content_hierarchy`
 
-### Trigger
+#### Trigger
 
 The architecture contains headings, body text, labels, navigation, actions, metadata, or decorative text.
 
-### Heading
+#### Heading
 
 Choose when text names a page, section, or subsection and participates in real hierarchy.
 
 Do not choose Heading only for size or weight.
 
-### Paragraph/body text
+#### Paragraph/body text
 
 Choose for prose, descriptions, explanatory content, and noninteractive copy.
 
-### Link
+#### Link
 
 Choose for navigation to a URL, route, anchor, resource, or location.
 
-### Button
+#### Button
 
 Choose for actions that change state, submit, open, close, reveal, filter, or trigger an operation.
 
-### Editable text
+#### Editable text
 
 Preserve meaningful copy as editable/searchable text. Do not flatten it into image or SVG when users need to read, search, translate, resize, or edit it.
 
-### Architect output
+#### Architect output
 
 Record semantic intent and hierarchy. Leave exact target-project element/control availability for CE evidence when version-sensitive.
 
 ---
 
-## 7.5 `media_role_and_representation_intent`
+### 7.5 `media_role_and_representation_intent`
 
-### Trigger
+#### Trigger
 
 A visual asset may be Image, Background, SVG, Icon, Video, Background Video, or decoration.
 
-### Image-content intent
+#### Image-content intent
 
 Choose when:
 
@@ -552,7 +575,7 @@ Choose when:
 - it may be linked, captioned, replaced, or data-bound;
 - it should participate in content flow.
 
-### Background/compositional intent
+#### Background/compositional intent
 
 Choose when:
 
@@ -562,21 +585,21 @@ Choose when:
 - crop, cover, and focal position are part of design intent;
 - no independent meaning is lost.
 
-### SVG intent
+#### SVG intent
 
 Choose for trusted vector assets, logos, custom shapes, or scalable illustrations when vector behavior matters.
 
-### Icon intent
+#### Icon intent
 
 Choose for simple symbolic glyphs when a dedicated icon representation is appropriate.
 
-### Video intent
+#### Video intent
 
 Use content video when controls, captions, transcript, poster, or independent meaning matter.
 
 Use background video only for nonessential atmosphere with a static/reduced-motion fallback requirement.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - meaningful image hidden as Background;
 - decorative image exposed as redundant content;
@@ -585,28 +608,28 @@ Use background video only for nonessential atmosphere with a static/reduced-moti
 - essential meaning carried only by decorative motion;
 - crop intent inferred without focal evidence.
 
-### Architect output
+#### Architect output
 
 State media role, semantic expectation, crop/overlay intent, and unresolved asset or capability evidence for CE.
 
 ---
 
-## 7.6 `interaction_pattern_selection`
+### 7.6 `interaction_pattern_selection`
 
-### Trigger
+#### Trigger
 
 The design requires action, navigation, selection, disclosure, or a large click target.
 
-### Button versus Link
+#### Button versus Link
 
 - Button performs an action.
 - Link navigates.
 
-### Clickable Container
+#### Clickable Container
 
 Choose only when the whole region has one unambiguous target and will not contain conflicting interactive descendants.
 
-### Tabs
+#### Tabs
 
 Choose when:
 
@@ -616,7 +639,7 @@ Choose when:
 - labels are short and stable;
 - correct semantics and keyboard behavior are expected downstream.
 
-### Accordion
+#### Accordion
 
 Choose when:
 
@@ -626,11 +649,11 @@ Choose when:
 - hidden content remains discoverable;
 - keyboard-operable disclosure behavior is expected.
 
-### Visible sections
+#### Visible sections
 
 Prefer when users need simultaneous comparison or disclosure adds no clear value.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - Tabs used for sequential steps;
 - Tabs used only to shorten a page;
@@ -639,19 +662,19 @@ Prefer when users need simultaneous comparison or disclosure adds no clear value
 - interaction inferred from visual appearance alone;
 - critical information hidden by default.
 
-### Architect output
+#### Architect output
 
 Define interaction responsibility, expected states, semantic pattern, and any CE evidence required for target-project support.
 
 ---
 
-## 7.7 `sizing_behavior_intent`
+### 7.7 `sizing_behavior_intent`
 
-### Trigger
+#### Trigger
 
 Architecture depends on dimension behavior.
 
-### Candidate behaviors
+#### Candidate behaviors
 
 - intrinsic/content-driven;
 - fill available space;
@@ -664,7 +687,7 @@ Architecture depends on dimension behavior.
 - intrinsic with min/max protection;
 - aspect-ratio-driven.
 
-### Selection rules
+#### Selection rules
 
 - Prefer intrinsic/content-driven behavior for variable meaningful content.
 - Choose fill when the region should occupy available parent or track space.
@@ -673,11 +696,11 @@ Architecture depends on dimension behavior.
 - Choose viewport-relative only when composition genuinely follows the viewport.
 - Prefer bounded-fluid when continuous adaptation is desired within meaningful limits.
 
-### Architect boundary
+#### Architect boundary
 
 Architect defines the behavior model and intended bounds. Exact units and values may be preserved as observed design evidence or explicit user requirements, but they must not be represented as proven implementation values without sufficient basis.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - fixed behavior inferred from one screenshot;
 - fixed height for variable meaningful text;
@@ -687,9 +710,9 @@ Architect defines the behavior model and intended bounds. Exact units and values
 
 ---
 
-## 7.8 `spacing_and_separator_ownership`
+### 7.8 `spacing_and_separator_ownership`
 
-### Trigger
+#### Trigger
 
 The architecture needs spacing, visual separation, or a decorative line.
 
@@ -700,7 +723,7 @@ The architecture needs spacing, visual separation, or a decorative line.
 - Use Divider intent when the separator is an independent layout item.
 - Use decoration only when a distinct visual responsibility exists.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - wrapper created only for spacing;
 - Divider used where Border belongs to a boundary;
@@ -710,9 +733,9 @@ The architecture needs spacing, visual separation, or a decorative line.
 
 ---
 
-## 7.9 `positioning_and_layering_intent`
+### 7.9 `positioning_and_layering_intent`
 
-### Trigger
+#### Trigger
 
 The architecture includes overlays, anchored media, sticky/fixed regions, clipping, or stacking.
 
@@ -722,7 +745,7 @@ The architecture includes overlays, anchored media, sticky/fixed regions, clippi
 - Use sticky/fixed intent only when persistence is part of the experience and obstruction is addressed.
 - Define named layer responsibilities rather than arbitrary z-index numbers.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - positioning used to repair layout;
 - offsets copied from one screenshot;
@@ -733,9 +756,9 @@ The architecture includes overlays, anchored media, sticky/fixed regions, clippi
 
 ---
 
-## 7.10 `reuse_class_variable_component_intent`
+### 7.10 `reuse_class_variable_component_intent`
 
-### Trigger
+#### Trigger
 
 Architecture requires repeated styling, shared values, synchronized structure, or independent repeated instances.
 
@@ -745,7 +768,7 @@ Architecture requires repeated styling, shared values, synchronized structure, o
 - Use Component intent when multi-element structure and content relationships should stay synchronized.
 - Use independent repeated structure when instances share style but may diverge.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - Component selected only because cards look similar;
 - Class used as a substitute for synchronized structure;
@@ -753,19 +776,19 @@ Architecture requires repeated styling, shared values, synchronized structure, o
 - local values repeated when centralized governance is intended;
 - class names invented after lock or outside approved scope.
 
-### Architect output
+#### Architect output
 
 Define approved class names/scopes and reuse intent deterministically.
 
 ---
 
-## 7.11 `repeated_content_and_data_model_intent`
+### 7.11 `repeated_content_and_data_model_intent`
 
-### Trigger
+#### Trigger
 
 The design contains repeated cards, rows, items, testimonials, products, posts, or data-bound content.
 
-### Candidate models
+#### Candidate models
 
 - fixed independent items;
 - repeated manual items with shared styling;
@@ -774,7 +797,7 @@ The design contains repeated cards, rows, items, testimonials, products, posts, 
 - query/data-bound collection;
 - hybrid static and dynamic content.
 
-### Required context
+#### Required context
 
 - source of content;
 - expected item count;
@@ -788,7 +811,7 @@ The design contains repeated cards, rows, items, testimonials, products, posts, 
 - performance;
 - target-project capability evidence.
 
-### Disqualifying conditions
+#### Disqualifying conditions
 
 - Dynamic Loop inferred merely from visual repetition;
 - manual duplication chosen for genuinely scalable data-driven content;
@@ -796,19 +819,19 @@ The design contains repeated cards, rows, items, testimonials, products, posts, 
 - item template defined without empty/error states;
 - architecture claiming a data source not supplied.
 
-### Architect output
+#### Architect output
 
 Define intended content model and unresolved data/capability questions. Do not claim Dynamic Loop readiness without evidence.
 
 ---
 
-## 7.12 `responsive_direction_seed`
+### 7.12 `responsive_direction_seed`
 
-### Trigger
+#### Trigger
 
 The approved architecture must preserve intent across viewport and direction changes.
 
-### Architect responsibilities
+#### Architect responsibilities
 
 Define:
 
@@ -821,7 +844,7 @@ Define:
 - text expansion expectations;
 - likely discontinuities requiring CE/Responsive review.
 
-### Do not define as proven
+#### Do not define as proven
 
 Do not claim:
 
@@ -834,13 +857,13 @@ Do not claim:
 
 ---
 
-## 7.13 `candidate_scoring_and_selection`
+### 7.13 `candidate_scoring_and_selection`
 
-### Trigger
+#### Trigger
 
 Architecture candidates must be evaluated and one selected.
 
-### Required scoring dimensions
+#### Required scoring dimensions
 
 Use the repository’s current scoring contract and include materially applicable factors such as:
 
@@ -858,7 +881,7 @@ Use the repository’s current scoring contract and include materially applicabl
 - reversibility;
 - forbidden-work compliance.
 
-### Decision integrity
+#### Decision integrity
 
 Do not let one attractive strength dominate unrelated weaknesses.
 
@@ -869,19 +892,19 @@ Examples:
 - native-looking structure alone does not prove target-project availability;
 - responsive plausibility alone does not prove exact breakpoint feasibility.
 
-### Lock rule
+#### Lock rule
 
 After selection and required audit, preserve `selected_candidate_id` and selected-candidate lock exactly.
 
 ---
 
-## 7.14 `approved_architecture_and_ce_handoff`
+### 7.14 `approved_architecture_and_ce_handoff`
 
-### Trigger
+#### Trigger
 
 The Architect prepares the final architecture handoff.
 
-### Required content
+#### Required content
 
 Preserve, when applicable:
 
@@ -898,7 +921,7 @@ Preserve, when applicable:
 - source payload/evidence ledger;
 - explicit non-readiness assertions.
 
-### Handoff quality rules
+#### Handoff quality rules
 
 - Every potentially executable node must be reviewable by CE.
 - Every missing execution proof must be explicit.
@@ -911,7 +934,7 @@ Preserve, when applicable:
 
 ## 8. Cross-cutting architecture constraints
 
-## 8.1 Accessibility design constraints
+### 8.1 Accessibility design constraints
 
 When architecture affects semantics, focus order, interaction, text, media, target size, contrast, motion, or reflow:
 
@@ -926,7 +949,7 @@ When architecture affects semantics, focus order, interaction, text, media, targ
 - treat contrast targets as design constraints;
 - do not claim conformance from architecture intent alone.
 
-## 8.2 Performance design constraints
+### 8.2 Performance design constraints
 
 When architecture affects media, DOM depth, repeated content, loading, or interaction:
 
@@ -937,13 +960,13 @@ When architecture affects media, DOM depth, repeated content, loading, or intera
 - keep repeated-item strategy proportionate;
 - treat Core Web Vitals as downstream measured targets, not Architect-proven outcomes.
 
-## 8.3 Security-sensitive architecture
+### 8.3 Security-sensitive architecture
 
 Apply when architecture involves forms, uploads, external media, SVG, custom HTML/code, remote services, webhooks, sensitive data, or destructive actions.
 
 Architect may define required experience and boundaries, but must not assume safe implementation.
 
-## 8.4 Platform and capability uncertainty
+### 8.4 Platform and capability uncertainty
 
 Before architecture depends on a version-sensitive, Pro-only, experimental, prerelease, or project-enabled capability:
 
@@ -1029,12 +1052,19 @@ Do not produce:
 
 ## 11. Architect start-session instruction
 
-Attach this policy and the approved EV4 Domain artifacts alongside the repository’s normal instructions.
+This policy may be attached manually alongside the repository’s normal instructions. Attach EV4 Domain artifacts only when their exact identity and approval/validation context are explicitly supplied for the current task.
 
 ```text
-Use the attached EV4 Architect Design Decision Policy and EV4 Domain artifacts
-as silent mandatory architecture-quality guidance inside the existing Architect
-pipeline.
+Use the attached EV4 Architect Design Decision Policy as a manual supplemental
+reference inside the existing Architect pipeline. It does not activate a new
+decision route and does not override repository contracts, Stage Anchors, active
+overrides, or Kernel authority.
+
+Use any attached EV4 Domain artifact only when the current task supplies its
+exact identity, Domain ID, revision, stable reference or digest, and approval or
+validation context. Otherwise treat Domain-specific evidence as unavailable or
+unverified, do not invent or select an external artifact, and preserve any
+material dependency as an evidence gap.
 
 Before selecting an architecture, resolve the user goal, reference role,
 content semantics, interaction responsibilities, structural ownership, content
@@ -1115,7 +1145,7 @@ These remain explicit project facts or downstream proof responsibilities.
 ## 14. Final policy state
 
 ```text
-EV4_ARCHITECT_DESIGN_DECISION_POLICY_READY
+EV4_ARCHITECT_DESIGN_DECISION_POLICY_MANUAL_REFERENCE_ONLY
 ```
 
-This policy is intended for immediate temporary use as a role-specific Architect decision-quality aid. It strengthens architecture intelligence without converting Architect into CE, Builder, Responsive Architect, or production validator.
+This policy is intended for manual supplemental use as a role-specific Architect decision-quality reference. It strengthens architecture intelligence without converting Architect into CE, Builder, Responsive Architect, or production validator.
