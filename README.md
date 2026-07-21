@@ -17,6 +17,7 @@ Responsive validates post-build responsive behavior.
 
 Approved architecture is not automatically approved implementation strategy.
 
+<!-- EV4_ARCHITECT_README_QUICK_START_START -->
 ## Quick Start
 
 In a new user-facing Architect session with the repository instructions loaded, send:
@@ -31,7 +32,7 @@ If no screenshot, section description, active run, or valid Stage Anchor is pres
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-Then send the section screenshot and any known device context, assets, constraints, or required behavior. If `شروع` is sent together with usable section input, the assistant starts `/intake` directly and does not repeat questions already answered by that input.
+If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
 
 The controlled opening sequence is:
 
@@ -40,6 +41,7 @@ The controlled opening sequence is:
 ```
 
 See `release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md` for the operator prompts used after each stage.
+<!-- EV4_ARCHITECT_README_QUICK_START_END -->
 
 ## EV4 Project Gate Workflow
 
