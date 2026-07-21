@@ -8,6 +8,7 @@ on:
       - 'schemas/**'
       - 'fixtures/architect-pipeline-stage-boundary/**'
       - 'scripts/check-architect-pipeline-stage-boundary.py'
+      - 'scripts/architect_validation_*.py'
       - 'tests/test_architect_pipeline_stage_boundary_validator.py'
       - 'stages/02_DECOMPOSE.md'
       - 'stages/03_ARCHITECTURES.md'
@@ -20,54 +21,119 @@ on:
 permissions:
   contents: read
 
-
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Checkout exact pull request head
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-      - name: Assert exact pull request head
+
+      - name: Assert exact pull request head and clean checkout
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo 'repository_status_checkpoint=after_checkout'
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
-      - name: Install pinned validation dependencies
+
+      - name: Install pinned validation dependencies and check cleanliness
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0' 'PyYAML>=6.0.0'
-      - name: Compile stage boundary validator
-        run: PYTHONDONTWRITEBYTECODE=1 python -m py_compile scripts/check-architect-pipeline-stage-boundary.py
-      - name: Validate JSON schemas with Draft 2020-12
+          echo 'repository_status_checkpoint=after_install'
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+      - name: Compile outside repository and check cleanliness
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import py_compile
+          from pathlib import Path
+          paths = [Path('scripts/check-architect-pipeline-stage-boundary.py')]
+          paths.extend(sorted(Path('scripts').glob('architect_validation_*.py')))
+          for path in paths:
+              py_compile.compile(
+                  str(path),
+                  cfile=f'/tmp/{path.name}.pyc',
+                  doraise=True,
+              )
+          PY
+          echo 'repository_status_checkpoint=after_compile'
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+      - name: Validate current Schemas with Draft 2020-12
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           from jsonschema import Draft202012Validator
-          for schema_path in sorted(Path('schemas').glob('ev4-*v1.schema.json')):
-              schema = json.loads(schema_path.read_text())
+          names = [
+              'ev4-architect-pipeline-stage-artifact.v1.schema.json',
+              'ev4-architect-stage-validation-receipt.v1.schema.json',
+              'ev4-architect-validation-failure-event.v1.schema.json',
+              'ev4-stage-boundary-record.v1.schema.json',
+              'ev4-stage-anchor.v1.schema.json',
+              'ev4-architect-validation-bundle.v1.schema.json',
+          ]
+          for name in names:
+              schema = json.loads((Path('schemas') / name).read_text())
               Draft202012Validator.check_schema(schema)
           PY
-      - name: Run canonical validation bundle transaction twice
+
+      - name: Run deterministic success and failure Bundle transactions
         run: |
-          rm -rf /tmp/ev4-validation-bundle-1 /tmp/ev4-validation-bundle-2
-          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle-1 --format json
-          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle-2 --format json
-          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-validation-bundle-1 --format json
-          diff -ru /tmp/ev4-validation-bundle-1 /tmp/ev4-validation-bundle-2
-      - name: Validate Architect stage boundary fixtures
-        run: PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py --fixtures
-      - name: Run stage boundary regression tests
-        run: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_pipeline_stage_boundary_validator.py
-      - name: Run legacy compatibility tests
+          set -euo pipefail
+          rm -rf /tmp/ev4-valid-bundle-1 /tmp/ev4-valid-bundle-2 /tmp/ev4-failure-bundle-1 /tmp/ev4-failure-bundle-2
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-1 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-2 --format json
+          diff -ru /tmp/ev4-valid-bundle-1 /tmp/ev4-valid-bundle-2
+          python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-valid-bundle-1 --format json
+          set +e
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-1 --format json
+          failure_exit_1=$?
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-2 --format json
+          failure_exit_2=$?
+          set -e
+          test "$failure_exit_1" -eq 1
+          test "$failure_exit_2" -eq 1
+          diff -ru /tmp/ev4-failure-bundle-1 /tmp/ev4-failure-bundle-2
+          python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-failure-bundle-1 --format json
+          echo 'repository_status_checkpoint=after_bundle_tests'
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+      - name: Validate fixtures and focused regression tests
         run: |
-          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-stage-payload.py
-          PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_stage_payload_validator.py
-      - name: Fail on untracked generated output
+          set -euo pipefail
+          python scripts/check-architect-pipeline-stage-boundary.py --fixtures
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_pipeline_stage_boundary_validator.py
+          echo 'repository_status_checkpoint=after_pytest'
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+      - name: Run legacy payload and governance compatibility checks
         run: |
+          set -euo pipefail
+          python scripts/check-architect-stage-payload.py
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_stage_payload_validator.py
+          python scripts/check-decision-escape-routes.py
+
+      - name: Final repository cleanliness assertion
+        run: |
+          set -euo pipefail
+          echo 'repository_status_checkpoint=final'
           git status --porcelain
           test -z "$(git status --porcelain)"
