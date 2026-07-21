@@ -1,0 +1,17 @@
+{
+  "contract_id": "ev4-repository-repair-recommendation-handoff@1.0.0",
+  "allowed_repository_gap_states": [
+    "confirmed",
+    "probable"
+  ],
+  "allowed_repository_gap_classes": [
+    "repository_enforcement_gap",
+    "contract_ambiguity",
+    "validator_gap",
+    "missing_negative_regression",
+    "stage_boundary_escape_route",
+    "conflicting_authorities",
+    "fail_late_detection",
+    "repeatable_prompt_or_protocol_defect"
+  ]
+}

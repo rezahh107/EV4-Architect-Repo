@@ -1,7 +1,7 @@
 # Project Instructions — Active Overrides
 
 Status: active
-Version: 0.3.0
+Version: 0.4.0
 Applies to: current EV4 Architect Project Instructions until the master file is repackaged
 
 ---
@@ -73,6 +73,49 @@ The plan must identify:
 - stages that must be invalidated;
 - required Artifact and Bundle evidence;
 - whether user confirmation is required.
+
+---
+
+## Repository Repair Recommendation Sequence
+
+When a current Architect Run fails, preserve this order:
+
+```text
+detect Run defect
+→ stop normal progression
+→ diagnose and repair or stabilize the current Run
+→ validate the current Run repair when repair is possible
+→ classify repository recurrence risk from external evidence
+→ emit a separate Repository Repair Recommendation only when warranted
+→ continue only from the valid repaired Anchor
+```
+
+The full handoff contract is:
+
+```text
+contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+```
+
+A full standalone repository-maintenance prompt is allowed only when:
+
+```text
+current_run_status: repaired | blocked | terminal
+repository_gap_state: confirmed | probable
+repository_gap_class: one allowed closed class
+```
+
+For `possible`, state only that repository review may be useful; emit no full standalone maintenance prompt. For `insufficient_evidence` or `not_repository_related`, emit no handoff.
+
+The active Architect Run:
+
+- must not edit repository files from inside the active Architect Run;
+- must not create a repository branch, commit, push, PR, approval, Merge, deployment, or release;
+- must not treat every routine Run error as a repository defect;
+- must not treat the Architect diagnosis as proven without fresh live-repository review;
+- must not replace or alter the current Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage;
+- may continue only through the valid current-Run repair route.
+
+Ordinary isolated errors such as missing user input, temporary tool failure, a formatting error caught by an adequate existing validator, or an arithmetic error correctly rejected at its owning boundary do not trigger a repository-maintenance prompt.
 
 ---
 

@@ -1,0 +1,58 @@
+{
+  "cases": [
+    {
+      "case_id": "N01",
+      "repository_gap_state": "not_repository_related",
+      "repository_gap_class": null,
+      "ordinary_run_error": true,
+      "should_emit_handoff": false,
+      "allowed_message": "No full maintenance prompt is emitted. A brief repository review suggestion may be stated only for possible.",
+      "handoff": null
+    },
+    {
+      "case_id": "N02",
+      "repository_gap_state": "not_repository_related",
+      "repository_gap_class": null,
+      "ordinary_run_error": true,
+      "should_emit_handoff": false,
+      "allowed_message": "No full maintenance prompt is emitted. A brief repository review suggestion may be stated only for possible.",
+      "handoff": null
+    },
+    {
+      "case_id": "N03",
+      "repository_gap_state": "not_repository_related",
+      "repository_gap_class": null,
+      "ordinary_run_error": true,
+      "should_emit_handoff": false,
+      "allowed_message": "No full maintenance prompt is emitted. A brief repository review suggestion may be stated only for possible.",
+      "handoff": null
+    },
+    {
+      "case_id": "N04",
+      "repository_gap_state": "not_repository_related",
+      "repository_gap_class": null,
+      "ordinary_run_error": true,
+      "should_emit_handoff": false,
+      "allowed_message": "No full maintenance prompt is emitted. A brief repository review suggestion may be stated only for possible.",
+      "handoff": null
+    },
+    {
+      "case_id": "N05",
+      "repository_gap_state": "insufficient_evidence",
+      "repository_gap_class": null,
+      "ordinary_run_error": false,
+      "should_emit_handoff": false,
+      "allowed_message": "No full maintenance prompt is emitted. A brief repository review suggestion may be stated only for possible.",
+      "handoff": null
+    },
+    {
+      "case_id": "B03",
+      "repository_gap_state": "possible",
+      "repository_gap_class": "contract_ambiguity",
+      "ordinary_run_error": false,
+      "should_emit_handoff": false,
+      "allowed_message": "No full maintenance prompt is emitted. A brief repository review suggestion may be stated only for possible.",
+      "handoff": null
+    }
+  ]
+}

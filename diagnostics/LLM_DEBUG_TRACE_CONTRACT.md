@@ -1,8 +1,9 @@
 # LLM Debug Trace Contract — EV4 Architect
 
 Status: active
-Version: 1.0.0
+Version: 1.1.0
 Schema: ev4-debug-trace@1.0.0
+Optional extension: ev4-repository-repair-diagnostic-extension@1.0.0
 
 ## Purpose
 
@@ -70,6 +71,31 @@ In debug mode, each stage must include an `EV4_DEBUG_TRACE` block after its norm
   "handoff_payload_schema": null
 }
 ```
+
+## Repository Repair Diagnostic Extension
+
+When the Debug Agent classifies recurrence risk after the current Run repair route is determined, it may append this additive extension:
+
+```yaml
+incident_class: ordinary_run_error | repeatable_run_defect | unresolved_causality
+repository_gap_state: confirmed | probable | possible | insufficient_evidence | not_repository_related
+repository_gap_class: repository_enforcement_gap | contract_ambiguity | validator_gap | missing_negative_regression | stage_boundary_escape_route | conflicting_authorities | fail_late_detection | repeatable_prompt_or_protocol_defect | null
+repository_gap_evidence:
+  - evidence_ref:
+    evidence_summary:
+repository_repair_handoff_required: true | false
+repository_repair_handoff_reason:
+```
+
+Closed rules:
+
+- `repository_repair_handoff_required: true` is allowed only for `confirmed` or `probable` and an allowed non-null `repository_gap_class`.
+- `possible` may justify a brief repository-review suggestion but no full standalone maintenance prompt.
+- `insufficient_evidence` and `not_repository_related` require `repository_repair_handoff_required: false`.
+- An ordinary isolated Run error must not be reclassified as a repository defect without repeatability evidence.
+- Classification occurs only after the current Run is stable as repaired, blocked, or terminal.
+- The extension is external diagnostic evidence only. It does not authorize repository modification and does not replace the current Repair Anchor, Success Anchor, or Partial Rerun plan.
+- Full handoff semantics are owned by `contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md`.
 
 ## Decision Log
 
@@ -148,6 +174,8 @@ A debug agent should classify bad outputs using this taxonomy:
 | `bad_handoff` | Payload missing or wrong schema | Producing stage |
 | `naming_contract_missing` | Build tree cannot proceed safely | Stage 7 |
 
+The repository-gap classes above extend this existing taxonomy; they do not create a second failure taxonomy.
+
 ## Debug Agent Contract
 
 A model-language debugger may be added as a separate workflow.
@@ -157,8 +185,11 @@ The debugger must not solve the Elementor architecture task again. It must inspe
 1. Which stage first produced the defect?
 2. Which rule was missing, weak, or ignored?
 3. Which payload field failed?
-4. What minimal prompt/document patch would prevent recurrence?
-5. Which calibration case should be added?
+4. What minimal Run repair is required?
+5. Which regression test or calibration case is required?
+6. What is the earliest safe rerun stage?
+7. After the Run is stable, is repository recurrence evidence `confirmed`, `probable`, `possible`, `insufficient_evidence`, or `not_repository_related`?
+8. Is a separate Repository Repair Recommendation Handoff required?
 
 ## Forbidden Debug Behavior
 
@@ -169,7 +200,10 @@ The debugger must not:
 - re-score candidates unless asked to run Stage 4 repair;
 - recommend architecture directly;
 - bypass the existing repair route;
-- rewrite the whole system when a local patch is enough.
+- rewrite the whole system when a local patch is enough;
+- edit repository files inside the active Architect Run;
+- treat a repository-gap hypothesis as proven without fresh live-repository review;
+- emit a full repository-maintenance prompt for every routine Run error.
 
 ## Recommended Debug Output
 
@@ -178,11 +212,14 @@ EV4 DEBUG REPORT
 
 1. Failure Summary
 2. First Broken Stage
-3. Evidence Trail
-4. Rule or Schema Violation
-5. Minimal Repair Patch
-6. Regression Test / Calibration Case Needed
-7. Rerun From Stage
+3. First Detection Stage
+4. Evidence Trail
+5. Rule or Schema Violation
+6. Minimal Current-Run Repair
+7. Regression Test / Calibration Case Needed
+8. Rerun From Stage
+9. Repository Recurrence Classification
+10. Repository Repair Recommendation Handoff, if allowed
 ```
 
 ## Relation To Tracing Tools

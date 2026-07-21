@@ -6,12 +6,19 @@ on:
       - 'AGENTS.md'
       - 'README.md'
       - 'STATUS.md'
+      - '02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md'
+      - 'contracts/PARTIAL_RERUN_CONTRACT.md'
+      - 'contracts/STAGE_ANCHOR_CONTRACT.md'
+      - 'contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md'
+      - 'diagnostics/LLM_DEBUG_TRACE_CONTRACT.md'
+      - 'fixtures/repository-repair-recommendation-handoff/**'
       - 'manifests/architect-conversation-bootstrap.v1.json'
       - 'manifests/architect-pipeline-manifest.v1.json'
       - 'schemas/architect-conversation-bootstrap.v1.schema.json'
       - 'release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md'
       - 'scripts/check-architect-bootstrap.py'
       - 'tests/test_architect_bootstrap_semantics.py'
+      - 'tests/test_repository_repair_recommendation_handoff.py'
       - '.github/workflows/validate-architect-bootstrap.yml'
 
 permissions:
@@ -38,6 +45,8 @@ jobs:
         run: python scripts/check-architect-bootstrap.py
       - name: Run bootstrap mutation tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_bootstrap_semantics.py
+      - name: Run repository repair handoff tests
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_repository_repair_recommendation_handoff.py
       - name: Validate AI governance
         run: python scripts/check-ai-governance.py
       - name: Validate Architect Producer Gate adoption

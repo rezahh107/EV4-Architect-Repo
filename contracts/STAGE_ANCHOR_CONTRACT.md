@@ -70,6 +70,24 @@ stage_boundary:
 
 Receipt status belongs only under `gate_results`; it is not a confidence delta. Active states `carried`, `score_capped`, `blocking`, and `downstream_only` remain visible. A failed or later Stage cannot erase an active predecessor unknown merely by omitting it. Evidence-backed inactive states `resolved_with_evidence`, `not_applicable`, and `stale` remain represented in `confidence_delta` as resolved or inactive audit evidence, but they are excluded from `critical_unknowns` and `blocking_items`; absence from active lists is valid only after the Stage 3 lifecycle record passes Schema and semantic validation.
 
+## Repository Repair Recommendation reference
+
+A Repository Repair Recommendation is a separate user-facing diagnostic handoff governed by:
+
+```text
+contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+```
+
+It does not change Anchor authorization, the current repair target, or the earliest safe rerun stage. The Anchor must not embed the full standalone repository-maintenance prompt.
+
+When a separate handoff is emitted, an implementation may carry only a compact informational `audit_flags` entry:
+
+```text
+repository_repair_recommendation:<handoff_id>
+```
+
+This flag is optional, non-authorizing, and non-blocking. It must not be interpreted as proof of a repository defect, repository modification authority, technical approval, or Merge authorization. Current-Run continuation remains governed only by the independently verified Validation Bundle and its valid Anchor.
+
 ## Historical compatibility
 
 `ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` remain readable as historical evidence only. They cannot authorize current continuation and are never silently upgraded.

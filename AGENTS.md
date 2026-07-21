@@ -136,6 +136,28 @@ Do not:
 - copy Architect schemas into Project Gate as competing canonical contracts;
 - treat legacy builder-feed exports as the canonical Architect Stage Payload.
 
+## Repository Repair Recommendation Boundary
+
+When an Architect Run reaches a stable repaired, blocked, or terminal state and external evidence indicates a `confirmed` or `probable` repeatable repository gap, the Architect may emit the separate user-facing handoff defined in:
+
+```text
+contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+```
+
+The active Architect Run must not modify repository files or create a repository PR. It must not create a branch, commit, push, approve, merge, deploy, or enable auto-merge.
+
+A repository recommendation:
+
+- is not proof of a repository defect;
+- is not repository write authority;
+- is not a Stage Artifact, Stage Anchor, Receipt, Boundary, or Validation Bundle;
+- must require fresh live-repository verification in a separate maintenance session;
+- is emitted only after the current Run repair route is determined;
+- does not change the current Repair Anchor, Success Anchor, or earliest safe rerun stage;
+- must not be emitted for every routine Run error.
+
+For `possible`, `insufficient_evidence`, or `not_repository_related`, follow the closed behavior in the handoff contract.
+
 ## Change Rules
 
 For changes affecting downstream CE intake:
@@ -171,6 +193,13 @@ For bootstrap or first-run changes, run:
 python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
 python scripts/check-architect-bootstrap.py
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_bootstrap_semantics.py
+```
+
+For Repository Repair Recommendation Handoff changes, run:
+
+```bash
+python -m pip install 'pytest>=8.0.0'
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_repository_repair_recommendation_handoff.py
 ```
 
 This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.
