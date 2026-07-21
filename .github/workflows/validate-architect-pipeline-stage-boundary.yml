@@ -107,6 +107,9 @@ jobs:
           python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-2 --format json
           diff -ru /tmp/ev4-valid-bundle-1 /tmp/ev4-valid-bundle-2
           python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-valid-bundle-1 --format json
+          rm -rf /tmp/ev4-resolved-inactive-bundle
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/resolved-inactive-unknowns-sequence --output /tmp/ev4-resolved-inactive-bundle --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-resolved-inactive-bundle --format json
           set +e
           python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-1 --format json
           failure_exit_1=$?
@@ -117,6 +120,24 @@ jobs:
           test "$failure_exit_2" -eq 1
           diff -ru /tmp/ev4-failure-bundle-1 /tmp/ev4-failure-bundle-2
           python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-failure-bundle-1 --format json
+          for case in \
+            T19-missing-stage2 \
+            T20-missing-stage3 \
+            T21-missing-stage4 \
+            T22-duplicate-stage2 \
+            T23-stage-file-mismatch; do
+            structural_output="/tmp/ev4-${case}-must-not-exist"
+            rm -rf "$structural_output"
+            set +e
+            python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+              --sequence "fixtures/architect-pipeline-stage-boundary/invalid/${case}" \
+              --output "$structural_output" \
+              --format json
+            structural_exit=$?
+            set -e
+            test "$structural_exit" -eq 1
+            test ! -e "$structural_output"
+          done
           echo 'repository_status_checkpoint=after_bundle_tests'
           git status --porcelain
           test -z "$(git status --porcelain)"
