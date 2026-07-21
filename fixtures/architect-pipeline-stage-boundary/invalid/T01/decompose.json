@@ -1,7 +1,7 @@
 {
   "artifact_id": "art-s2",
   "artifact_revision": 1,
-  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
   "payload": {
     "allowed_next_stage": "/architectures",
     "gate_results": "pass",

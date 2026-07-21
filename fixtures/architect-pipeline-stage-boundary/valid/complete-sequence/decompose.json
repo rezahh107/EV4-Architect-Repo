@@ -25,7 +25,7 @@
     ],
     "unknowns": [
       {
-        "blocking": false,
+        "blocking": true,
         "description": "mobile connector",
         "evidence_state": "insufficient_evidence",
         "unknown_id": "U-1",

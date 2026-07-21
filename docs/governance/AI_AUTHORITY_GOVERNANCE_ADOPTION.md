@@ -150,7 +150,7 @@ If an executable validator/tool is available:
 - write the canonical Stage Artifact;
 - execute the official validator;
 - obtain the receipt;
-- emit the separate receipt-bound NEXT STAGE ANCHOR only after status=valid.
+- emit the separate Boundary-referenced NEXT_STAGE_ANCHOR only from a valid generated Validation Bundle.
 
 If execution is unavailable:
 - do not claim machine validation;
@@ -159,4 +159,4 @@ If execution is unavailable:
 - provide the exact manual validator command;
 - preserve the Artifact for external validation.
 
-Validation command: `python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json`. For Stage 3-5 standalone validation, provide explicit `--upstream-artifact` and `--upstream-receipt` inputs; for anchors, validate the separate anchor with `--anchor`, `--anchor-source-artifact`, and `--anchor-source-receipt`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.
+Canonical production authorization command: `python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json`. Caller-supplied Receipts, Boundary Records, Anchors, and Manifests are untrusted assertions; only a freshly generated and independently `validate-bundle`-verified Validation Bundle authorizes the next stage. Standalone `--artifact` and `--anchor` paths are diagnostic-only and report `authorization_valid: false`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced only after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.

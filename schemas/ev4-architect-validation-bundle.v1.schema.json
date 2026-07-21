@@ -1,1 +1,221 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"ev4-architect-validation-bundle@1.0.0","type":"object","additionalProperties":false,"required":["bundle_schema","bundle_id","run_id","validator_id","validator_version","determinism_profile","stage_sequence","overall_status","authorized_next_stage","repair_target_stage","stages","bundle_content_digest"],"properties":{"bundle_schema":{"const":"ev4-architect-validation-bundle@1.0.0"},"bundle_id":{"type":"string"},"run_id":{"type":"string"},"validator_id":{"type":"string"},"validator_version":{"type":"string"},"determinism_profile":{"type":"string"},"stage_sequence":{"type":"array","items":{"type":"string"}},"overall_status":{"enum":["valid","invalid","insufficient_evidence"]},"authorized_next_stage":{"type":["string","null"]},"repair_target_stage":{"type":["string","null"]},"stages":{"type":"array"},"bundle_content_digest":{"type":"string"}}}
+{
+  "$id": "ev4-architect-validation-bundle@1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "overall_status": {
+            "const": "valid"
+          }
+        },
+        "required": [
+          "overall_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "authorized_next_stage": {
+            "type": "string"
+          },
+          "repair_target_stage": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "stages"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "overall_status": {
+            "enum": [
+              "invalid",
+              "insufficient_evidence"
+            ]
+          }
+        },
+        "required": [
+          "overall_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "authorized_next_stage": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "authorized_next_stage": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "bundle_content_digest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "bundle_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "bundle_schema": {
+      "const": "ev4-architect-validation-bundle@1.0.0"
+    },
+    "determinism_profile": {
+      "const": "deterministic_no_timestamps_v1"
+    },
+    "overall_status": {
+      "enum": [
+        "valid",
+        "invalid",
+        "insufficient_evidence"
+      ]
+    },
+    "repair_target_stage": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "run_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "stage_sequence": {
+      "items": {
+        "enum": [
+          "/decompose",
+          "/architectures",
+          "/score-evidence",
+          "/score-audit"
+        ]
+      },
+      "type": "array"
+    },
+    "stages": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "anchor_path": {
+            "pattern": "^anchors/[^/]+\\.anchor\\.json$",
+            "type": "string"
+          },
+          "anchor_schema": {
+            "const": "ev4-stage-anchor@1.2.0"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "artifact_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "artifact_path": {
+            "pattern": "^artifacts/[^/]+\\.json$",
+            "type": "string"
+          },
+          "artifact_schema": {
+            "const": "ev4-architect-pipeline-stage-artifact@1.1.0"
+          },
+          "artifact_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "boundary_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "boundary_path": {
+            "pattern": "^boundaries/[^/]+\\.boundary\\.json$",
+            "type": "string"
+          },
+          "boundary_schema": {
+            "const": "ev4-stage-boundary-record@1.0.0"
+          },
+          "boundary_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "receipt_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "receipt_path": {
+            "pattern": "^receipts/[^/]+\\.receipt\\.json$",
+            "type": "string"
+          },
+          "receipt_schema": {
+            "const": "ev4-architect-stage-validation-receipt@1.1.0"
+          },
+          "receipt_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "stage_id": {
+            "enum": [
+              "/decompose",
+              "/architectures",
+              "/score-evidence",
+              "/score-audit"
+            ]
+          }
+        },
+        "required": [
+          "stage_id",
+          "artifact_path",
+          "artifact_id",
+          "artifact_schema",
+          "artifact_sha256",
+          "receipt_path",
+          "receipt_id",
+          "receipt_schema",
+          "receipt_sha256",
+          "boundary_path",
+          "boundary_id",
+          "boundary_schema",
+          "boundary_sha256",
+          "anchor_path",
+          "anchor_id",
+          "anchor_schema",
+          "anchor_sha256"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "validator_id": {
+      "const": "architect-pipeline-stage-boundary-validator"
+    },
+    "validator_version": {
+      "const": "1.1.0"
+    }
+  },
+  "required": [
+    "bundle_schema",
+    "bundle_id",
+    "run_id",
+    "validator_id",
+    "validator_version",
+    "determinism_profile",
+    "stage_sequence",
+    "overall_status",
+    "authorized_next_stage",
+    "repair_target_stage",
+    "stages",
+    "bundle_content_digest"
+  ],
+  "type": "object"
+}

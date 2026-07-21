@@ -1,22 +1,46 @@
 {
-  "anchor_id": "asb-anchor-run-asb-fixture-decompose-9e0704be27b5",
+  "anchor_id": "asb-anchor-run-asb-fixture-decompose-8139d62c9ee8",
   "anchor_schema": "ev4-stage-anchor@1.2.0",
   "anchor_type": "NEXT_STAGE_ANCHOR",
   "boundary_ref": {
-    "boundary_id": "asb-boundary-run-asb-fixture-decompose-0089ebdbe10a",
+    "boundary_id": "asb-boundary-run-asb-fixture-decompose-93950a7321f8",
     "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-    "boundary_sha256": "9e0704be27b55a1d2ecbee07898b68aa9cf6de87f24986f8e8bf9ed41f435ee4"
+    "boundary_sha256": "8139d62c9ee80f4e2c71ce36b16c9770e27d9dec908a2d47aef8ffdf743bf65e"
   },
   "handoff_state": {
     "audit_flags": [],
-    "blocking_items": [],
-    "confidence_delta": [],
-    "critical_unknowns": [],
+    "blocking_items": [
+      {
+        "description": "mobile connector",
+        "source_stage": "/decompose",
+        "state": "insufficient_evidence",
+        "unknown_id": "U-1"
+      }
+    ],
+    "confidence_delta": [
+      "receipt_status:valid"
+    ],
+    "critical_unknowns": [
+      {
+        "description": "mobile connector",
+        "source_stage": "/decompose",
+        "state": "insufficient_evidence",
+        "unknown_id": "U-1"
+      }
+    ],
     "gate_results": "machine_boundary_valid",
     "partial_rerun_state": {
-      "downstream_payloads_dependent_on_this_stage": [],
+      "downstream_payloads_dependent_on_this_stage": [
+        "/architectures",
+        "/score-evidence",
+        "/score-audit"
+      ],
       "earliest_safe_rerun_stage": "/decompose",
-      "invalidation_triggers": [],
+      "invalidation_triggers": [
+        "artifact_bytes_change",
+        "schema_version_change",
+        "validator_version_change"
+      ],
       "reusable_until": null
     },
     "required_user_confirmations": [],
@@ -25,7 +49,8 @@
         "continue_to:/architectures"
       ],
       "forbidden_work": [
-        "do_not_treat_anchor_as_machine_authorization"
+        "do_not_treat_anchor_as_machine_authorization",
+        "do_not_reconstruct_missing_upstream_artifacts"
       ],
       "stop_conditions": []
     }

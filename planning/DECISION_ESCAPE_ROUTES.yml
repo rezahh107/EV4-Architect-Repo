@@ -317,8 +317,8 @@ records:
         This escape route governs intermediate stage-boundary evidence control and does not introduce or complete an EV4-Decision-Kernel decision family.
     rule_shape:
       trigger: A Stage 2-5 intermediate Architect artifact is emitted or accepted as input to the next stage.
-      predicate: The artifact must validate against the canonical intermediate stage schema and semantic validator, carry exact upstream receipt lineage, and reject downstream reconstruction of missing required artifacts.
-      enforcement: Additive Stage Artifact schema, validation receipt schema, semantic validator, positive and negative fixtures, targeted pytest, and exact-head CI workflow are introduced for this bounded stage sequence.
+      predicate: The exact stage-artifact byte chain must validate through the canonical validate-run transaction, generate receipts, boundary records, anchors, and a validation-bundle manifest, and reject downstream reconstruction or caller-supplied receipt/anchor authority.
+      enforcement: Additive Stage Artifact, Receipt, Machine Boundary Record, User Handoff Anchor, Validation Bundle schemas, semantic validator, positive/negative fixtures, targeted pytest, and exact-head CI workflow are introduced for this bounded stage sequence.
     carriers:
       prose_source: contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md
       schema_carrier: schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json
@@ -326,7 +326,7 @@ records:
       valid_fixture: fixtures/architect-pipeline-stage-boundary/valid/complete-sequence
       invalid_fixture: fixtures/architect-pipeline-stage-boundary/invalid/incident-fail-late
       validator_diagnostic: ASB-UPSTREAM-VALIDATION-REQUIRED
-      test_command: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_pipeline_stage_boundary_validator.py
+      test_command: python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json && python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-validation-bundle --format json && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_pipeline_stage_boundary_validator.py
       CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Validate Architect stage boundary fixtures
       sequence_CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Run stage boundary regression tests
       runtime_monitor: null
@@ -336,4 +336,4 @@ records:
       enforcement_status: fixture_tested
       evidence_state: proposed
     notes: >-
-      This record is an additive cross-turn sequence-integrity repair; exact-head CI workflow execution remains pending evidence. Runtime, downstream, Project Gate, Builder, Responsive, OS/harness, release, and production enforcement remain insufficient_evidence unless separately implemented and validated. It must not be marked resolved from prose-only evidence or single-artifact validation.
+      This record is an additive cross-turn sequence-integrity repair whose current authorization source is the generated Validation Bundle; exact-head CI workflow execution remains pending evidence unless a workflow run is observed on the current head. Runtime, downstream, Project Gate, Builder, Responsive, OS/harness, release, and production enforcement remain insufficient_evidence unless separately implemented and validated. It must not be marked resolved from prose-only evidence or single-artifact validation.

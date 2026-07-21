@@ -2,18 +2,18 @@
   "artifact": {
     "artifact_id": "art-s5",
     "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-    "artifact_sha256": "8bd16f83b348f5b61acaacab0efd0a77dcc484976608014f2eab2ba54c8f2fb6"
+    "artifact_sha256": "784ec203c539057c742e1e91156ccae0b2a73f52a1be500c1088a5ecaea36dbc"
   },
   "authorization": {
     "authorization_reason": "generated_valid_receipt",
     "next_stage_authorized": true
   },
-  "boundary_id": "asb-boundary-run-asb-fixture-score-audit-8bd16f83b348",
+  "boundary_id": "asb-boundary-run-asb-fixture-score-audit-784ec203c539",
   "boundary_schema": "ev4-stage-boundary-record@1.0.0",
   "receipt": {
-    "receipt_id": "asb-receipt-run-asb-fixture-art-s5-8bd16f83b348",
+    "receipt_id": "asb-receipt-run-asb-fixture-art-s5-784ec203c539",
     "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-    "receipt_sha256": "d8c029182dd15ae506f301b110ce50f6c1f2b07c3e0d8161d5d9c6c3eb36f8f9",
+    "receipt_sha256": "dc614582b3712f3d08e866b9a3998d5c00f34b03e046cf4903445fcc0b3b6b08",
     "status": "valid",
     "validator_id": "architect-pipeline-stage-boundary-validator",
     "validator_version": "1.1.0"

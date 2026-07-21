@@ -1,22 +1,28 @@
 {
-  "anchor_id": "asb-anchor-run-asb-fixture-score-audit-59c5dd4421d5",
+  "anchor_id": "asb-anchor-run-asb-fixture-score-audit-58ce424ab422",
   "anchor_schema": "ev4-stage-anchor@1.2.0",
   "anchor_type": "NEXT_STAGE_ANCHOR",
   "boundary_ref": {
-    "boundary_id": "asb-boundary-run-asb-fixture-score-audit-8bd16f83b348",
+    "boundary_id": "asb-boundary-run-asb-fixture-score-audit-784ec203c539",
     "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-    "boundary_sha256": "59c5dd4421d56b54d46e784c725f95665a8dd59665b9b4b0aa41d8d166021085"
+    "boundary_sha256": "58ce424ab422219512bd66c96fcce9f1dde9ae8c8b00ab0666c885f32571fd93"
   },
   "handoff_state": {
     "audit_flags": [],
     "blocking_items": [],
-    "confidence_delta": [],
+    "confidence_delta": [
+      "receipt_status:valid"
+    ],
     "critical_unknowns": [],
     "gate_results": "machine_boundary_valid",
     "partial_rerun_state": {
       "downstream_payloads_dependent_on_this_stage": [],
       "earliest_safe_rerun_stage": "/score-audit",
-      "invalidation_triggers": [],
+      "invalidation_triggers": [
+        "artifact_bytes_change",
+        "schema_version_change",
+        "validator_version_change"
+      ],
       "reusable_until": null
     },
     "required_user_confirmations": [],
@@ -25,7 +31,8 @@
         "continue_to:/recommend"
       ],
       "forbidden_work": [
-        "do_not_treat_anchor_as_machine_authorization"
+        "do_not_treat_anchor_as_machine_authorization",
+        "do_not_reconstruct_missing_upstream_artifacts"
       ],
       "stop_conditions": []
     }

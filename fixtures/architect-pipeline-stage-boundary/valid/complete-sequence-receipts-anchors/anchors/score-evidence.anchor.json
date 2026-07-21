@@ -1,22 +1,36 @@
 {
-  "anchor_id": "asb-anchor-run-asb-fixture-score-evidence-c66e58ffa68c",
+  "anchor_id": "asb-anchor-run-asb-fixture-score-evidence-87c4216346db",
   "anchor_schema": "ev4-stage-anchor@1.2.0",
   "anchor_type": "NEXT_STAGE_ANCHOR",
   "boundary_ref": {
-    "boundary_id": "asb-boundary-run-asb-fixture-score-evidence-2266f5c7db59",
+    "boundary_id": "asb-boundary-run-asb-fixture-score-evidence-783fb460a7a9",
     "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-    "boundary_sha256": "c66e58ffa68cd3742ac1354024ad37448038ff6488a227444f757df415d24851"
+    "boundary_sha256": "87c4216346dba59174df101d9fd4ed59f164fb51249a413e62024e8145ab53e8"
   },
   "handoff_state": {
     "audit_flags": [],
     "blocking_items": [],
-    "confidence_delta": [],
-    "critical_unknowns": [],
+    "confidence_delta": [
+      "receipt_status:valid"
+    ],
+    "critical_unknowns": [
+      {
+        "source_stage": "/score-evidence",
+        "state": "active",
+        "unknown_id": "U-1"
+      }
+    ],
     "gate_results": "machine_boundary_valid",
     "partial_rerun_state": {
-      "downstream_payloads_dependent_on_this_stage": [],
+      "downstream_payloads_dependent_on_this_stage": [
+        "/score-audit"
+      ],
       "earliest_safe_rerun_stage": "/score-evidence",
-      "invalidation_triggers": [],
+      "invalidation_triggers": [
+        "artifact_bytes_change",
+        "schema_version_change",
+        "validator_version_change"
+      ],
       "reusable_until": null
     },
     "required_user_confirmations": [],
@@ -25,7 +39,8 @@
         "continue_to:/score-audit"
       ],
       "forbidden_work": [
-        "do_not_treat_anchor_as_machine_authorization"
+        "do_not_treat_anchor_as_machine_authorization",
+        "do_not_reconstruct_missing_upstream_artifacts"
       ],
       "stop_conditions": []
     }

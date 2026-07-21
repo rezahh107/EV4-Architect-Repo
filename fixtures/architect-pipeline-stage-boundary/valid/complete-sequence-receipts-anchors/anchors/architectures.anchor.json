@@ -1,22 +1,51 @@
 {
-  "anchor_id": "asb-anchor-run-asb-fixture-architectures-073a64a01fc5",
+  "anchor_id": "asb-anchor-run-asb-fixture-architectures-39e8d720de7f",
   "anchor_schema": "ev4-stage-anchor@1.2.0",
   "anchor_type": "NEXT_STAGE_ANCHOR",
   "boundary_ref": {
-    "boundary_id": "asb-boundary-run-asb-fixture-architectures-28b4761cd147",
+    "boundary_id": "asb-boundary-run-asb-fixture-architectures-7b1b58d05819",
     "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-    "boundary_sha256": "073a64a01fc529171a4455e44144a1f0ee07a74e28d8d1853dd71d915c9561ac"
+    "boundary_sha256": "39e8d720de7f510858810b25cbb88cadeb51139eed57facdd26ce01e947bd96b"
   },
   "handoff_state": {
     "audit_flags": [],
-    "blocking_items": [],
-    "confidence_delta": [],
-    "critical_unknowns": [],
+    "blocking_items": [
+      {
+        "affected_candidates": [
+          "C-A01"
+        ],
+        "handling": "blocking",
+        "source_stage": "/architectures",
+        "state": "blocking",
+        "unknown_id": "U-1"
+      }
+    ],
+    "confidence_delta": [
+      "receipt_status:valid"
+    ],
+    "critical_unknowns": [
+      {
+        "affected_candidates": [
+          "C-A01"
+        ],
+        "handling": "blocking",
+        "source_stage": "/architectures",
+        "state": "blocking",
+        "unknown_id": "U-1"
+      }
+    ],
     "gate_results": "machine_boundary_valid",
     "partial_rerun_state": {
-      "downstream_payloads_dependent_on_this_stage": [],
+      "downstream_payloads_dependent_on_this_stage": [
+        "/score-evidence",
+        "/score-audit"
+      ],
       "earliest_safe_rerun_stage": "/architectures",
-      "invalidation_triggers": [],
+      "invalidation_triggers": [
+        "artifact_bytes_change",
+        "schema_version_change",
+        "validator_version_change"
+      ],
       "reusable_until": null
     },
     "required_user_confirmations": [],
@@ -25,7 +54,8 @@
         "continue_to:/score-evidence"
       ],
       "forbidden_work": [
-        "do_not_treat_anchor_as_machine_authorization"
+        "do_not_treat_anchor_as_machine_authorization",
+        "do_not_reconstruct_missing_upstream_artifacts"
       ],
       "stop_conditions": []
     }

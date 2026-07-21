@@ -252,7 +252,7 @@ A valid anchor passes if:
 - It does not introduce new claims not present in prior stage outputs.
 
 
-## Receipt-Bound Stage Anchor v1.2.0
+## Boundary-Referenced User Handoff Anchor v1.2.0
 
 New Stage 2-5 outputs after activation use `ev4-stage-anchor@1.2.0` when they claim a validated next-stage boundary. The v1.2.0 anchor is a separate handoff artifact produced after Stage Artifact validation; it is not embedded inside the Stage Artifact bytes whose SHA-256 appears in the validation receipt. Historical `ev4-stage-anchor@1.1.0` records remain readable as historical evidence only and are not silently upgraded.
 
@@ -277,8 +277,13 @@ Rules: a `NEXT STAGE ANCHOR` may be emitted only when the machine-generated rece
 Canonical validation command for a separate anchor:
 
 ```bash
-python scripts/check-architect-pipeline-stage-boundary.py \
-  --anchor path/to/stage.anchor.json \
-  --anchor-source-artifact path/to/stage.json \
-  --anchor-source-receipt path/to/stage.receipt.json
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence path/to/stage-artifacts \
+  --output path/to/validation-bundle \
+  --format json
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle path/to/validation-bundle \
+  --format json
 ```
+
+Standalone `--anchor` validation is retained only as diagnostic comparison and reports `authorization_valid: false`; a user-facing Anchor cannot independently authorize continuation.

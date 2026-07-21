@@ -20,6 +20,7 @@ on:
 permissions:
   contents: read
 
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -40,27 +41,33 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0' 'PyYAML>=6.0.0'
       - name: Compile stage boundary validator
-        run: python -m py_compile scripts/check-architect-pipeline-stage-boundary.py
-      - name: Validate JSON schemas
+        run: PYTHONDONTWRITEBYTECODE=1 python -m py_compile scripts/check-architect-pipeline-stage-boundary.py
+      - name: Validate JSON schemas with Draft 2020-12
         run: |
-          python -m json.tool schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json > /dev/null
-          python -m json.tool schemas/ev4-architect-stage-validation-receipt.v1.schema.json > /dev/null
-          python -m json.tool schemas/ev4-stage-boundary-record.v1.schema.json > /dev/null
-          python -m json.tool schemas/ev4-architect-validation-bundle.v1.schema.json > /dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+          for schema_path in sorted(Path('schemas').glob('ev4-*v1.schema.json')):
+              schema = json.loads(schema_path.read_text())
+              Draft202012Validator.check_schema(schema)
+          PY
       - name: Run canonical validation bundle transaction twice
         run: |
           rm -rf /tmp/ev4-validation-bundle-1 /tmp/ev4-validation-bundle-2
-          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle-1 --format json
-          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle-2 --format json
-          python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-validation-bundle-1 --format json
+          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle-1 --format json
+          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle-2 --format json
+          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-validation-bundle-1 --format json
           diff -ru /tmp/ev4-validation-bundle-1 /tmp/ev4-validation-bundle-2
       - name: Validate Architect stage boundary fixtures
-        run: python scripts/check-architect-pipeline-stage-boundary.py --fixtures
+        run: PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-pipeline-stage-boundary.py --fixtures
       - name: Run stage boundary regression tests
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_pipeline_stage_boundary_validator.py
+        run: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_pipeline_stage_boundary_validator.py
       - name: Run legacy compatibility tests
         run: |
-          python scripts/check-architect-stage-payload.py
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py
+          PYTHONDONTWRITEBYTECODE=1 python scripts/check-architect-stage-payload.py
+          PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_stage_payload_validator.py
       - name: Fail on untracked generated output
-        run: test -z "$(git status --porcelain)"
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"

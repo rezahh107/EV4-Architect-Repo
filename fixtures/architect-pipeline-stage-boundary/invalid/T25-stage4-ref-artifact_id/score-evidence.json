@@ -1,7 +1,7 @@
 {
   "artifact_id": "art-s4",
   "artifact_revision": 1,
-  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
   "payload": {
     "arithmetic_evidence": {},
     "audit_trail_payload": {},
@@ -32,12 +32,11 @@
     ],
     "validated_upstream_artifact_refs": [
       {
-        "artifact_id": "invalid",
-        "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
-        "artifact_sha256": "1c9951914ab6305c2abc344d8ddb10381d5d39e0329833d2d0bf27051620c051",
-        "source_stage": "/architectures",
-        "validation_receipt_id": "asb-receipt-art-s3-1c9951914ab6",
-        "validation_status": "valid"
+        "artifact_id": "mutated",
+        "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+        "artifact_sha256": "7b1b58d05819a26dd7715590078fed4445a3fbe21f8de254d848b808d35b000d",
+        "run_id": "run-asb-fixture",
+        "source_stage": "/architectures"
       }
     ]
   },
@@ -45,11 +44,10 @@
   "source_artifacts": [
     {
       "artifact_id": "art-s3",
-      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
-      "artifact_sha256": "1c9951914ab6305c2abc344d8ddb10381d5d39e0329833d2d0bf27051620c051",
-      "source_stage": "/architectures",
-      "validation_receipt_id": "asb-receipt-art-s3-1c9951914ab6",
-      "validation_status": "valid"
+      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "artifact_sha256": "7b1b58d05819a26dd7715590078fed4445a3fbe21f8de254d848b808d35b000d",
+      "run_id": "run-asb-fixture",
+      "source_stage": "/architectures"
     }
   ],
   "stage_id": "/score-evidence",
