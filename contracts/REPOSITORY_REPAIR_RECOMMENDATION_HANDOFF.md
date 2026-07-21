@@ -7,47 +7,78 @@ Compatibility: `additive_nonbreaking`
 
 ## Purpose
 
-This contract defines the bounded user-facing escalation used when an Architect run has reached a stable repaired, blocked, or terminal state and external evidence indicates a repeatable repository enforcement gap may have contributed to the incident.
-
-The handoff separates two authorities:
+This contract separates current Architect Run repair from repository root-cause repair.
 
 ```text
-Current Run Repair
-= allowed inside the active Architect conversation
-= governed by the current Repair Anchor, Success Anchor, Partial Rerun plan, and validated Run evidence
+Current Run repair
+= remains inside the active Architect conversation
+= follows the valid Repair/Success Anchor and Partial Rerun route
 
-Repository Root-Cause Repair
+Repository root-cause repair
 = separate repository-maintenance session
-= requires fresh live-repository inspection
-= may produce only a bounded Draft PR when Scope is independently validated
+= requires fresh live-repository verification
+= may produce at most one bounded Draft PR after Scope Gate authorization
 ```
 
-The active Architect run must not edit repository files, create a repository branch, commit, push, open a pull request, approve, merge, deploy, or enable auto-merge.
+A Repository Repair Recommendation is informational. It is not a Stage Artifact, Stage Anchor, Validation Bundle, repository-write authority, proof of a repository defect, technical approval, Merge authorization, deployment authorization, or runtime-enforcement claim.
 
-## Non-authority
+## Executable authority
 
-A Repository Repair Recommendation Handoff is not:
+The sole repository-side executable authority is:
 
-- a Stage Artifact;
-- a Stage Anchor;
-- a Validation Bundle, Receipt, Boundary, or machine-validation result;
-- repository modification authorization for the active Architect run;
-- proof that a repository defect exists;
-- proof that the proposed repair is correct;
-- technical approval;
-- a merge recommendation;
-- deployment or release authorization.
+```text
+scripts/repository_repair_handoff.py
+```
 
-The incident description is evidence to investigate, not an authoritative diagnosis.
+It owns:
 
-## Repository-gap classification
+```python
+validate_repository_repair_handoff_record(record)
+evaluate_repository_repair_handoff_eligibility(record)
+render_repository_maintenance_prompt(validated_record)
+validate_rendered_repository_maintenance_prompt(prompt)
+```
 
-A full handoff may be emitted only when both conditions are true:
+Prose, fixtures, tests, Debug Trace output, Project Instructions, and `AGENTS.md` must reference these functions. They must not define a competing eligibility predicate or maintain independent full prompt bodies.
 
-1. the current run is in a stable `repaired`, `blocked`, or `terminal` state; and
-2. `repository_gap_state` is `confirmed` or `probable` for an allowed repository-gap class.
+## Closed Run-state relationship
 
-Allowed classes:
+The validator owns this minimal relationship:
+
+| `current_run_status` | allowed `current_run_repair_status` | emission meaning |
+|---|---|---|
+| `in_progress` | `pending` | never eligible |
+| `repairing` | `pending` | never eligible |
+| `repaired` | `validated` | eligible only when the repository-gap predicate also passes |
+| `blocked` | `failed` | stable and eligible only when the repository-gap predicate also passes |
+| `terminal` | `not_applicable` | stable and eligible only when the repository-gap predicate also passes |
+
+All other combinations fail closed. A `repaired` Run with `pending` or `failed` repair status is not eligible.
+
+## Eligibility
+
+The evaluator returns a structured result:
+
+```text
+eligible
+not_eligible
+invalid_input
+```
+
+with a concise `reason_code`.
+
+A full handoff is eligible only when:
+
+```text
+current_run_status is stable and contract-valid
+repository_gap_state is confirmed or probable
+repository_gap_class is in the closed allowed class set
+ordinary_run_error is false
+```
+
+`possible` permits only a brief review suggestion. `insufficient_evidence` and `not_repository_related` emit no handoff. Missing fields, unknown decision-bearing values, contradictory Run/repair states, and pre-rendered prompt input fail closed.
+
+Allowed repository-gap classes are owned by the executable module:
 
 ```text
 repository_enforcement_gap
@@ -60,278 +91,114 @@ fail_late_detection
 repeatable_prompt_or_protocol_defect
 ```
 
-Evidence states:
+Ordinary isolated errors do not trigger a full handoff, including missing user input, temporary tool failure, a formatting error already rejected by an adequate validator, or an arithmetic error correctly rejected at its owning boundary.
+
+## Validated record
+
+The validator requires at least:
 
 ```text
-confirmed
-probable
-possible
-insufficient_evidence
-not_repository_related
+handoff_schema
+incident_id
+source_run_id
+current_run_status
+current_run_repair_status
+repository_gap_state
+repository_gap_class
+ordinary_run_error
+first_broken_stage
+first_detection_stage
+root_cause_summary
+repository_gap_hypothesis
+evidence_summary
+violated_or_weak_authorities
+recurrence_risk
+current_run_resume_stage
+repository_maintenance_scope
+forbidden_actions
 ```
 
-Trigger rule:
+Unknown factual repository details may remain `unknown` or visible placeholders. Decision-bearing states and classes are closed enums. The validator rejects an input field named `standalone_repair_prompt`; prompt bytes must come from the canonical renderer.
+
+Required forbidden actions include:
 
 ```text
-emit_full_handoff =
-  current_run_status in {repaired, blocked, terminal}
-  and repository_gap_state in {confirmed, probable}
-  and repository_gap_class in allowed_repository_gap_classes
+modify_repository_inside_active_architect_run
+merge
+approve
+deploy
+modify_repository_settings
 ```
 
-For `possible`, the Architect may state that repository review could be useful, but it must not emit the full standalone maintenance prompt. For `insufficient_evidence` or `not_repository_related`, no handoff is emitted.
+## Deterministic prompt rendering
 
-Do not emit a full handoff for ordinary isolated run errors such as:
+`render_repository_maintenance_prompt()` accepts only a validated eligible record. It is the sole executable source for emitted standalone prompt bodies.
+
+The canonical section order is:
 
 ```text
-user input missing
-temporary tool failure
-single arithmetic mistake already caught by existing controls
-model formatting error with an adequate existing validator
-unavailable external source
-one-off misunderstanding with no repeatability evidence
+[ROLE]
+[TARGET REPOSITORY]
+[OBSERVED INCIDENT]
+[CURRENT-RUN EVIDENCE]
+[SUSPECTED REPOSITORY GAP]
+[UNCERTAINTIES]
+[REQUIRED LIVE REPOSITORY REVIEW]
+[SOLUTION COMPARISON REQUIREMENT]
+[SELECTION CRITERIA]
+[BOUNDED IMPLEMENTATION AUTHORITY]
+[NON-GOALS]
+[VALIDATION REQUIREMENTS]
+[DRAFT PR REQUIREMENT]
+[INDEPENDENT REVIEW REQUIREMENT]
+[FINAL RESPONSE FORMAT]
+[STOP CONDITIONS]
 ```
 
-## Timing and run continuity
+Every prompt explicitly carries the incident and Run identities, Run repair state, broken and detection stages, repository-gap state/class/hypothesis, and current Run resume stage. It requires live repository revalidation, exact current Head verification, authority inspection, Scope Gate evaluation, credible option comparison, the smallest complete solution, at most one bounded Draft PR, and fresh independent exact-Head review.
 
-The handoff is evaluated only after the current run repair route is determined and the run has reached a stable repaired, blocked, or terminal state.
+Every prompt explicitly reports:
 
-- Downstream Run outputs remain invalid until the current Run repair is validated.
-- The repository handoff does not change the earliest safe rerun stage.
-- The repository handoff does not replace a Repair Anchor or Success Anchor.
-- A repaired and validated current Run may continue only from its valid repaired Stage Anchor.
-- A blocked Run remains blocked even when a repository handoff is emitted.
-- The recommendation itself is informational and must not independently block an otherwise valid current Run.
-
-## Semantic handoff fields
-
-The user-facing output may be Markdown, but these semantic fields must be explicit:
-
-```yaml
-handoff_schema: ev4-repository-repair-recommendation-handoff@1.0.0
-incident_id:
-source_run_id:
-current_run_status: repaired | blocked | terminal
-current_run_repair_status:
-repository_gap_state: confirmed | probable
-repository_gap_class:
-first_broken_stage:
-first_detection_stage:
-root_cause_summary:
-repository_gap_hypothesis:
-evidence_summary:
-violated_or_weak_authorities:
-recurrence_risk:
-current_run_resume_stage:
-repository_maintenance_scope:
-forbidden_actions:
-standalone_repair_prompt:
+```text
+merge_performed: false
+approval_performed: false
+deployment_performed: false
 ```
 
-Unknown values must remain `unknown` or visible placeholders. Do not invent repository names, commit SHAs, PR numbers, paths, Schema IDs, Validator IDs, Workflow names, test results, or evidence.
-
-## Incident evidence requirements
-
-The handoff must concisely preserve:
-
-- what failed;
-- what the model previously claimed;
-- what later contradicted the claim;
-- which Stage first owned the missing or invalid information;
-- where the defect was first detected;
-- which outputs became invalid;
-- how the current Run was repaired or why it remains blocked;
-- why recurrence is plausible;
-- which repository controls might be involved.
-
-Use external traces, Artifact identities, diagnostic codes, Stage IDs, contract references, Validator output, and concise evidence summaries. Do not include the full conversation transcript by default. Do not request or expose hidden chain-of-thought.
-
-## User-facing section
+## User-facing recommendation
 
 <!-- EV4_REPOSITORY_REPAIR_HANDOFF_USER_SECTION_START -->
 
 ```text
 ## پیشنهاد بررسی و اصلاح ریشه‌ای ریپو
 
-تعمیر اجرای جاری انجام شد یا به وضعیت پایدار رسیده است.
+تعمیر اجرای جاری انجام شده یا اجرای جاری به وضعیت پایدار رسیده است.
 
-بررسی خطا نشان می‌دهد این رخداد احتمالاً فقط یک اشتباه موردی در این گفتگو نبوده و ممکن است یک ضعف قابل‌تکرار در قراردادها، Gateها، Validatorها یا کنترل‌های ریپو نیز در ایجاد یا کشف دیرهنگام آن نقش داشته باشد.
+شواهد بیرونی نشان می‌دهد ممکن است یک ضعف قابل‌تکرار در قراردادها، Gateها، Validatorها یا کنترل‌های ریپو در رخداد یا کشف دیرهنگام خطا نقش داشته باشد.
 
-در این اجرای Architect، من مجاز نیستم از مسیر جاری خارج شوم یا فایل‌های ریپو را تغییر دهم.
-
-می‌توانید پرامپت مستقلی را که در ادامه آمده است در یک گفتگوی جدید به یک مدل دارای دسترسی GitHub یا محیط پیاده‌سازی بدهید.
-
-مدل نگهدارنده باید:
-
-- وضعیت زنده ریپو را مستقلاً بررسی کند؛
-- میان خطای اجرای جاری و نقص ساختاری ریپو تفکیک قائل شود؛
-- راه‌حل‌های ممکن را استخراج و مقایسه کند؛
-- متناسب‌ترین روش اصلاح را پیشنهاد دهد؛
-- و فقط در صورت احراز Scope، تغییر را در یک Draft PR محدود پیاده‌سازی کند.
-
-این پیشنهاد به معنی اثبات قطعی باگ ریپو، تأیید یک راه‌حل مشخص یا مجوز Merge نیست.
+این تشخیص قطعی نیست. اجرای فعال Architect مجاز به تغییر ریپو نیست. پرامپت مستقل repository-maintenance فقط از رکورد معتبر و توسط renderer رسمی تولید می‌شود و باید در یک گفتگوی جداگانه با بررسی زنده ریپو اجرا شود.
 ```
 
 <!-- EV4_REPOSITORY_REPAIR_HANDOFF_USER_SECTION_END -->
 
-The wording may be adapted for incident facts, but its authority boundary and uncertainty must remain explicit.
+## Run continuity
 
-## Standalone repository-maintenance prompt
+The recommendation does not replace or modify a Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage. A repaired Run continues only from its valid repaired Anchor. A blocked or terminal Run remains non-resumable even when a handoff is emitted.
 
-Every emitted full handoff must contain a self-contained prompt with all sections below. The maintenance model must be able to execute it without access to the active Architect conversation.
+The active Architect Run must not modify repository files, create a branch, commit, push, open or update a PR, approve, merge, deploy, release, enable auto-merge, or modify repository settings.
 
-<!-- EV4_REPOSITORY_REPAIR_HANDOFF_PROMPT_START -->
+## Fixtures and tests
 
-```text
-[ROLE]
-
-Act as the bounded repository-maintenance implementer and independent root-cause verifier for the target repository.
-
-[TARGET REPOSITORY]
-
-repository: [TARGET_REPOSITORY_OR_UNKNOWN]
-default_branch: [DEFAULT_BRANCH_OR_UNKNOWN]
-observed_revision: [OBSERVED_REVISION_OR_UNKNOWN]
-
-[OBSERVED INCIDENT]
-
-incident_id: [INCIDENT_ID]
-source_run_id: [SOURCE_RUN_ID]
-current_run_status: [REPAIRED_BLOCKED_OR_TERMINAL]
-first_broken_stage: [STAGE_ID_OR_UNKNOWN]
-first_detection_stage: [STAGE_ID_OR_UNKNOWN]
-
-Summarize what failed, what was previously claimed, and what later evidence contradicted that claim.
-
-[CURRENT-RUN EVIDENCE]
-
-Provide concise external evidence only:
-- Artifact, trace, diagnostic, Stage, contract, or Validator identities;
-- invalidated downstream outputs;
-- current Run repair result or blocking reason;
-- current Run resume Stage or `none`.
-
-Do not request hidden chain-of-thought and do not assume access to the original conversation.
-
-[SUSPECTED REPOSITORY GAP]
-
-repository_gap_state: [CONFIRMED_OR_PROBABLE]
-repository_gap_class: [ALLOWED_CLASS]
-repository_gap_hypothesis: [HYPOTHESIS]
-recurrence_risk: [RISK_SUMMARY]
-
-The incident description is evidence to investigate, not an authoritative diagnosis.
-The repository-maintenance model must verify or reject the hypothesis from live repository evidence.
-
-[UNCERTAINTIES]
-
-List every unknown repository identity, path, Schema, Validator, Workflow, test result, or causal claim as `unknown` or a visible placeholder. Do not invent missing evidence.
-
-[REQUIRED LIVE REPOSITORY REVIEW]
-
-Before modifying anything:
-1. revalidate the live default branch and exact current Head;
-2. inspect current `AGENTS.md`, `STATUS.md`, active overrides, governance files, contracts, schemas, validators, diagnostics, fixtures, tests, workflows, and open pull requests;
-3. inspect any newer repair-mode, diagnostic, partial-rerun, Stage Anchor, or overlapping patch;
-4. determine whether the incident is a run-only defect, documentation weakness, contract ambiguity, missing validator, missing sequence enforcement, missing negative regression, conflicting authorities, or another evidence-backed cause;
-5. stop if live authorities conflict or materially equivalent work already exists.
-
-[SOLUTION COMPARISON REQUIREMENT]
-
-Identify at least two materially different repair options when credible alternatives exist. Do not blindly implement the Architect Run hypothesis.
-
-[SELECTION CRITERIA]
-
-Compare credible options by:
-- effectiveness;
-- failure-detection timing;
-- determinism;
-- scope;
-- compatibility;
-- implementation cost;
-- maintenance burden;
-- AIGOV alignment;
-- overengineering risk.
-
-Select the smallest complete solution supported by live evidence.
-
-[BOUNDED IMPLEMENTATION AUTHORITY]
-
-Only after the Scope Gate is `authorized`, create a focused branch and implement the bounded repository repair. A Draft PR may be created only after Scope validation and relevant validation. Preserve existing roles, Stage IDs, contracts, historical evidence, and downstream boundaries.
-
-[NON-GOALS]
-
-Do not redesign the pipeline, create self-healing behavior, add automatic repository repair, add a repository-editing mode to the Architect Run, alter unrelated repositories, broadly refactor, change secrets or permissions, or claim repository-wide enforcement.
-
-[VALIDATION REQUIREMENTS]
-
-Run targeted tests for the selected cause, relevant regression tests, deterministic negative cases, `git diff --check`, and applicable Schema/YAML/JSON validation. Report exact commands and exact observed results. Do not claim runtime enforcement from prose, fixtures, or CI alone.
-
-[DRAFT PR REQUIREMENT]
-
-If implementation is authorized and validated, push one bounded branch and open one Draft PR. Never merge or approve. Do not enable auto-merge, deploy, release, or modify repository settings.
-
-[INDEPENDENT REVIEW REQUIREMENT]
-
-Request a fresh independent exact-Head review after the final Head is known. Any Head change makes an earlier review stale.
-
-[FINAL RESPONSE FORMAT]
-
-Return:
-- repository and live base SHA;
-- Scope Gate result;
-- selected option and rejected alternatives;
-- files changed;
-- exact validation commands and results;
-- Draft PR number and URL if created;
-- enforcement achieved and not achieved;
-- remaining evidence gaps;
-- independent review state;
-- merge_performed: false;
-- approval_performed: false;
-- deployment_performed: false.
-
-[STOP CONDITIONS]
-
-Stop without modifying the repository when:
-- the Scope Gate is `unauthorized` or `insufficient_evidence`;
-- live authorities conflict;
-- materially equivalent open work exists;
-- the repository identity or exact behavior cannot be established;
-- the repair requires a new broad framework or downstream contract change;
-- the proposed change would authorize the active Architect Run to edit its own repository.
-```
-
-<!-- EV4_REPOSITORY_REPAIR_HANDOFF_PROMPT_END -->
-
-## Forbidden claims
-
-The handoff and standalone prompt must not claim:
+Fixtures are data-first:
 
 ```text
-repository bug proven
-proposed repair proven correct
-merge authorized
-approval granted
-runtime enforced
-automatic diagnosis
-automatic repository modification
-self-healing
-production ready
-repository-wide AIGOV compliance
+fixture record
+→ canonical validator
+→ canonical evaluator
+→ canonical renderer when eligible
+→ asserted result
 ```
 
-## Determinism and testability
+Fixtures must not contain `should_emit_handoff`, a competing predicate, or hand-authored `standalone_repair_prompt` bodies. One minimal renderer-produced golden snapshot may be retained to detect deterministic byte drift.
 
-Repository fixtures and tests may validate:
-
-- required semantic fields;
-- allowed trigger states and classes;
-- absence of a prompt for non-trigger cases;
-- mandatory standalone prompt sections;
-- explicit uncertainty and live-review requirements;
-- forbidden claims and actions;
-- separation of Run repair from repository repair;
-- preservation of current Run Anchor authority.
-
-Fixture and CI validation establish only repository-fixture enforcement for the exact tested revision. Real conversational runtime enforcement remains `insufficient_evidence`.
+Repository tests may establish fixture/test and exact-Head CI enforcement for the tested revision. They do not establish real conversational runtime enforcement, downstream enforcement, automatic diagnosis, automatic repository repair, self-healing, repository-wide enforcement, or production readiness.

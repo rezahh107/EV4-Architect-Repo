@@ -138,25 +138,21 @@ Do not:
 
 ## Repository Repair Recommendation Boundary
 
-When an Architect Run reaches a stable repaired, blocked, or terminal state and external evidence indicates a `confirmed` or `probable` repeatable repository gap, the Architect may emit the separate user-facing handoff defined in:
+The behavioral contract is documented in:
 
 ```text
 contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
 ```
 
-The active Architect Run must not modify repository files or create a repository PR. It must not create a branch, commit, push, approve, merge, deploy, or enable auto-merge.
+The sole executable eligibility, record-validation, and prompt-rendering authority is:
 
-A repository recommendation:
+```text
+scripts/repository_repair_handoff.py
+```
 
-- is not proof of a repository defect;
-- is not repository write authority;
-- is not a Stage Artifact, Stage Anchor, Receipt, Boundary, or Validation Bundle;
-- must require fresh live-repository verification in a separate maintenance session;
-- is emitted only after the current Run repair route is determined;
-- does not change the current Repair Anchor, Success Anchor, or earliest safe rerun stage;
-- must not be emitted for every routine Run error.
+Do not reimplement its trigger predicate in `AGENTS.md`, Project Instructions, fixtures, or tests. Do not accept a hand-authored prompt as equivalent to renderer output.
 
-For `possible`, `insufficient_evidence`, or `not_repository_related`, follow the closed behavior in the handoff contract.
+The active Architect Run must not modify repository files, create or update a repository PR, create a branch, commit, push, approve, merge, deploy, release, enable auto-merge, or modify repository settings. A recommendation does not replace the current Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage, and it is not proof of a repository defect or repository-write authority.
 
 ## Change Rules
 
@@ -198,7 +194,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_bootstrap_semant
 For Repository Repair Recommendation Handoff changes, run:
 
 ```bash
-python -m pip install 'pytest>=8.0.0'
+python -m py_compile scripts/repository_repair_handoff.py tests/test_repository_repair_recommendation_handoff.py
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_repository_repair_recommendation_handoff.py
 ```
 

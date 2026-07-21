@@ -1,11 +1,11 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.17.0
-Status: repository_repair_recommendation_handoff_implemented_pending_exact_head_validation_and_independent_review
-Last confirmed stage: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`; the bounded Validation Transaction repair is present on the live default branch but independent technical acceptance remains unestablished
-Current next step: validate the Repository Repair Recommendation Handoff on the exact Draft PR Head, then obtain a fresh independent exact-Head review; owner-only Merge remains required
+Version: 0.18.0
+Status: repository_repair_handoff_root_cause_repair_implemented_pending_exact_head_ci_and_independent_review
+Last confirmed stage: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`; PR #33 is a Draft repair increment on branch `feat/repository-repair-recommendation-handoff`
+Current next step: run all applicable Workflows on the resulting exact PR #33 Head, then obtain a fresh independent exact-Head review; owner-only Merge remains required
 Language: Persian reports, English technical labels allowed
-Last automation update: 2026-07-21
+Last automation update: 2026-07-22
 
 ---
 
@@ -103,10 +103,13 @@ independent acceptance of its findings, and it does not authorize PR #30 or late
 The current state does not claim:
 
 - final closure of ARCHBOOT-F01 or ARCHBOOT-F02;
-- independent technical acceptance of PR #30 or PR #32;
+- independent technical acceptance of PR #30, PR #32, or PR #33;
 - repository-backed owner authorization or an approved bootstrap increment;
-- merge authorization, approval, release, or deployment for the current handoff increment;
+- Merge authorization, approval, release, or deployment for PR #33;
 - external model-host loading of AGENTS.md or repository instructions;
+- real conversational runtime enforcement of Repository Repair Recommendation behavior;
+- automatic root-cause diagnosis or automatic repository repair;
+- repository-wide enforcement or self-healing;
 - real non-synthetic Architect-to-CE handoff;
 - current-live-head compatibility for downstream Project Gate transition pins;
 - CE acceptance;
@@ -191,39 +194,45 @@ A malformed, forged, incomplete, or non-reproducible Bundle has `bundle_integrit
 
 ```yaml
 increment_id: ARCH-GOV-REPOSITORY-REPAIR-HANDOFF-001
-change_kind: bounded_diagnostic_handoff_hardening
+pull_request: 33
+working_branch: feat/repository-repair-recommendation-handoff
+starting_reviewed_head: 21cab91e6bc2dfae63d5cc2e9ac25ea54b731676
+change_kind: bounded_behavioral_contract_root_cause_repair
 scope_gate: authorized
 compatibility: additive_nonbreaking
 owning_contract: contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
 contract_identity: ev4-repository-repair-recommendation-handoff@1.0.0
-behavior:
-  current_run_repair: remains_inside_active_architect_run
-  repository_root_cause_repair: separate_repository_maintenance_session
-  active_architect_repository_write: forbidden
-  full_handoff_states:
-    - confirmed
-    - probable
-  possible_state_behavior: brief_review_suggestion_only_no_full_prompt
-  non_trigger_states:
-    - insufficient_evidence
-    - not_repository_related
+canonical_authorities:
+  implementation_module: scripts/repository_repair_handoff.py
+  record_validator: validate_repository_repair_handoff_record
+  eligibility_evaluator: evaluate_repository_repair_handoff_eligibility
+  prompt_renderer: render_repository_maintenance_prompt
+  rendered_prompt_validator: validate_rendered_repository_maintenance_prompt
+findings:
+  PRF-001:
+    title: incomplete_trigger_enforcement
+    implementation_state: implemented_pending_rereview
+  PRF-002:
+    title: standalone_prompt_drift_from_canonical_contract
+    implementation_state: implemented_pending_rereview
+fixture_model: data_first
 fixtures:
   positive: 4
   negative: 5
   boundary: 5
+  manual_full_prompt_copies: removed_except_one_renderer_generated_golden_snapshot
 tests: tests/test_repository_repair_recommendation_handoff.py
-enforcement_level:
-  - prose_defined
-  - fixture_tested_pending_exact_head_ci
-repository_ci_enforcement: pending_exact_head
+local_validation_state: locally_validated
+exact_head_ci: pending_final_head
+independent_review: pending_final_head
 runtime_enforcement: insufficient_evidence
 automatic_root_cause_detection: not_implemented
 automatic_repository_repair: not_implemented
 repository_self_healing: not_implemented
-independent_review: required
+repository_wide_enforcement: not_claimed
 merge_authorized: false
 approval_performed: false
 deployment_performed: false
 ```
 
-This increment standardizes diagnostic escalation only. It does not create a new Stage, Stage Artifact, Stage Anchor authority, repository repair mode, automatic prompt-generation service, automatic repository modification path, or downstream contract change.
+This increment centralizes repository-side eligibility, record validation, and deterministic prompt rendering. It does not create a new Stage, Stage Artifact, Stage Anchor authority, repair mode, runtime service, orchestration framework, automatic diagnosis, automatic repository modification path, or downstream contract change.

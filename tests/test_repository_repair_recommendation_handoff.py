@@ -1,259 +1,245 @@
 from __future__ import annotations
 
+import importlib.util
 import json
+import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
+MODULE_PATH = REPO_ROOT / "scripts" / "repository_repair_handoff.py"
 FIXTURE_DIR = REPO_ROOT / "fixtures" / "repository-repair-recommendation-handoff"
-CONTRACT_PATH = REPO_ROOT / "contracts" / "REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md"
+GOLDEN_PATH = FIXTURE_DIR / "golden-P01.prompt.txt"
 
-ALLOWED_STATES = {"confirmed", "probable"}
-ALLOWED_CLASSES = {
-    "repository_enforcement_gap",
-    "contract_ambiguity",
-    "validator_gap",
-    "missing_negative_regression",
-    "stage_boundary_escape_route",
-    "conflicting_authorities",
-    "fail_late_detection",
-    "repeatable_prompt_or_protocol_defect",
-}
-REQUIRED_HANDOFF_FIELDS = {
-    "handoff_schema",
-    "incident_id",
-    "source_run_id",
-    "current_run_status",
-    "current_run_repair_status",
-    "repository_gap_state",
-    "repository_gap_class",
-    "first_broken_stage",
-    "first_detection_stage",
-    "root_cause_summary",
-    "repository_gap_hypothesis",
-    "evidence_summary",
-    "violated_or_weak_authorities",
-    "recurrence_risk",
-    "current_run_resume_stage",
-    "repository_maintenance_scope",
-    "forbidden_actions",
-    "standalone_repair_prompt",
-}
-REQUIRED_PROMPT_SECTIONS = [
-    "[ROLE]",
-    "[TARGET REPOSITORY]",
-    "[OBSERVED INCIDENT]",
-    "[CURRENT-RUN EVIDENCE]",
-    "[SUSPECTED REPOSITORY GAP]",
-    "[UNCERTAINTIES]",
-    "[REQUIRED LIVE REPOSITORY REVIEW]",
-    "[SOLUTION COMPARISON REQUIREMENT]",
-    "[SELECTION CRITERIA]",
-    "[BOUNDED IMPLEMENTATION AUTHORITY]",
-    "[NON-GOALS]",
-    "[VALIDATION REQUIREMENTS]",
-    "[DRAFT PR REQUIREMENT]",
-    "[INDEPENDENT REVIEW REQUIREMENT]",
-    "[FINAL RESPONSE FORMAT]",
-    "[STOP CONDITIONS]",
-]
+spec = importlib.util.spec_from_file_location("repository_repair_handoff", MODULE_PATH)
+assert spec and spec.loader
+handoff = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = handoff
+spec.loader.exec_module(handoff)
 
 
-def load_fixture() -> dict:
-    fixture = json.loads((FIXTURE_DIR / "index.v1.json").read_text(encoding="utf-8"))
+def load_cases() -> list[dict]:
+    index = json.loads((FIXTURE_DIR / "index.v1.json").read_text(encoding="utf-8"))
     cases: list[dict] = []
-    for path in sorted(FIXTURE_DIR.glob("case-*.v1.json")):
-        cases.append(json.loads(path.read_text(encoding="utf-8")))
-    grouped = json.loads((FIXTURE_DIR / "non-emitted-cases.v1.json").read_text(encoding="utf-8"))
-    cases.extend(grouped["cases"])
-    fixture["cases"] = cases
-    return fixture
+    for filename in index["case_files"]:
+        payload = json.loads((FIXTURE_DIR / filename).read_text(encoding="utf-8"))
+        cases.extend(payload["cases"])
+    by_id = {case["case_id"]: case for case in cases}
+    assert set(by_id) == set(index["case_ids"])
+    return [by_id[case_id] for case_id in index["case_ids"]]
 
 
-def all_cases() -> list[dict]:
-    return load_fixture()["cases"]
+def case_by_id(case_id: str) -> dict:
+    return next(case for case in load_cases() if case["case_id"] == case_id)
 
 
-def emitted_cases() -> list[dict]:
-    return [case for case in all_cases() if case["should_emit_handoff"]]
+def validated_record(case_id: str):
+    result = handoff.validate_repository_repair_handoff_record(case_by_id(case_id)["record"])
+    assert result.status == "valid", result.reason_code
+    assert result.record is not None
+    return result.record
 
 
-def non_emitted_cases() -> list[dict]:
-    return [case for case in all_cases() if not case["should_emit_handoff"]]
-
-
-def test_fixture_inventory_is_complete_and_unique() -> None:
-    fixture = load_fixture()
-    ids = [case["case_id"] for case in fixture["cases"]]
-    assert len(ids) == len(set(ids))
-    assert set(ids) == {
+def test_fixture_inventory_is_complete_and_data_first() -> None:
+    cases = load_cases()
+    assert [case["case_id"] for case in cases] == [
         "P01", "P02", "P03", "P04",
         "N01", "N02", "N03", "N04", "N05",
         "B01", "B02", "B03", "B04", "B05",
+    ]
+    serialized = json.dumps(cases, sort_keys=True)
+    for competing_key in (
+        "should_emit_handoff",
+        "standalone_repair_prompt",
+        "eligibility_predicate",
+        "allowed_repository_gap_states",
+        "allowed_repository_gap_classes",
+    ):
+        assert competing_key not in serialized
+
+
+@pytest.mark.parametrize("case", load_cases(), ids=lambda case: case["case_id"])
+def test_canonical_evaluator_matches_fixture_expectation(case: dict) -> None:
+    result = handoff.evaluate_repository_repair_handoff_eligibility(case["record"])
+    assert result.status == case["expected"]["eligibility_status"]
+    assert result.reason_code == case["expected"]["reason_code"]
+
+
+def test_closed_run_and_repair_status_relationships() -> None:
+    assert handoff._ALLOWED_REPAIR_STATUS_BY_RUN_STATUS == {
+        "in_progress": frozenset({"pending"}),
+        "repairing": frozenset({"pending"}),
+        "repaired": frozenset({"validated"}),
+        "blocked": frozenset({"failed"}),
+        "terminal": frozenset({"not_applicable"}),
     }
-    assert set(fixture["allowed_repository_gap_states"]) == ALLOWED_STATES
-    assert set(fixture["allowed_repository_gap_classes"]) == ALLOWED_CLASSES
+    for case_id in ("N03", "B05"):
+        validation = handoff.validate_repository_repair_handoff_record(case_by_id(case_id)["record"])
+        assert validation.status == "invalid_input"
+        assert validation.reason_code == "contradictory_run_repair_status"
+        eligibility = handoff.evaluate_repository_repair_handoff_eligibility(case_by_id(case_id)["record"])
+        assert eligibility.status == "not_eligible"
 
 
-def test_handoff_appears_only_for_allowed_states_and_classes() -> None:
-    for case in all_cases():
-        eligible = (
-            case["repository_gap_state"] in ALLOWED_STATES
-            and case["repository_gap_class"] in ALLOWED_CLASSES
-            and not case["ordinary_run_error"]
-        )
-        assert case["should_emit_handoff"] is eligible
+@pytest.mark.parametrize("case_id", ["P01", "P02", "P03", "P04"])
+def test_eligible_records_validate_and_render(case_id: str) -> None:
+    record = validated_record(case_id)
+    eligibility = handoff.evaluate_repository_repair_handoff_eligibility(case_by_id(case_id)["record"])
+    assert eligibility.status == "eligible"
+    prompt = handoff.render_repository_maintenance_prompt(record)
+    assert handoff.validate_rendered_repository_maintenance_prompt(prompt).status == "valid"
+    positions = [prompt.index(section) for section in handoff.REQUIRED_PROMPT_SECTIONS]
+    assert positions == sorted(positions)
+    for value in (
+        record.incident_id,
+        record.source_run_id,
+        record.current_run_status,
+        record.current_run_repair_status,
+        record.first_broken_stage,
+        record.first_detection_stage,
+        record.repository_gap_state,
+        record.repository_gap_class,
+        record.repository_gap_hypothesis,
+        record.current_run_resume_stage,
+    ):
+        assert value in prompt
 
 
-def test_ordinary_run_errors_and_possible_state_do_not_emit_prompt() -> None:
-    for case in non_emitted_cases():
-        assert case["handoff"] is None
-    possible = next(case for case in all_cases() if case["case_id"] == "B03")
-    assert possible["repository_gap_state"] == "possible"
-    assert "full maintenance prompt" in possible["allowed_message"]
+def test_renderer_is_deterministic_and_matches_single_golden_snapshot() -> None:
+    record = validated_record("P01")
+    first = handoff.render_repository_maintenance_prompt(record)
+    second = handoff.render_repository_maintenance_prompt(record)
+    assert first == second
+    assert first == GOLDEN_PATH.read_text(encoding="utf-8")
 
 
-def test_emitted_handoffs_have_explicit_semantic_fields() -> None:
-    for case in emitted_cases():
-        handoff = case["handoff"]
-        assert set(handoff) == REQUIRED_HANDOFF_FIELDS
-        assert handoff["handoff_schema"] == "ev4-repository-repair-recommendation-handoff@1.0.0"
-        assert handoff["repository_gap_state"] in ALLOWED_STATES
-        assert handoff["repository_gap_class"] in ALLOWED_CLASSES
-        assert handoff["current_run_status"] in {"repaired", "blocked", "terminal"}
-        assert "modify_repository_inside_active_architect_run" in handoff["forbidden_actions"]
+def test_renderer_requires_validated_record_and_rejects_fixture_authored_prompt() -> None:
+    raw = dict(case_by_id("P01")["record"])
+    with pytest.raises(TypeError):
+        handoff.render_repository_maintenance_prompt(raw)
+    raw["standalone_repair_prompt"] = "arbitrary fixture prompt"
+    result = handoff.validate_repository_repair_handoff_record(raw)
+    assert result.status == "invalid_input"
+    assert result.reason_code == "pre_rendered_prompt_forbidden"
 
 
-def test_run_repair_and_repository_repair_remain_separate() -> None:
-    for case in emitted_cases():
-        handoff = case["handoff"]
-        prompt = handoff["standalone_repair_prompt"]
-        assert handoff["current_run_repair_status"]
-        assert "The active Architect Run must not edit repository files or create a PR." in prompt
-        if handoff["current_run_status"] == "repaired":
-            assert handoff["current_run_resume_stage"] == handoff["first_broken_stage"]
-        else:
-            assert handoff["current_run_resume_stage"] in {"none", handoff["first_broken_stage"]}
+@pytest.mark.parametrize(
+    ("case_id", "expected_status", "expected_reason"),
+    [
+        ("N01", "not_eligible", "current_run_not_stable"),
+        ("N02", "not_eligible", "current_run_not_stable"),
+        ("N03", "not_eligible", "contradictory_run_repair_status"),
+        ("B05", "not_eligible", "contradictory_run_repair_status"),
+        ("N04", "not_eligible", "possible_review_suggestion_only"),
+        ("N05", "not_eligible", "insufficient_repository_evidence"),
+        ("B01", "not_eligible", "not_repository_related"),
+        ("B02", "not_eligible", "ordinary_run_error"),
+        ("B03", "invalid_input", "unknown_repository_gap_class"),
+        ("B04", "invalid_input", "missing_required_field:source_run_id"),
+    ],
+)
+def test_fail_closed_non_emission_cases(case_id: str, expected_status: str, expected_reason: str) -> None:
+    result = handoff.evaluate_repository_repair_handoff_eligibility(case_by_id(case_id)["record"])
+    assert (result.status, result.reason_code) == (expected_status, expected_reason)
 
 
-def test_prompt_is_self_contained_and_ordered() -> None:
-    for case in emitted_cases():
-        prompt = case["handoff"]["standalone_repair_prompt"]
-        positions = [prompt.index(section) for section in REQUIRED_PROMPT_SECTIONS]
-        assert positions == sorted(positions)
-        assert "Do not assume access to the original Architect conversation." in prompt
-        assert "repository:" in prompt
-        assert "incident_id:" in prompt
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda prompt: prompt.replace("source_run_id: RUN-P01\n", "", 1),
+        lambda prompt: prompt.replace("current_run_repair_status: validated\n", "", 1),
+        lambda prompt: prompt.replace("repository_gap_state: probable\n", "", 1),
+        lambda prompt: prompt.replace("repository_gap_class: fail_late_detection\n", "", 1),
+        lambda prompt: prompt.replace("Evaluate the Scope Gate from current repository evidence.", "Evaluate scope from evidence.", 1),
+        lambda prompt: prompt.replace("Revalidate the live default branch", "Review the branch", 1),
+        lambda prompt: prompt.replace("Verify the exact current Head", "Review the current revision", 1),
+        lambda prompt: prompt.replace("fresh independent exact-Head review", "independent review", 1),
+        lambda prompt: prompt.replace("merge_performed: false\n", "", 1),
+        lambda prompt: prompt.replace("approval_performed: false\n", "", 1),
+        lambda prompt: prompt.replace("deployment_performed: false\n", "", 1),
+        lambda prompt: prompt.replace("[STOP CONDITIONS]", "[END]", 1),
+    ],
+)
+def test_prompt_mutations_fail_contract_validation(mutation) -> None:
+    prompt = handoff.render_repository_maintenance_prompt(validated_record("P01"))
+    mutated = mutation(prompt)
+    assert mutated != prompt
+    result = handoff.validate_rendered_repository_maintenance_prompt(mutated)
+    assert result.status == "invalid_prompt"
 
 
-def test_prompt_requires_live_repository_verification_and_solution_comparison() -> None:
-    for case in emitted_cases():
-        prompt = case["handoff"]["standalone_repair_prompt"]
-        assert "Revalidate the live default branch and exact current Head." in prompt
-        assert "Inspect current AGENTS.md, STATUS.md, active overrides" in prompt
-        assert "Identify at least two materially different repair options" in prompt
-        assert "Select the smallest complete solution." in prompt
-
-
-def test_prompt_does_not_treat_architect_diagnosis_as_authoritative() -> None:
-    required = (
-        "The incident description is evidence to investigate, not an authoritative diagnosis.\n"
-        "The repository-maintenance model must verify or reject the hypothesis from live repository evidence."
-    )
-    for case in emitted_cases():
-        assert required in case["handoff"]["standalone_repair_prompt"]
-
-
-def test_prompt_forbids_merge_approval_and_unbounded_write() -> None:
-    for case in emitted_cases():
-        prompt = case["handoff"]["standalone_repair_prompt"]
-        assert "Do not merge or approve." in prompt
-        assert "Do not enable auto-merge, deploy, release, or modify repository settings." in prompt
-        assert "Only after Scope Gate is authorized" in prompt
-        assert "Create one bounded Draft PR only after Scope and validation succeed." in prompt
-
-
-def test_prompt_requests_independent_exact_head_review() -> None:
-    for case in emitted_cases():
-        prompt = case["handoff"]["standalone_repair_prompt"]
-        assert "fresh independent exact-Head review" in prompt
-        assert "Any Head change makes prior review stale." in prompt
-
-
-def test_unknown_repository_details_remain_explicit() -> None:
-    case = next(case for case in emitted_cases() if case["case_id"] == "B04")
-    prompt = case["handoff"]["standalone_repair_prompt"]
-    assert "repository: [TARGET_REPOSITORY_OR_UNKNOWN]" in prompt
+def test_unknown_repository_facts_remain_visible() -> None:
+    prompt = handoff.render_repository_maintenance_prompt(validated_record("P04"))
+    assert "repository: unknown" in prompt
+    assert "default_branch: unknown" in prompt
     assert "observed_revision: unknown" in prompt
-    assert "exact affected Validator path: unknown" in prompt
+    assert "target repository identity is unknown" in prompt
 
 
-def test_no_hidden_chain_of_thought_is_requested() -> None:
-    forbidden_requests = {
-        "show your chain-of-thought",
-        "reveal your hidden reasoning",
-        "provide private reasoning",
-    }
-    for case in emitted_cases():
-        prompt = case["handoff"]["standalone_repair_prompt"].lower()
-        assert forbidden_requests.isdisjoint({phrase for phrase in forbidden_requests if phrase in prompt})
-        assert "do not request hidden chain-of-thought" in prompt
+def test_prompt_preserves_bounded_authority_and_false_action_results() -> None:
+    prompt = handoff.render_repository_maintenance_prompt(validated_record("P01"))
+    for text in (
+        "Create at most one bounded Draft PR.",
+        "Do not merge or approve.",
+        "Do not deploy or modify repository settings.",
+        "merge_performed: false",
+        "approval_performed: false",
+        "deployment_performed: false",
+    ):
+        assert text in prompt
 
 
-def test_controlled_contract_markers_and_non_authority_are_present() -> None:
-    contract = CONTRACT_PATH.read_text(encoding="utf-8")
-    assert "<!-- EV4_REPOSITORY_REPAIR_HANDOFF_USER_SECTION_START -->" in contract
-    assert "<!-- EV4_REPOSITORY_REPAIR_HANDOFF_USER_SECTION_END -->" in contract
-    assert "<!-- EV4_REPOSITORY_REPAIR_HANDOFF_PROMPT_START -->" in contract
-    assert "<!-- EV4_REPOSITORY_REPAIR_HANDOFF_PROMPT_END -->" in contract
-    assert "A Repository Repair Recommendation Handoff is not:" in contract
-    assert "a Stage Artifact;" in contract
-    assert "a Stage Anchor;" in contract
-    assert "proof that a repository defect exists;" in contract
+def test_tests_use_production_module_as_authority() -> None:
+    assert handoff.evaluate_repository_repair_handoff_eligibility.__module__ == "repository_repair_handoff"
+    assert handoff.validate_repository_repair_handoff_record.__module__ == "repository_repair_handoff"
+    assert handoff.render_repository_maintenance_prompt.__module__ == "repository_repair_handoff"
+    source = Path(__file__).read_text(encoding="utf-8")
+    assert ("ALLOWED_" + "REPOSITORY_GAP_CLASSES =") not in source
+    assert ("emit_full_" + "handoff =") not in source
 
 
-def test_repository_recommendation_does_not_replace_run_anchor() -> None:
-    contract = CONTRACT_PATH.read_text(encoding="utf-8")
+def test_material_authorities_reference_executable_module_without_competing_predicate() -> None:
+    paths = (
+        REPO_ROOT / "contracts" / "REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md",
+        REPO_ROOT / "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
+        REPO_ROOT / "AGENTS.md",
+        REPO_ROOT / "diagnostics" / "LLM_DEBUG_TRACE_CONTRACT.md",
+    )
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        assert "scripts/repository_repair_handoff.py" in text
+    for path in paths[1:]:
+        assert "should_emit_handoff" not in path.read_text(encoding="utf-8")
+    debug = paths[-1].read_text(encoding="utf-8")
+    assert "repository_repair_handoff_required:" not in debug
+
+
+def test_contract_names_canonical_functions_and_renderer_authority() -> None:
+    contract = (REPO_ROOT / "contracts" / "REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md").read_text(encoding="utf-8")
+    for function_name in (
+        "validate_repository_repair_handoff_record(record)",
+        "evaluate_repository_repair_handoff_eligibility(record)",
+        "render_repository_maintenance_prompt(validated_record)",
+        "validate_rendered_repository_maintenance_prompt(prompt)",
+    ):
+        assert function_name in contract
+    assert "sole executable source for emitted standalone prompt bodies" in contract
+
+
+def test_run_anchor_and_partial_rerun_authorities_remain_unchanged() -> None:
     partial = (REPO_ROOT / "contracts" / "PARTIAL_RERUN_CONTRACT.md").read_text(encoding="utf-8")
     anchor = (REPO_ROOT / "contracts" / "STAGE_ANCHOR_CONTRACT.md").read_text(encoding="utf-8")
-    assert "does not replace a Repair Anchor or Success Anchor" in contract
     assert "does not change the earliest safe rerun stage" in partial
     assert "must not embed the full standalone repository-maintenance prompt" in anchor
 
 
-def test_active_project_instructions_prohibit_repository_edits() -> None:
-    overrides = (REPO_ROOT / "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md").read_text(encoding="utf-8")
-    agents = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    assert "must not edit repository files from inside the active Architect Run" in overrides
-    assert "must not modify repository files or create a repository PR" in agents
-    assert "confirmed" in overrides and "probable" in overrides
-    assert "possible" in overrides and "no full standalone maintenance prompt" in overrides
-
-
-def test_debug_trace_extension_uses_closed_states_and_classes() -> None:
-    debug = (REPO_ROOT / "diagnostics" / "LLM_DEBUG_TRACE_CONTRACT.md").read_text(encoding="utf-8")
-    for field in (
-        "incident_class",
-        "repository_gap_state",
-        "repository_gap_class",
-        "repository_gap_evidence",
-        "repository_repair_handoff_required",
-        "repository_repair_handoff_reason",
-    ):
-        assert field in debug
-    for state in ("confirmed", "probable", "possible", "insufficient_evidence", "not_repository_related"):
-        assert state in debug
-
-
-def test_workflow_runs_targeted_handoff_tests() -> None:
+def test_existing_workflow_runs_targeted_module_and_tests_with_minimum_permissions() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "validate-architect-bootstrap.yml").read_text(encoding="utf-8")
-    assert "contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md" in workflow
-    assert "fixtures/repository-repair-recommendation-handoff/**" in workflow
-    assert "tests/test_repository_repair_recommendation_handoff.py" in workflow
+    assert "scripts/repository_repair_handoff.py" in workflow
+    assert "python -m py_compile scripts/repository_repair_handoff.py tests/test_repository_repair_recommendation_handoff.py" in workflow
     assert "pytest -q tests/test_repository_repair_recommendation_handoff.py" in workflow
-
-
-def test_fixture_serialization_is_deterministic() -> None:
-    parsed = load_fixture()
-    first = json.dumps(parsed, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    second = json.dumps(json.loads(first), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    assert first == second
+    assert "ref: ${{ github.event.pull_request.head.sha }}" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "permissions:\n  contents: read" in workflow
+    assert "contents: write" not in workflow

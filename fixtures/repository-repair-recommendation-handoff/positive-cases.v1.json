@@ -1,0 +1,189 @@
+{
+  "cases": [
+    {
+      "case_id": "P01",
+      "record": {
+        "handoff_schema": "ev4-repository-repair-recommendation-handoff@1.0.0",
+        "incident_id": "P01",
+        "source_run_id": "RUN-P01",
+        "current_run_status": "repaired",
+        "current_run_repair_status": "validated",
+        "repository_gap_state": "probable",
+        "repository_gap_class": "fail_late_detection",
+        "ordinary_run_error": false,
+        "first_broken_stage": "/score-evidence",
+        "first_detection_stage": "/score-audit",
+        "root_cause_summary": "A mandatory input was accepted before its owning control rejected it.",
+        "repository_gap_hypothesis": "The repository may contain a repeatable fail-late enforcement gap.",
+        "evidence_summary": [
+          "validated current-run repair",
+          "external diagnostic evidence"
+        ],
+        "violated_or_weak_authorities": [
+          "contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md"
+        ],
+        "recurrence_risk": "repeatable when the same missing control is encountered",
+        "current_run_resume_stage": "/score-evidence",
+        "repository_maintenance_scope": "verify and repair only the smallest evidence-backed repository gap",
+        "forbidden_actions": [
+          "modify_repository_inside_active_architect_run",
+          "merge",
+          "approve",
+          "deploy",
+          "modify_repository_settings"
+        ],
+        "target_repository": "rezahh107/EV4-Architect-Repo",
+        "default_branch": "main",
+        "observed_revision": "unknown",
+        "uncertainties": [
+          "exact live Head must be revalidated",
+          "exact affected validator path is unknown"
+        ]
+      },
+      "expected": {
+        "eligibility_status": "eligible",
+        "reason_code": "full_handoff_allowed",
+        "render_prompt": true
+      }
+    },
+    {
+      "case_id": "P02",
+      "record": {
+        "handoff_schema": "ev4-repository-repair-recommendation-handoff@1.0.0",
+        "incident_id": "P02",
+        "source_run_id": "RUN-P02",
+        "current_run_status": "blocked",
+        "current_run_repair_status": "failed",
+        "repository_gap_state": "probable",
+        "repository_gap_class": "validator_gap",
+        "ordinary_run_error": false,
+        "first_broken_stage": "/score-evidence",
+        "first_detection_stage": "/score-audit",
+        "root_cause_summary": "A mandatory input was accepted before its owning control rejected it.",
+        "repository_gap_hypothesis": "The repository may contain a repeatable fail-late enforcement gap.",
+        "evidence_summary": [
+          "validated current-run repair",
+          "external diagnostic evidence"
+        ],
+        "violated_or_weak_authorities": [
+          "contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md"
+        ],
+        "recurrence_risk": "repeatable when the same missing control is encountered",
+        "current_run_resume_stage": "none",
+        "repository_maintenance_scope": "verify and repair only the smallest evidence-backed repository gap",
+        "forbidden_actions": [
+          "modify_repository_inside_active_architect_run",
+          "merge",
+          "approve",
+          "deploy",
+          "modify_repository_settings"
+        ],
+        "target_repository": "rezahh107/EV4-Architect-Repo",
+        "default_branch": "main",
+        "observed_revision": "unknown",
+        "uncertainties": [
+          "exact live Head must be revalidated",
+          "exact affected validator path is unknown"
+        ]
+      },
+      "expected": {
+        "eligibility_status": "eligible",
+        "reason_code": "full_handoff_allowed",
+        "render_prompt": true
+      }
+    },
+    {
+      "case_id": "P03",
+      "record": {
+        "handoff_schema": "ev4-repository-repair-recommendation-handoff@1.0.0",
+        "incident_id": "P03",
+        "source_run_id": "RUN-P03",
+        "current_run_status": "terminal",
+        "current_run_repair_status": "not_applicable",
+        "repository_gap_state": "confirmed",
+        "repository_gap_class": "conflicting_authorities",
+        "ordinary_run_error": false,
+        "first_broken_stage": "/score-evidence",
+        "first_detection_stage": "/score-audit",
+        "root_cause_summary": "A mandatory input was accepted before its owning control rejected it.",
+        "repository_gap_hypothesis": "The repository may contain a repeatable fail-late enforcement gap.",
+        "evidence_summary": [
+          "validated current-run repair",
+          "external diagnostic evidence"
+        ],
+        "violated_or_weak_authorities": [
+          "contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md"
+        ],
+        "recurrence_risk": "repeatable when the same missing control is encountered",
+        "current_run_resume_stage": "none",
+        "repository_maintenance_scope": "verify and repair only the smallest evidence-backed repository gap",
+        "forbidden_actions": [
+          "modify_repository_inside_active_architect_run",
+          "merge",
+          "approve",
+          "deploy",
+          "modify_repository_settings"
+        ],
+        "target_repository": "rezahh107/EV4-Architect-Repo",
+        "default_branch": "main",
+        "observed_revision": "unknown",
+        "uncertainties": [
+          "exact live Head must be revalidated",
+          "exact affected validator path is unknown"
+        ]
+      },
+      "expected": {
+        "eligibility_status": "eligible",
+        "reason_code": "full_handoff_allowed",
+        "render_prompt": true
+      }
+    },
+    {
+      "case_id": "P04",
+      "record": {
+        "handoff_schema": "ev4-repository-repair-recommendation-handoff@1.0.0",
+        "incident_id": "P04",
+        "source_run_id": "RUN-P04",
+        "current_run_status": "repaired",
+        "current_run_repair_status": "validated",
+        "repository_gap_state": "confirmed",
+        "repository_gap_class": "missing_negative_regression",
+        "ordinary_run_error": false,
+        "first_broken_stage": "/score-evidence",
+        "first_detection_stage": "/score-audit",
+        "root_cause_summary": "A mandatory input was accepted before its owning control rejected it.",
+        "repository_gap_hypothesis": "The repository may contain a repeatable fail-late enforcement gap.",
+        "evidence_summary": [
+          "validated current-run repair",
+          "external diagnostic evidence"
+        ],
+        "violated_or_weak_authorities": [
+          "contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md"
+        ],
+        "recurrence_risk": "repeatable when the same missing control is encountered",
+        "current_run_resume_stage": "/score-evidence",
+        "repository_maintenance_scope": "verify and repair only the smallest evidence-backed repository gap",
+        "forbidden_actions": [
+          "modify_repository_inside_active_architect_run",
+          "merge",
+          "approve",
+          "deploy",
+          "modify_repository_settings"
+        ],
+        "target_repository": "unknown",
+        "default_branch": "unknown",
+        "observed_revision": "unknown",
+        "uncertainties": [
+          "target repository identity is unknown",
+          "exact live Head is unknown",
+          "affected validator and workflow are unknown"
+        ]
+      },
+      "expected": {
+        "eligibility_status": "eligible",
+        "reason_code": "full_handoff_allowed",
+        "render_prompt": true
+      }
+    }
+  ]
+}
