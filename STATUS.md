@@ -1,11 +1,11 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.16.0
-Status: architect_validation_transaction_implemented_pending_exact_head_rereview
-Last confirmed stage: PR #29 merged into main at be9bdea9ae246b1587043f2582c1a950ea2a6ec5; PR #32 contains the bounded Validation Transaction repair and remains open, unmerged, and not independently accepted
-Current next step: verify all required Workflows on the resulting exact PR Head, then obtain a fresh independent PR Inspector review; owner-only Merge remains required
+Version: 0.18.0
+Status: repository_repair_handoff_root_cause_repair_implemented_pending_exact_head_ci_and_independent_review
+Last confirmed stage: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`; PR #33 is a Draft repair increment on branch `feat/repository-repair-recommendation-handoff`
+Current next step: run all applicable Workflows on the resulting exact PR #33 Head, then obtain a fresh independent exact-Head review; owner-only Merge remains required
 Language: Persian reports, English technical labels allowed
-Last automation update: 2026-07-21
+Last automation update: 2026-07-22
 
 ---
 
@@ -95,7 +95,7 @@ A positive /project-gate-export instruction is required; substring presence is i
 Negative mutation tests must demonstrate rejection of semantic drift and contradictory guidance.
 
 PR #29 is merged according to authoritative GitHub state. That merge does not establish
-independent acceptance of its findings, and it does not authorize PR #30 or PR #32.
+independent acceptance of its findings, and it does not authorize PR #30 or later increments.
 ```
 
 ## Evidence Boundaries
@@ -103,10 +103,13 @@ independent acceptance of its findings, and it does not authorize PR #30 or PR #
 The current state does not claim:
 
 - final closure of ARCHBOOT-F01 or ARCHBOOT-F02;
-- independent technical acceptance of PR #30 or PR #32;
+- independent technical acceptance of PR #30, PR #32, or PR #33;
 - repository-backed owner authorization or an approved bootstrap increment;
-- merge authorization, merge, approval, release, or deployment for PR #32;
+- Merge authorization, approval, release, or deployment for PR #33;
 - external model-host loading of AGENTS.md or repository instructions;
+- real conversational runtime enforcement of Repository Repair Recommendation behavior;
+- automatic root-cause diagnosis or automatic repository repair;
+- repository-wide enforcement or self-healing;
 - real non-synthetic Architect-to-CE handoff;
 - current-live-head compatibility for downstream Project Gate transition pins;
 - CE acceptance;
@@ -121,9 +124,10 @@ writing a final tested Head SHA into this file would itself create a new, unvali
 
 ## ARCH-GOV-STAGE-BOUNDARY-001
 
-Status: bounded_validation_transaction_implemented_pending_independent_review
+Status: merged_observed_not_independently_accepted
 Scope gate: authorized for bounded intermediate Stage Artifact enforcement at `/decompose` through `/score-audit`.
-Evidence state: Schema-backed, deterministic Bundle generation, independent Bundle regeneration, focused fixture/mutation testing, and prior exact-Head CI evidence exist; the resulting synchronized Head must receive fresh exact-Head CI and independent review.
+Live merge evidence: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`.
+Evidence state: Schema-backed, deterministic Bundle generation, independent Bundle regeneration, focused fixture/mutation testing, and exact-Head CI evidence were recorded in PR #32; independent technical acceptance remains unestablished.
 Runtime enforcement: `insufficient_evidence`. Downstream enforcement: `insufficient_evidence`.
 Final Architect Stage Payload v1 authority remains unchanged.
 
@@ -134,6 +138,9 @@ pull_request: 32
 base_branch: main
 original_reviewed_head_sha: 266f8ad0266b18a5020b9f1f4641237680c477b4
 required_integrated_main_sha: a4b6a8c57d906c69b6f5b4bc79969ffcfbac701a
+final_pr_head: c438d25a95e6c35db0700bac12ca5c255acc8ea6
+merge_commit: 8f3cc638f0b7a34b90935efcce68a3928c94309f
+merge_status: merged
 production_generate_command: validate-run
 production_verify_command: validate-bundle
 artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
@@ -156,9 +163,8 @@ failed_stage_and_repair_target_stage_separated: true
 success_bundle_regeneration: implemented
 failure_bundle_regeneration: implemented
 focused_test_count: 92
-local_validation_state: passed_before_final_main_integration
-resulting_head_exact_ci: pending
-fresh_independent_pr_inspector_review: required
+final_pr_head_exact_ci: recorded_success_in_pr32
+fresh_independent_pr_inspector_review: not_established
 owner_merge_required: true
 merge_authorized: false
 runtime_tool_enforced: insufficient_evidence
@@ -182,4 +188,51 @@ authorization_valid: false
 output_published: false
 ```
 
-A malformed, forged, incomplete, or non-reproducible Bundle has `bundle_integrity_status: invalid` and authorizes no work. Success carriers are forbidden in failure Bundles. User-facing Anchors do not independently authorize continuation. Final exact-Head CI and fresh independent PR Inspector review remain required after integrating current `main`.
+A malformed, forged, incomplete, or non-reproducible Bundle has `bundle_integrity_status: invalid` and authorizes no work. Success carriers are forbidden in failure Bundles. User-facing Anchors do not independently authorize continuation.
+
+## ARCH-GOV-REPOSITORY-REPAIR-HANDOFF-001
+
+```yaml
+increment_id: ARCH-GOV-REPOSITORY-REPAIR-HANDOFF-001
+pull_request: 33
+working_branch: feat/repository-repair-recommendation-handoff
+starting_reviewed_head: 21cab91e6bc2dfae63d5cc2e9ac25ea54b731676
+change_kind: bounded_behavioral_contract_root_cause_repair
+scope_gate: authorized
+compatibility: additive_nonbreaking
+owning_contract: contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+contract_identity: ev4-repository-repair-recommendation-handoff@1.0.0
+canonical_authorities:
+  implementation_module: scripts/repository_repair_handoff.py
+  record_validator: validate_repository_repair_handoff_record
+  eligibility_evaluator: evaluate_repository_repair_handoff_eligibility
+  prompt_renderer: render_repository_maintenance_prompt
+  rendered_prompt_validator: validate_rendered_repository_maintenance_prompt
+findings:
+  PRF-001:
+    title: incomplete_trigger_enforcement
+    implementation_state: implemented_pending_rereview
+  PRF-002:
+    title: standalone_prompt_drift_from_canonical_contract
+    implementation_state: implemented_pending_rereview
+fixture_model: data_first
+fixtures:
+  positive: 4
+  negative: 5
+  boundary: 5
+  manual_full_prompt_copies: removed_except_one_renderer_generated_golden_snapshot
+tests: tests/test_repository_repair_recommendation_handoff.py
+local_validation_state: locally_validated
+exact_head_ci: pending_final_head
+independent_review: pending_final_head
+runtime_enforcement: insufficient_evidence
+automatic_root_cause_detection: not_implemented
+automatic_repository_repair: not_implemented
+repository_self_healing: not_implemented
+repository_wide_enforcement: not_claimed
+merge_authorized: false
+approval_performed: false
+deployment_performed: false
+```
+
+This increment centralizes repository-side eligibility, record validation, and deterministic prompt rendering. It does not create a new Stage, Stage Artifact, Stage Anchor authority, repair mode, runtime service, orchestration framework, automatic diagnosis, automatic repository modification path, or downstream contract change.

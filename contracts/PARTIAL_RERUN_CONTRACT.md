@@ -1,7 +1,7 @@
 # Partial Rerun Contract
 
 Status: active
-Version: 1.0.0
+Version: 1.1.0
 Applies to: EV4 Architect stages after the first complete run, repair runs, and changed-input reruns
 
 ---
@@ -99,6 +99,35 @@ invalidate_downstream: /implementation onward
 
 ---
 
+## Repository Repair Escalation Boundary
+
+Run repair and repository root-cause repair are separate.
+
+Sequence:
+
+```text
+determine current Run repair route
+→ invalidate dependent Run outputs
+→ repair or stabilize the current Run
+→ validate the current Run repair
+→ classify repository recurrence risk
+→ emit a separate Repository Repair Recommendation only when allowed
+→ continue only from the valid repaired Anchor
+```
+
+Rules:
+
+- A repository recommendation is evaluated only after the current Run repair plan is determined and the Run is stable as `repaired`, `blocked`, or `terminal`.
+- Downstream outputs remain invalid until the current Run repair is validated.
+- The repository recommendation does not change the earliest safe rerun stage.
+- The repository recommendation does not replace a Repair Anchor, Success Anchor, Validation Bundle, or Partial Rerun plan.
+- The active Architect Run must not edit repository files, create a repository branch, commit, push, or open a repository PR.
+- A separate maintenance prompt may be emitted only under `contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md`.
+- The presence of a repository recommendation does not block a repaired and validated Run from continuing through its valid Anchor.
+- A blocked Run remains blocked even when a repository recommendation is emitted.
+
+---
+
 ## Reuse Rules
 
 Allowed reuse:
@@ -164,4 +193,5 @@ A partial rerun plan passes only if:
 - it does not reuse stale payloads;
 - it respects schema versions;
 - it gives one minimal confirmation question when needed;
-- it preserves Stage Anchor and Debug Trace continuity.
+- it preserves Stage Anchor and Debug Trace continuity;
+- it does not treat repository repair escalation as Run-repair authorization.

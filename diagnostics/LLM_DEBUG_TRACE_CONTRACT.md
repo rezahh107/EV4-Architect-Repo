@@ -1,8 +1,9 @@
 # LLM Debug Trace Contract — EV4 Architect
 
 Status: active
-Version: 1.0.0
+Version: 1.2.0
 Schema: ev4-debug-trace@1.0.0
+Optional extension: ev4-repository-repair-diagnostic-extension@1.0.0
 
 ## Purpose
 
@@ -14,7 +15,7 @@ The goal is not to expose hidden chain-of-thought. The goal is to force each sta
 
 Debug the pipeline through external traces, not private thoughts.
 
-A language model is not required or trusted to reveal its hidden reasoning. Instead, every stage must externalize:
+Every stage must externalize:
 
 - what input it used;
 - what claims it made;
@@ -23,20 +24,6 @@ A language model is not required or trusted to reveal its hidden reasoning. Inst
 - what was unknown;
 - what was blocked;
 - what repair route is required if the output fails.
-
-## Why This Exists
-
-When a final Elementor architecture output is wrong, the user needs to know where the failure happened:
-
-- bad visual decomposition;
-- missing unknown;
-- biased architecture enumeration;
-- scoring arithmetic error;
-- hidden recommendation leak;
-- invalid handoff;
-- build-tree naming or structure error.
-
-Without a structured trace, failures become vague and the prompt cannot be repaired precisely.
 
 ## Debug Mode
 
@@ -70,6 +57,38 @@ In debug mode, each stage must include an `EV4_DEBUG_TRACE` block after its norm
   "handoff_payload_schema": null
 }
 ```
+
+## Repository Repair Diagnostic Extension
+
+After the current Run repair route is known, the Debug Agent may append external evidence needed to build a handoff record:
+
+```yaml
+incident_class: ordinary_run_error | repeatable_run_defect | unresolved_causality
+current_run_status: in_progress | repairing | repaired | blocked | terminal
+current_run_repair_status: validated | pending | failed | not_applicable
+repository_gap_state: confirmed | probable | possible | insufficient_evidence | not_repository_related
+repository_gap_class: repository_enforcement_gap | contract_ambiguity | validator_gap | missing_negative_regression | stage_boundary_escape_route | conflicting_authorities | fail_late_detection | repeatable_prompt_or_protocol_defect | unknown
+ordinary_run_error: true | false
+repository_gap_evidence:
+  - evidence_ref:
+    evidence_summary:
+```
+
+This extension records evidence only. It must not author `repository_repair_handoff_required`, reconstruct the eligibility predicate, or contain a standalone prompt.
+
+The canonical validator, evaluator, and renderer are owned by:
+
+```text
+scripts/repository_repair_handoff.py
+```
+
+The full behavioral contract is:
+
+```text
+contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+```
+
+The executable evaluator determines `eligible`, `not_eligible`, or `invalid_input`. The extension does not authorize repository modification and does not replace the current Repair Anchor, Success Anchor, Validation Bundle, or Partial Rerun plan.
 
 ## Decision Log
 
@@ -132,8 +151,6 @@ Each stage must log only decisions that affect downstream output.
 
 ## Failure Symptom Index
 
-A debug agent should classify bad outputs using this taxonomy:
-
 | Symptom | Meaning | Likely repair stage |
 |---|---|---|
 | `missing_input` | Required payload or artifact absent | Same stage input gate |
@@ -148,17 +165,20 @@ A debug agent should classify bad outputs using this taxonomy:
 | `bad_handoff` | Payload missing or wrong schema | Producing stage |
 | `naming_contract_missing` | Build tree cannot proceed safely | Stage 7 |
 
+Repository-gap classes extend this taxonomy; they do not create a second failure taxonomy.
+
 ## Debug Agent Contract
 
-A model-language debugger may be added as a separate workflow.
-
-The debugger must not solve the Elementor architecture task again. It must inspect traces and answer:
+A model-language debugger may be added as a separate workflow. It must inspect traces and answer:
 
 1. Which stage first produced the defect?
 2. Which rule was missing, weak, or ignored?
 3. Which payload field failed?
-4. What minimal prompt/document patch would prevent recurrence?
-5. Which calibration case should be added?
+4. What minimal current-Run repair is required?
+5. Which regression test or calibration case is required?
+6. What is the earliest safe rerun stage?
+7. After the Run is stable, what external repository-recurrence evidence exists?
+8. What handoff record fields can be populated without invention?
 
 ## Forbidden Debug Behavior
 
@@ -169,7 +189,11 @@ The debugger must not:
 - re-score candidates unless asked to run Stage 4 repair;
 - recommend architecture directly;
 - bypass the existing repair route;
-- rewrite the whole system when a local patch is enough.
+- rewrite the whole system when a local patch is enough;
+- edit repository files inside the active Architect Run;
+- treat a repository-gap hypothesis as proven without fresh live-repository review;
+- independently decide or encode prompt eligibility;
+- author a full repository-maintenance prompt.
 
 ## Recommended Debug Output
 
@@ -178,15 +202,18 @@ EV4 DEBUG REPORT
 
 1. Failure Summary
 2. First Broken Stage
-3. Evidence Trail
-4. Rule or Schema Violation
-5. Minimal Repair Patch
-6. Regression Test / Calibration Case Needed
-7. Rerun From Stage
+3. First Detection Stage
+4. Evidence Trail
+5. Rule or Schema Violation
+6. Minimal Current-Run Repair
+7. Regression Test / Calibration Case Needed
+8. Rerun From Stage
+9. Repository Recurrence Evidence
+10. Handoff Record Inputs, if available
 ```
 
 ## Relation To Tracing Tools
 
 This contract is compatible with external trace systems. Tool calls, model calls, stage outputs, payloads, validator results, and repair routes can be captured as trace spans.
 
-However, this repository must remain useful even without external observability infrastructure; therefore every stage must emit compact, text-based debug payloads when debug mode is requested.
+The repository must remain useful without external observability infrastructure; therefore every stage emits compact, text-based debug payloads when debug mode is requested.

@@ -136,6 +136,24 @@ Do not:
 - copy Architect schemas into Project Gate as competing canonical contracts;
 - treat legacy builder-feed exports as the canonical Architect Stage Payload.
 
+## Repository Repair Recommendation Boundary
+
+The behavioral contract is documented in:
+
+```text
+contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+```
+
+The sole executable eligibility, record-validation, and prompt-rendering authority is:
+
+```text
+scripts/repository_repair_handoff.py
+```
+
+Do not reimplement its trigger predicate in `AGENTS.md`, Project Instructions, fixtures, or tests. Do not accept a hand-authored prompt as equivalent to renderer output.
+
+The active Architect Run must not modify repository files, create or update a repository PR, create a branch, commit, push, approve, merge, deploy, release, enable auto-merge, or modify repository settings. A recommendation does not replace the current Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage, and it is not proof of a repository defect or repository-write authority.
+
 ## Change Rules
 
 For changes affecting downstream CE intake:
@@ -171,6 +189,13 @@ For bootstrap or first-run changes, run:
 python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
 python scripts/check-architect-bootstrap.py
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_bootstrap_semantics.py
+```
+
+For Repository Repair Recommendation Handoff changes, run:
+
+```bash
+python -m py_compile scripts/repository_repair_handoff.py tests/test_repository_repair_recommendation_handoff.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_repository_repair_recommendation_handoff.py
 ```
 
 This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.

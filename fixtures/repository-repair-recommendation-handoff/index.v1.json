@@ -1,0 +1,24 @@
+{
+  "contract_id": "ev4-repository-repair-recommendation-handoff@1.0.0",
+  "case_ids": [
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "N01",
+    "N02",
+    "N03",
+    "N04",
+    "N05",
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05"
+  ],
+  "case_files": [
+    "positive-cases.v1.json",
+    "negative-cases.v1.json",
+    "boundary-cases.v1.json"
+  ]
+}

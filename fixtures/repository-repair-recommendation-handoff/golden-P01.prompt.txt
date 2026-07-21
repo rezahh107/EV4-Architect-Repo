@@ -1,0 +1,81 @@
+[ROLE]
+Act as the bounded repository-maintenance implementer and independent root-cause verifier for the target repository.
+
+[TARGET REPOSITORY]
+repository: rezahh107/EV4-Architect-Repo
+default_branch: main
+observed_revision: unknown
+
+[OBSERVED INCIDENT]
+incident_id: P01
+source_run_id: RUN-P01
+current_run_status: repaired
+current_run_repair_status: validated
+first_broken_stage: /score-evidence
+first_detection_stage: /score-audit
+root_cause_summary: A mandatory input was accepted before its owning control rejected it.
+
+[CURRENT-RUN EVIDENCE]
+evidence_summary:
+- validated current-run repair
+- external diagnostic evidence
+violated_or_weak_authorities:
+- contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+current_run_resume_stage: /score-evidence
+Do not request hidden chain-of-thought and do not assume access to the original Architect conversation.
+
+[SUSPECTED REPOSITORY GAP]
+repository_gap_state: probable
+repository_gap_class: fail_late_detection
+repository_gap_hypothesis: The repository may contain a repeatable fail-late enforcement gap.
+recurrence_risk: repeatable when the same missing control is encountered
+The incident description is evidence to investigate, not an authoritative diagnosis. Verify or reject it from live repository evidence.
+
+[UNCERTAINTIES]
+- exact live Head must be revalidated
+- exact affected validator path is unknown
+Unknown repository facts must remain unknown or visible placeholders. Do not invent repository names, SHAs, PR numbers, paths, Schema IDs, Validator IDs, Workflow names, tests, or evidence.
+
+[REQUIRED LIVE REPOSITORY REVIEW]
+1. Revalidate the live default branch.
+2. Verify the exact current Head before modifying anything.
+3. Inspect current AGENTS.md, STATUS.md, active overrides, governance files, contracts, schemas, validators, diagnostics, fixtures, tests, workflows, and open pull requests.
+4. Evaluate the Scope Gate from current repository evidence.
+5. Stop for conflicting authorities, materially equivalent open work, insufficient Scope evidence, unknown repository identity, or required broad redesign.
+
+[SOLUTION COMPARISON REQUIREMENT]
+Identify at least two materially different repair options when credible alternatives exist. Do not blindly implement the incident hypothesis.
+
+[SELECTION CRITERIA]
+Compare effectiveness, failure-detection timing, determinism, scope, compatibility, implementation cost, maintenance burden, AIGOV alignment, and overengineering risk. Select the smallest complete solution supported by live evidence.
+
+[BOUNDED IMPLEMENTATION AUTHORITY]
+Only after the Scope Gate is authorized, implement the bounded repair on one focused branch. Preserve existing roles, Stage IDs, contracts, historical evidence, and downstream boundaries. Create at most one bounded Draft PR. Do not merge or approve. Do not deploy or modify repository settings.
+repository_maintenance_scope: verify and repair only the smallest evidence-backed repository gap
+forbidden_actions:
+- modify_repository_inside_active_architect_run
+- merge
+- approve
+- deploy
+- modify_repository_settings
+
+[NON-GOALS]
+Do not redesign the pipeline, add self-healing behavior, add automatic diagnosis or repository repair, create a new Stage or repair mode, introduce a generalized orchestration framework, or alter unrelated repositories.
+
+[VALIDATION REQUIREMENTS]
+Run targeted tests, relevant regressions, deterministic negative cases, git diff --check, and applicable Python/JSON/YAML validation. Report exact commands and exact observed results. Do not claim runtime enforcement from prose, fixtures, or CI alone.
+
+[DRAFT PR REQUIREMENT]
+If implementation is authorized and validated, update or open at most one bounded Draft PR. Never merge, approve, enable auto-merge, deploy, release, or modify repository settings.
+
+[INDEPENDENT REVIEW REQUIREMENT]
+After the final Head is known, request a fresh independent exact-Head review. Any Head change makes the earlier review stale.
+
+[FINAL RESPONSE FORMAT]
+Return repository and live base SHA, resulting Head SHA, Scope Gate result, selected solution, rejected alternatives, files changed, exact validation commands/results, Draft PR, enforcement achieved/not achieved, remaining evidence gaps, and:
+merge_performed: false
+approval_performed: false
+deployment_performed: false
+
+[STOP CONDITIONS]
+Stop without repository modification for conflicting authorities, overlapping equivalent work, unauthorized or insufficient Scope, unknown repository identity, a required new Stage or downstream contract, a generalized orchestration requirement, automatic repository editing, or any proposal that authorizes the active Architect Run to edit its own repository.

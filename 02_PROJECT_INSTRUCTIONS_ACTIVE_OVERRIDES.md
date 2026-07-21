@@ -1,7 +1,7 @@
 # Project Instructions — Active Overrides
 
 Status: active
-Version: 0.3.0
+Version: 0.5.0
 Applies to: current EV4 Architect Project Instructions until the master file is repackaged
 
 ---
@@ -73,6 +73,45 @@ The plan must identify:
 - stages that must be invalidated;
 - required Artifact and Bundle evidence;
 - whether user confirmation is required.
+
+---
+
+## Repository Repair Recommendation Sequence
+
+Preserve this order:
+
+```text
+detect Run defect
+→ stop normal progression
+→ diagnose and repair or stabilize the current Run
+→ validate the current Run repair when repair is possible
+→ evaluate repository-repair handoff eligibility from external evidence
+→ render a separate Repository Repair Recommendation only when eligible
+→ continue only from the valid repaired Anchor
+```
+
+The behavioral contract is:
+
+```text
+contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+```
+
+The sole executable authority is:
+
+```text
+scripts/repository_repair_handoff.py
+```
+
+Use its validator, eligibility evaluator, and deterministic renderer. Do not reconstruct the trigger predicate in Project Instructions, fixtures, tests, or model prose. Do not accept a caller-authored `standalone_repair_prompt` as equivalent authority.
+
+The active Architect Run:
+
+- must not edit repository files from inside the active Architect Run;
+- must not create or update a repository branch, commit, push, PR, approval, Merge, deployment, release, auto-merge state, or repository settings;
+- must not treat every routine Run error as a repository defect;
+- must not treat the Architect diagnosis as proven without fresh live-repository review;
+- must not replace or alter the current Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage;
+- may continue only through the valid current-Run repair route.
 
 ---
 
