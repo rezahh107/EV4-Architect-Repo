@@ -959,6 +959,6 @@ Stage 4 passes only if:
 
 ## Intermediate Stage Artifact Boundary
 
-Producer-owned intermediate Artifact: `/score-evidence` emits `ev4-architect-pipeline-stage-artifact@1.0.0` and must reference a valid Stage 3 receipt and exact artifact digest before scoring acceptance. It must not reconstruct a missing Matrix/Ledger from prose or anchors, normalize absent artifacts, score candidates absent from validated Stage 3, discard Stage 3 unknowns, emit final totals for contract-critical `?`, or claim audited scores.
+Producer-owned intermediate Artifact: `/score-evidence` emits `ev4-architect-pipeline-stage-artifact@1.1.0` and must reference a valid Stage 3 receipt and exact artifact digest before scoring acceptance. It must not reconstruct a missing Matrix/Ledger from prose or anchors, normalize absent artifacts, score candidates absent from validated Stage 3, discard Stage 3 unknowns, emit final totals for contract-critical `?`, or claim audited scores.
 
 If an executable validator/tool is available, write the canonical Stage Artifact, execute `python scripts/check-architect-pipeline-stage-boundary.py --artifact <artifact.json> --write-receipt <receipt.json>`, obtain the receipt, and emit a receipt-bound `NEXT STAGE ANCHOR` only after `status=valid`. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact, and provide the manual validator command.

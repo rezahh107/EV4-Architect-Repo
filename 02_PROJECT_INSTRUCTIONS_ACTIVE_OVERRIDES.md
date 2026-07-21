@@ -155,7 +155,7 @@ Exception: only a user-approved quick sketch mode may produce a non-audited draf
 
 ## Architect Stage Boundary Artifact Enforcement
 
-Stage 2 through Stage 5 now have an additive intermediate Artifact contract, `ev4-architect-pipeline-stage-artifact@1.0.0`, validated by `scripts/check-architect-pipeline-stage-boundary.py` with receipts using `ev4-architect-stage-validation-receipt@1.0.0`. The earliest owning producer boundary must fail when a required canonical artifact is missing; downstream reconstruction from prose, Stage Anchor text, or self-declared `gate_results: pass` is forbidden. This does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
+Stage 2 through Stage 5 now have an additive intermediate Artifact contract, `ev4-architect-pipeline-stage-artifact@1.1.0`, validated by `scripts/check-architect-pipeline-stage-boundary.py` with receipts using `ev4-architect-stage-validation-receipt@1.1.0`. The earliest owning producer boundary must fail when a required canonical artifact is missing; downstream reconstruction from prose, Stage Anchor text, or self-declared `gate_results: pass` is forbidden. This does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
 
 If an executable validator/tool is available:
 - write the canonical Stage Artifact;
@@ -170,4 +170,4 @@ If execution is unavailable:
 - provide the exact manual validator command;
 - preserve the Artifact for external validation.
 
-Validation command: `python scripts/check-architect-pipeline-stage-boundary.py --fixtures`. For Stage 3-5 standalone validation, provide explicit `--upstream-artifact` and `--upstream-receipt` inputs; for anchors, validate the separate anchor with `--anchor`, `--anchor-source-artifact`, and `--anchor-source-receipt`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.
+Validation command: `python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json`. For Stage 3-5 standalone validation, provide explicit `--upstream-artifact` and `--upstream-receipt` inputs; for anchors, validate the separate anchor with `--anchor`, `--anchor-source-artifact`, and `--anchor-source-receipt`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.

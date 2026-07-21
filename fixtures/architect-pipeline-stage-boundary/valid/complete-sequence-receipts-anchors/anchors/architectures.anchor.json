@@ -1,0 +1,37 @@
+{
+  "anchor_id": "asb-anchor-run-asb-fixture-architectures-073a64a01fc5",
+  "anchor_schema": "ev4-stage-anchor@1.2.0",
+  "anchor_type": "NEXT_STAGE_ANCHOR",
+  "boundary_ref": {
+    "boundary_id": "asb-boundary-run-asb-fixture-architectures-28b4761cd147",
+    "boundary_schema": "ev4-stage-boundary-record@1.0.0",
+    "boundary_sha256": "073a64a01fc529171a4455e44144a1f0ee07a74e28d8d1853dd71d915c9561ac"
+  },
+  "handoff_state": {
+    "audit_flags": [],
+    "blocking_items": [],
+    "confidence_delta": [],
+    "critical_unknowns": [],
+    "gate_results": "machine_boundary_valid",
+    "partial_rerun_state": {
+      "downstream_payloads_dependent_on_this_stage": [],
+      "earliest_safe_rerun_stage": "/architectures",
+      "invalidation_triggers": [],
+      "reusable_until": null
+    },
+    "required_user_confirmations": [],
+    "stage_boundary": {
+      "allowed_work": [
+        "continue_to:/score-evidence"
+      ],
+      "forbidden_work": [
+        "do_not_treat_anchor_as_machine_authorization"
+      ],
+      "stop_conditions": []
+    }
+  },
+  "repair_target_stage": null,
+  "run_id": "run-asb-fixture",
+  "source_stage": "/architectures",
+  "target_stage": "/score-evidence"
+}

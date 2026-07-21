@@ -1,0 +1,37 @@
+{
+  "anchor_id": "asb-anchor-run-asb-fixture-decompose-9e0704be27b5",
+  "anchor_schema": "ev4-stage-anchor@1.2.0",
+  "anchor_type": "NEXT_STAGE_ANCHOR",
+  "boundary_ref": {
+    "boundary_id": "asb-boundary-run-asb-fixture-decompose-0089ebdbe10a",
+    "boundary_schema": "ev4-stage-boundary-record@1.0.0",
+    "boundary_sha256": "9e0704be27b55a1d2ecbee07898b68aa9cf6de87f24986f8e8bf9ed41f435ee4"
+  },
+  "handoff_state": {
+    "audit_flags": [],
+    "blocking_items": [],
+    "confidence_delta": [],
+    "critical_unknowns": [],
+    "gate_results": "machine_boundary_valid",
+    "partial_rerun_state": {
+      "downstream_payloads_dependent_on_this_stage": [],
+      "earliest_safe_rerun_stage": "/decompose",
+      "invalidation_triggers": [],
+      "reusable_until": null
+    },
+    "required_user_confirmations": [],
+    "stage_boundary": {
+      "allowed_work": [
+        "continue_to:/architectures"
+      ],
+      "forbidden_work": [
+        "do_not_treat_anchor_as_machine_authorization"
+      ],
+      "stop_conditions": []
+    }
+  },
+  "repair_target_stage": null,
+  "run_id": "run-asb-fixture",
+  "source_stage": "/decompose",
+  "target_stage": "/architectures"
+}

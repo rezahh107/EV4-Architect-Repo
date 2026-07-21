@@ -128,3 +128,10 @@ Scope gate: authorized for bounded intermediate Stage Artifact enforcement at `/
 Evidence state: schema_backed and fixture_tested locally after validation; CI enforcement requires exact PR-head workflow execution.
 Runtime enforcement: insufficient_evidence. Downstream enforcement: insufficient_evidence.
 Final Architect Stage Payload v1 authority remains unchanged.
+
+## PR32 Run Validation Transaction Repair
+
+Status: proposed_additive_nonbreaking_pending_independent_review
+Current exact local head: c3ef1e2952674413f556d7fd35dcf6e3ca4fcab6 before this repair; newer repair head must be verified after commit.
+Canonical command: `python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json`.
+Evidence boundary: receipts, boundary records, anchors, and bundle manifests are generated outputs of the current validator transaction, not trusted authorization inputs. Runtime and downstream enforcement remain insufficient_evidence.

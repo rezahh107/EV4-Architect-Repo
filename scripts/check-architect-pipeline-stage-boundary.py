@@ -11,10 +11,10 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_ID = "ev4-architect-pipeline-stage-artifact@1.0.0"
-RECEIPT_SCHEMA = "ev4-architect-stage-validation-receipt@1.0.0"
+SCHEMA_ID = "ev4-architect-pipeline-stage-artifact@1.1.0"
+RECEIPT_SCHEMA = "ev4-architect-stage-validation-receipt@1.1.0"
 VALIDATOR_ID = "architect-pipeline-stage-boundary-validator"
-VALIDATOR_VERSION = "1.0.0"
+VALIDATOR_VERSION = "1.1.0"
 FAMILIES = [f"A{i:02d}" for i in range(1, 9)]
 ORDER = ["/decompose", "/architectures", "/score-evidence", "/score-audit"]
 STAGE_FILE_PREFIX = {
@@ -124,7 +124,8 @@ class Validator:
         status = "valid" if not diagnostics else "invalid"
         return {
             "receipt_schema": RECEIPT_SCHEMA,
-            "receipt_id": f"asb-receipt-{artifact.get('artifact_id', 'unknown')}-{digest[:12]}",
+            "receipt_id": f"asb-receipt-{artifact.get('run_id', 'unknown')}-{artifact.get('artifact_id', 'unknown')}-{digest[:12]}",
+            "run_id": artifact.get("run_id", "unknown"),
             "validator_id": VALIDATOR_ID,
             "validator_version": VALIDATOR_VERSION,
             "artifact_id": artifact.get("artifact_id", "unknown"),
@@ -364,11 +365,10 @@ class Validator:
         if not upstream:
             return [diag("ASB-UPSTREAM-VALIDATION-REQUIRED", "ASB-R05", current_stage, base_path, f"validated {source_stage} source artifact", "missing", source_stage)]
         expected = {
+            "run_id": upstream["artifact"]["run_id"],
             "artifact_id": upstream["artifact"]["artifact_id"],
             "artifact_schema": upstream["artifact"].get("artifact_schema"),
             "artifact_sha256": upstream["sha"],
-            "validation_receipt_id": upstream["receipt"]["receipt_id"],
-            "validation_status": upstream["receipt"]["status"],
             "source_stage": source_stage,
         }
         diagnostics = []
@@ -394,88 +394,49 @@ class Validator:
             diagnostics.append(diag("ASB-LINEAGE-VALIDATOR-VERSION-MISMATCH", "ASB-R07", current_stage, base_path, VALIDATOR_VERSION, str(upstream["receipt"].get("validator_version")), source_stage))
         return diagnostics
 
-    def validate_anchor(self, anchor, artifact, receipt, artifact_sha, path_base="$"):
+    def validate_anchor(self, anchor, artifact, receipt, artifact_sha, boundary=None, boundary_sha=None, path_base="$"):
         stage = artifact.get("stage_id", "unknown")
         diagnostics = []
         if not isinstance(anchor, dict):
             return {"status": "invalid", "diagnostics": [diag("ASB-ANCHOR-NOT-OBJECT", "ASB-R06", stage, path_base, "object", type(anchor).__name__, stage)]}
-        required = ["anchor_schema", "anchor_type", "allowed_next_stage", "source_artifact", "source_validation"]
+        required = ["anchor_schema", "anchor_id", "run_id", "anchor_type", "source_stage", "target_stage", "repair_target_stage", "boundary_ref", "handoff_state"]
         for field in required:
             if field not in anchor:
                 diagnostics.append(diag("ASB-ANCHOR-MISSING-FIELD", "ASB-R06", stage, f"{path_base}/{field}", "present", "missing", stage))
         if diagnostics:
             return {"status": "invalid", "diagnostics": sort_diags(diagnostics)}
-        expected_artifact = {
-            "artifact_id": artifact.get("artifact_id"),
-            "artifact_schema": artifact.get("artifact_schema"),
-            "artifact_sha256": artifact_sha,
-            "stage_id": stage,
+        if boundary is None:
+            boundary = boundary_for(self, artifact, artifact_sha, receipt)
+        if boundary_sha is None:
+            boundary_sha = hashlib.sha256(canonical_json_bytes(boundary)).hexdigest()
+        checks = {
+            "anchor_schema": ANCHOR_SCHEMA,
+            "run_id": artifact.get("run_id"),
+            "source_stage": stage,
+            "anchor_type": "NEXT_STAGE_ANCHOR" if boundary["transition"] == "next_stage" else "REPAIR_ANCHOR",
+            "target_stage": boundary["target_stage"],
+            "repair_target_stage": boundary["repair_target_stage"],
         }
-        for field, expected in expected_artifact.items():
-            observed = anchor.get("source_artifact", {}).get(field)
-            if observed != expected:
-                diagnostics.append(
-                    diag(
-                        f"ASB-ANCHOR-SOURCE-ARTIFACT-{field.upper()}-MISMATCH".replace("_", "-"),
-                        "ASB-R07",
-                        stage,
-                        f"{path_base}/source_artifact/{field}",
-                        str(expected),
-                        str(observed),
-                        stage,
-                    )
-                )
-        expected_validation = {
-            "receipt_id": receipt.get("receipt_id"),
-            "receipt_schema": RECEIPT_SCHEMA,
-            "validator_id": VALIDATOR_ID,
-            "validator_version": VALIDATOR_VERSION,
-            "status": "valid",
-        }
-        for field, expected in expected_validation.items():
-            observed = anchor.get("source_validation", {}).get(field)
-            if observed != expected:
-                diagnostics.append(
-                    diag(
-                        f"ASB-ANCHOR-SOURCE-VALIDATION-{field.upper()}-MISMATCH".replace("_", "-"),
-                        "ASB-R06" if field == "status" else "ASB-R07",
-                        stage,
-                        f"{path_base}/source_validation/{field}",
-                        str(expected),
-                        str(observed),
-                        stage,
-                    )
-                )
-        if anchor.get("anchor_schema") != ANCHOR_SCHEMA:
-            diagnostics.append(diag("ASB-ANCHOR-SCHEMA-MISMATCH", "ASB-R06", stage, f"{path_base}/anchor_schema", ANCHOR_SCHEMA, str(anchor.get("anchor_schema")), stage))
-        expected_type = "NEXT STAGE ANCHOR" if receipt.get("status") == "valid" else "REPAIR ANCHOR"
-        if anchor.get("anchor_type") != expected_type:
-            diagnostics.append(diag("ASB-ANCHOR-TYPE-MISMATCH", "ASB-R06", stage, f"{path_base}/anchor_type", expected_type, str(anchor.get("anchor_type")), stage))
-        if anchor.get("anchor_type") == "NEXT STAGE ANCHOR" and anchor.get("allowed_next_stage") != NEXT_STAGE.get(stage):
-            diagnostics.append(diag("ASB-ANCHOR-NEXT-STAGE-MISMATCH", "ASB-R06", stage, f"{path_base}/allowed_next_stage", str(NEXT_STAGE.get(stage)), str(anchor.get("allowed_next_stage")), stage))
+        for field, expected in checks.items():
+            if anchor.get(field) != expected:
+                diagnostics.append(diag(f"ASB-ANCHOR-{field.upper()}-MISMATCH".replace("_", "-"), "ASB-R06", stage, f"{path_base}/{field}", str(expected), str(anchor.get(field)), stage))
+        bref = anchor.get("boundary_ref", {})
+        for field, expected in {"boundary_id": boundary["boundary_id"], "boundary_schema": boundary["boundary_schema"], "boundary_sha256": boundary_sha}.items():
+            if bref.get(field) != expected:
+                diagnostics.append(diag(f"ASB-ANCHOR-BOUNDARY-REF-{field.upper()}-MISMATCH".replace("_", "-"), "ASB-R07", stage, f"{path_base}/boundary_ref/{field}", str(expected), str(bref.get(field)), stage))
+        hs = anchor.get("handoff_state", {})
+        for field in ["critical_unknowns", "blocking_items", "confidence_delta", "gate_results", "audit_flags", "required_user_confirmations", "partial_rerun_state", "stage_boundary"]:
+            if field not in hs:
+                diagnostics.append(diag("ASB-ANCHOR-HANDOFF-STATE-MISSING", "ASB-R06", stage, f"{path_base}/handoff_state/{field}", "present", "missing", stage))
         return {"status": "valid" if not diagnostics else "invalid", "diagnostics": sort_diags(diagnostics)}
 
-    def make_anchor(self, artifact, receipt, artifact_sha):
-        stage = artifact["stage_id"]
-        return {
-            "anchor_schema": ANCHOR_SCHEMA,
-            "anchor_type": "NEXT STAGE ANCHOR" if receipt["status"] == "valid" else "REPAIR ANCHOR",
-            "allowed_next_stage": NEXT_STAGE.get(stage) if receipt["status"] == "valid" else None,
-            "repair_target_stage": None if receipt["status"] == "valid" else stage,
-            "source_artifact": {
-                "artifact_id": artifact["artifact_id"],
-                "artifact_schema": artifact["artifact_schema"],
-                "artifact_sha256": artifact_sha,
-                "stage_id": stage,
-            },
-            "source_validation": {
-                "receipt_id": receipt["receipt_id"],
-                "receipt_schema": RECEIPT_SCHEMA,
-                "validator_id": VALIDATOR_ID,
-                "validator_version": VALIDATOR_VERSION,
-                "status": receipt["status"],
-            },
-        }
+    def make_anchor(self, artifact, receipt, artifact_sha, boundary=None, boundary_sha=None):
+        if boundary is None:
+            boundary = boundary_for(self, artifact, artifact_sha, receipt)
+        if boundary_sha is None:
+            boundary_sha = hashlib.sha256(canonical_json_bytes(boundary)).hexdigest()
+        success = boundary["transition"] == "next_stage"
+        return anchor_for(artifact, boundary, boundary_sha)
 
     def context_from_upstreams(self, artifact_paths, receipt_paths):
         ctx = {"artifacts": {}, "lineage": {}}
@@ -554,6 +515,15 @@ class Validator:
                         )
                     )
                     return {"status": "invalid", "diagnostics": sort_diags(diagnostics), "receipts": []}
+        run_ids = set()
+        for stage in existing:
+            try:
+                run_ids.add(load_json(present[stage]).get("run_id"))
+            except Exception:
+                run_ids.add(None)
+        if len(run_ids) != 1 or None in run_ids:
+            diagnostics.append(diag("ASB-RUN-ID-MISMATCH", "ASB-R07", "sequence", "$/run_id", "one stable run_id", ",".join(str(item) for item in sorted(run_ids, key=str)), "/decompose"))
+            return {"status": "invalid", "diagnostics": sort_diags(diagnostics), "receipts": []}
         ctx = {"artifacts": {}, "lineage": {}}
         receipts = []
         all_diagnostics = []
@@ -583,22 +553,10 @@ def validate_fixture_suite(validator):
     base = ROOT / "fixtures/architect-pipeline-stage-boundary"
     valid = validator.validate_sequence(base / "valid/complete-sequence")
     checked = [valid]
-    anchor_sequence_dir = base / "valid/complete-sequence-receipts-anchors"
-    anchor_sequence = validator.validate_sequence(anchor_sequence_dir)
-    checked.append(anchor_sequence)
+    bundle_dir = base / "valid/complete-sequence-receipts-anchors"
+    bundle_check = validate_bundle_directory(bundle_dir)
+    checked.append(bundle_check)
     anchor_checks = []
-    if anchor_sequence["status"] == "valid":
-        for stage in ORDER:
-            prefix = STAGE_FILE_PREFIX[stage]
-            anchor_checks.append(
-                validator.validate_anchor(
-                    load_json(anchor_sequence_dir / f"{prefix}.anchor.json"),
-                    load_json(anchor_sequence_dir / f"{prefix}.json"),
-                    load_json(anchor_sequence_dir / f"{prefix}.receipt.json"),
-                    sha(anchor_sequence_dir / f"{prefix}.json"),
-                )
-            )
-        checked.extend(anchor_checks)
     bad = []
     for directory in sorted((base / "invalid").iterdir()):
         if not directory.is_dir():
@@ -619,19 +577,202 @@ def validate_fixture_suite(validator):
         if result["status"] == "valid":
             bad.append(str(directory.relative_to(ROOT)))
     return {
-        "status": "valid" if valid["status"] == "valid" and anchor_sequence["status"] == "valid" and all(item["status"] == "valid" for item in anchor_checks) and not bad else "invalid",
+        "status": "valid" if valid["status"] == "valid" and bundle_check["status"] == "valid" and not bad else "invalid",
         "diagnostics": []
-        if not bad and anchor_sequence["status"] == "valid" and all(item["status"] == "valid" for item in anchor_checks)
+        if not bad and bundle_check["status"] == "valid"
         else sort_diags(
             ([] if not bad else [diag("ASB-FIXTURE-EXPECTED-INVALID-PASSED", "ASB-R07", "fixture", "$/fixtures", "invalid fixture failure", ",".join(bad))])
-            + anchor_sequence.get("diagnostics", [])
-            + [diagnostic for item in anchor_checks for diagnostic in item.get("diagnostics", [])]
+            + bundle_check.get("diagnostics", [])
         ),
         "checked": len(checked),
     }
 
 
+
+def canonical_json_bytes(value):
+    return json.dumps(value, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+
+
+def file_sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def write_json(path, value):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_bytes(canonical_json_bytes(value))
+
+
+def receipt_sha_for(receipt):
+    return hashlib.sha256(canonical_json_bytes(receipt)).hexdigest()
+
+
+def boundary_for(validator, artifact, artifact_sha, receipt):
+    valid = receipt["status"] == "valid"
+    stage = artifact["stage_id"]
+    return {
+        "boundary_schema": "ev4-stage-boundary-record@1.0.0",
+        "boundary_id": f"asb-boundary-{artifact['run_id']}-{stage.strip('/').replace('/', '-')}-{artifact_sha[:12]}",
+        "run_id": artifact["run_id"],
+        "source_stage": stage,
+        "target_stage": NEXT_STAGE.get(stage) if valid else None,
+        "repair_target_stage": None if valid else stage,
+        "transition": "next_stage" if valid else "repair",
+        "artifact": {"artifact_id": artifact["artifact_id"], "artifact_schema": artifact["artifact_schema"], "artifact_sha256": artifact_sha},
+        "receipt": {"receipt_id": receipt["receipt_id"], "receipt_schema": receipt["receipt_schema"], "receipt_sha256": receipt_sha_for(receipt), "validator_id": VALIDATOR_ID, "validator_version": VALIDATOR_VERSION, "status": receipt["status"]},
+        "authorization": {"next_stage_authorized": valid, "authorization_reason": "generated_valid_receipt" if valid else "generated_invalid_receipt"},
+    }
+
+
+def anchor_for(artifact, boundary, boundary_sha, active_unknowns=None, blockers=None):
+    success = boundary["transition"] == "next_stage"
+    return {
+        "anchor_schema": ANCHOR_SCHEMA,
+        "anchor_id": f"asb-anchor-{artifact['run_id']}-{artifact['stage_id'].strip('/').replace('/', '-')}-{boundary_sha[:12]}",
+        "run_id": artifact["run_id"],
+        "anchor_type": "NEXT_STAGE_ANCHOR" if success else "REPAIR_ANCHOR",
+        "source_stage": artifact["stage_id"],
+        "target_stage": boundary["target_stage"] if success else None,
+        "repair_target_stage": None if success else boundary["repair_target_stage"],
+        "boundary_ref": {"boundary_id": boundary["boundary_id"], "boundary_schema": boundary["boundary_schema"], "boundary_sha256": boundary_sha},
+        "handoff_state": {
+            "critical_unknowns": active_unknowns or [],
+            "blocking_items": blockers or [],
+            "confidence_delta": [],
+            "gate_results": "machine_boundary_valid" if success else "machine_boundary_repair",
+            "audit_flags": [],
+            "required_user_confirmations": [],
+            "partial_rerun_state": {"reusable_until": None, "invalidation_triggers": [], "earliest_safe_rerun_stage": artifact["stage_id"], "downstream_payloads_dependent_on_this_stage": []},
+            "stage_boundary": {"allowed_work": [] if not success else [f"continue_to:{boundary['target_stage']}"], "forbidden_work": ["do_not_treat_anchor_as_machine_authorization"], "stop_conditions": [] if success else ["repair_required"]},
+        },
+    }
+
+
+def bundle_manifest(run_id, stages, overall_status, authorized_next_stage, repair_target_stage):
+    manifest = {
+        "bundle_schema": "ev4-architect-validation-bundle@1.0.0",
+        "bundle_id": f"asb-bundle-{run_id}",
+        "run_id": run_id,
+        "validator_id": VALIDATOR_ID,
+        "validator_version": VALIDATOR_VERSION,
+        "determinism_profile": "deterministic_no_timestamps_v1",
+        "stage_sequence": [stage["stage_id"] for stage in stages],
+        "overall_status": overall_status,
+        "authorized_next_stage": authorized_next_stage,
+        "repair_target_stage": repair_target_stage,
+        "stages": stages,
+        "bundle_content_digest": "",
+    }
+    digest_input = json.dumps({k: v for k, v in manifest.items() if k != "bundle_content_digest"}, sort_keys=True, separators=(",", ":")).encode()
+    manifest["bundle_content_digest"] = hashlib.sha256(digest_input).hexdigest()
+    return manifest
+
+
+
+def validate_bundle_directory(bundle_dir):
+    bundle_path = Path(bundle_dir)
+    diagnostics = []
+    try:
+        manifest = load_json(bundle_path / "manifest.json")
+    except Exception as exc:
+        return {"status": "invalid", "diagnostics": [diag("ASB-BUNDLE-MANIFEST-MISSING", "ASB-R07", "bundle", "$/manifest.json", "readable manifest", type(exc).__name__, None)]}
+    for index, stage in enumerate(manifest.get("stages", [])):
+        for kind in ["artifact", "receipt", "boundary", "anchor"]:
+            path_key = f"{kind}_path"
+            sha_key = f"{kind}_sha256"
+            if path_key not in stage:
+                continue
+            file_path = bundle_path / stage[path_key]
+            if not file_path.exists():
+                diagnostics.append(diag(f"ASB-BUNDLE-{kind.upper()}-MISSING", "ASB-R07", stage.get("stage_id", "bundle"), f"$/stages/{index}/{path_key}", "existing file", str(stage[path_key]), None))
+            elif sha_key in stage and file_sha(file_path) != stage[sha_key]:
+                diagnostics.append(diag(f"ASB-BUNDLE-{kind.upper()}-SHA256-MISMATCH", "ASB-R07", stage.get("stage_id", "bundle"), f"$/stages/{index}/{sha_key}", file_sha(file_path), str(stage[sha_key]), None))
+        boundary = load_json(bundle_path / stage["boundary_path"])
+        anchor = load_json(bundle_path / stage["anchor_path"])
+        if anchor["boundary_ref"]["boundary_id"] != boundary["boundary_id"]:
+            diagnostics.append(diag("ASB-ANCHOR-BOUNDARY-ID-MISMATCH", "ASB-R07", stage["stage_id"], f"$/stages/{index}/anchor/boundary_ref/boundary_id", boundary["boundary_id"], anchor["boundary_ref"].get("boundary_id"), None))
+        if anchor["run_id"] != manifest["run_id"] or boundary["run_id"] != manifest["run_id"]:
+            diagnostics.append(diag("ASB-BUNDLE-RUN-ID-MISMATCH", "ASB-R07", stage["stage_id"], f"$/stages/{index}/run_id", manifest["run_id"], f"boundary={boundary.get('run_id')} anchor={anchor.get('run_id')}", None))
+    expected = bundle_manifest(manifest.get("run_id", "unknown"), [{k: v for k, v in st.items()} for st in manifest.get("stages", [])], manifest.get("overall_status"), manifest.get("authorized_next_stage"), manifest.get("repair_target_stage"))
+    if expected["bundle_content_digest"] != manifest.get("bundle_content_digest"):
+        diagnostics.append(diag("ASB-BUNDLE-CONTENT-DIGEST-MISMATCH", "ASB-R07", "bundle", "$/bundle_content_digest", expected["bundle_content_digest"], str(manifest.get("bundle_content_digest")), None))
+    return {"status": "valid" if not diagnostics else "invalid", "diagnostics": sort_diags(diagnostics), "manifest": manifest}
+
+def validate_run_transaction(validator, sequence, output):
+    sequence_path = Path(sequence)
+    result = validator.validate_sequence(sequence_path)
+    output_path = Path(output)
+    if output_path.exists():
+        import shutil
+        shutil.rmtree(output_path)
+    output_path.mkdir(parents=True)
+    for sub in ["artifacts", "receipts", "boundaries", "anchors"]:
+        (output_path / sub).mkdir()
+    stages = []
+    run_id = None
+    for receipt in result.get("receipts", []):
+        stage = receipt["stage_id"]
+        prefix = STAGE_FILE_PREFIX[stage]
+        artifact_src = sequence_path / f"{prefix}.json"
+        artifact = load_json(artifact_src)
+        run_id = artifact["run_id"] if run_id is None else run_id
+        artifact_sha = sha(artifact_src)
+        artifact_dst = output_path / "artifacts" / f"{prefix}.json"
+        artifact_dst.write_bytes(artifact_src.read_bytes())
+        receipt_dst = output_path / "receipts" / f"{prefix}.receipt.json"
+        write_json(receipt_dst, receipt)
+        boundary = boundary_for(validator, artifact, artifact_sha, receipt)
+        boundary_dst = output_path / "boundaries" / f"{prefix}.boundary.json"
+        write_json(boundary_dst, boundary)
+        boundary_sha = file_sha(boundary_dst)
+        anchor = anchor_for(artifact, boundary, boundary_sha)
+        anchor_dst = output_path / "anchors" / f"{prefix}.anchor.json"
+        write_json(anchor_dst, anchor)
+        stages.append({
+            "stage_id": stage,
+            "artifact_path": str(artifact_dst.relative_to(output_path)),
+            "artifact_id": artifact["artifact_id"],
+            "artifact_schema": artifact["artifact_schema"],
+            "artifact_sha256": artifact_sha,
+            "receipt_path": str(receipt_dst.relative_to(output_path)),
+            "receipt_id": receipt["receipt_id"],
+            "receipt_schema": receipt["receipt_schema"],
+            "receipt_sha256": file_sha(receipt_dst),
+            "boundary_path": str(boundary_dst.relative_to(output_path)),
+            "boundary_id": boundary["boundary_id"],
+            "boundary_schema": boundary["boundary_schema"],
+            "boundary_sha256": boundary_sha,
+            "anchor_path": str(anchor_dst.relative_to(output_path)),
+            "anchor_id": anchor["anchor_id"],
+            "anchor_schema": anchor["anchor_schema"],
+            "anchor_sha256": file_sha(anchor_dst),
+        })
+    overall = result["status"]
+    authorized = NEXT_STAGE.get(stages[-1]["stage_id"]) if overall == "valid" and stages else None
+    repair = None if overall == "valid" else (result["diagnostics"][0].get("repair_target_stage") if result["diagnostics"] else "/decompose")
+    manifest = bundle_manifest(run_id or "unknown", stages, overall, authorized, repair)
+    write_json(output_path / "manifest.json", manifest)
+    return {"status": overall, "diagnostics": result["diagnostics"], "manifest": manifest}
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "validate-bundle":
+        parser = argparse.ArgumentParser()
+        parser.add_argument("validate_bundle")
+        parser.add_argument("--bundle", required=True)
+        parser.add_argument("--format", choices=["text", "json"], default="text")
+        args = parser.parse_args()
+        output = validate_bundle_directory(args.bundle)
+        print(json.dumps(output, indent=2, sort_keys=True) if args.format == "json" else output["status"])
+        return 0 if output["status"] == "valid" else 1
+    if len(sys.argv) > 1 and sys.argv[1] == "validate-run":
+        parser = argparse.ArgumentParser()
+        parser.add_argument("validate_run")
+        parser.add_argument("--sequence", required=True)
+        parser.add_argument("--output", required=True)
+        parser.add_argument("--format", choices=["text", "json"], default="text")
+        args = parser.parse_args()
+        output = validate_run_transaction(Validator(ROOT), args.sequence, args.output)
+        print(json.dumps(output, indent=2, sort_keys=True) if args.format == "json" else output["status"])
+        return 0 if output["status"] == "valid" else 1
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact")
     parser.add_argument("--write-receipt")
@@ -640,6 +781,7 @@ def main():
     parser.add_argument("--anchor")
     parser.add_argument("--anchor-source-artifact")
     parser.add_argument("--anchor-source-receipt")
+    parser.add_argument("--anchor-source-boundary")
     parser.add_argument("--sequence")
     parser.add_argument("--write-receipts")
     parser.add_argument("--write-anchors")
@@ -653,7 +795,9 @@ def main():
         artifact_path = Path(args.anchor_source_artifact)
         artifact = load_json(artifact_path)
         receipt = load_json(Path(args.anchor_source_receipt))
-        output = validator.validate_anchor(load_json(Path(args.anchor)), artifact, receipt, sha(artifact_path))
+        boundary = load_json(Path(args.anchor_source_boundary)) if args.anchor_source_boundary else None
+        boundary_sha = file_sha(Path(args.anchor_source_boundary)) if args.anchor_source_boundary else None
+        output = validator.validate_anchor(load_json(Path(args.anchor)), artifact, receipt, sha(artifact_path), boundary, boundary_sha)
     elif args.artifact:
         if len(args.upstream_artifact) != len(args.upstream_receipt):
             parser.error("--upstream-artifact and --upstream-receipt counts must match")

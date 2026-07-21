@@ -1,9 +1,9 @@
 # Architect Pipeline Stage Artifact v1
 
 Status: active additive_nonbreaking intermediate contract
-Schema identity: `ev4-architect-pipeline-stage-artifact@1.0.0`
+Schema identity: `ev4-architect-pipeline-stage-artifact@1.1.0`
 Schema path: `schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json`
-Receipt schema: `ev4-architect-stage-validation-receipt@1.0.0`
+Receipt schema: `ev4-architect-stage-validation-receipt@1.1.0`
 Validator: `scripts/check-architect-pipeline-stage-boundary.py`
 
 ## Purpose
@@ -15,7 +15,7 @@ This contract owns intermediate Architect pipeline Stage Artifacts for `/decompo
 Every artifact uses one common envelope:
 
 ```yaml
-artifact_schema: ev4-architect-pipeline-stage-artifact@1.0.0
+artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
 artifact_id: stable artifact identity
 run_id: stable run identity
 stage_id: /decompose | /architectures | /score-evidence | /score-audit
@@ -88,5 +88,22 @@ python scripts/check-architect-pipeline-stage-boundary.py \
 Fixture-suite validation:
 
 ```bash
-python scripts/check-architect-pipeline-stage-boundary.py --fixtures
+python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json
 ```
+
+
+## Canonical Run Validation Transaction
+
+The production-authoritative command is:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py \
+  validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle-directory> \
+  --format json
+```
+
+Receipts are generated outputs only. Caller-supplied receipts, anchors, boundary records, and manifests are untrusted assertions and do not authorize continuation. Machine authorization derives only from a valid generated `ev4-architect-validation-bundle@1.0.0` manifest and its generated `ev4-stage-boundary-record@1.0.0` records. User handoff anchors remain model-continuity context and must not independently authorize continuation.
+
+Current schema identities for new generated evidence are `ev4-architect-pipeline-stage-artifact@1.1.0`, `ev4-architect-stage-validation-receipt@1.1.0`, `ev4-stage-boundary-record@1.0.0`, `ev4-stage-anchor@1.2.0`, and `ev4-architect-validation-bundle@1.0.0`. Historical v1.0 stage artifacts and receipts may be read only as historical evidence; they are not current authorization records.

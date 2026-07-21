@@ -1,0 +1,13 @@
+{
+  "artifact_id": "art-s4",
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+  "artifact_sha256": "2266f5c7db59dfaad6d60c41f4bfc324fce01843ef2c9fd1d7ad13b3d87a0d16",
+  "diagnostics": [],
+  "receipt_id": "asb-receipt-run-asb-fixture-art-s4-2266f5c7db59",
+  "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
+  "run_id": "run-asb-fixture",
+  "stage_id": "/score-evidence",
+  "status": "valid",
+  "validator_id": "architect-pipeline-stage-boundary-validator",
+  "validator_version": "1.1.0"
+}

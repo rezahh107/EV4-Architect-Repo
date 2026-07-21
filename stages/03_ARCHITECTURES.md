@@ -691,6 +691,6 @@ Stage 3 fails if:
 
 ## Intermediate Stage Artifact Boundary
 
-Producer-owned intermediate Artifact: `/architectures` emits `ev4-architect-pipeline-stage-artifact@1.0.0` with `architecture_coverage_matrix` and `unknown_propagation_ledger`. Missing Matrix or Ledger, disappeared Stage 2 unknowns, untracked unknown dependencies, or unsupported resolution fail at Stage 3 under ASB-R03/ASB-R04.
+Producer-owned intermediate Artifact: `/architectures` emits `ev4-architect-pipeline-stage-artifact@1.1.0` with `architecture_coverage_matrix` and `unknown_propagation_ledger`. Missing Matrix or Ledger, disappeared Stage 2 unknowns, untracked unknown dependencies, or unsupported resolution fail at Stage 3 under ASB-R03/ASB-R04.
 
 If an executable validator/tool is available, write the canonical Stage Artifact, execute `python scripts/check-architect-pipeline-stage-boundary.py --artifact <artifact.json> --write-receipt <receipt.json>`, obtain the receipt, and emit a receipt-bound `NEXT STAGE ANCHOR` only after `status=valid`. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact, and provide the manual validator command.
