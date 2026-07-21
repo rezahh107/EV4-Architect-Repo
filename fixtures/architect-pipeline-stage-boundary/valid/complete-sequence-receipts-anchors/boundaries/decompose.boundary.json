@@ -5,18 +5,20 @@
     "artifact_sha256": "93950a7321f82215dc409d403800278bf654544668bdb09f50cd86d8cb6fe6da"
   },
   "authorization": {
-    "authorization_reason": "generated_valid_receipt",
+    "authorization_reason": "regenerated_valid_bundle",
     "next_stage_authorized": true
   },
-  "boundary_id": "asb-boundary-run-asb-fixture-decompose-93950a7321f8",
-  "boundary_schema": "ev4-stage-boundary-record@1.0.0",
+  "boundary_id": "asb-boundary-run-asb-fixture-decompose-cd803e91bc91",
+  "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+  "failed_stage": null,
+  "failure_event_ref": null,
   "receipt": {
     "receipt_id": "asb-receipt-run-asb-fixture-art-s2-93950a7321f8",
     "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-    "receipt_sha256": "60a0b20b8433dbe3937809994e44984c2084c9269cc946de2d3f567370166caf",
+    "receipt_sha256": "cf970e7b76fa1616a4cade612cc619c875149e7579a0ab221b23e1dba61ac020",
     "status": "valid",
     "validator_id": "architect-pipeline-stage-boundary-validator",
-    "validator_version": "1.1.0"
+    "validator_version": "1.2.0"
   },
   "repair_target_stage": null,
   "run_id": "run-asb-fixture",

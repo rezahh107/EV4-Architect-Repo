@@ -210,6 +210,8 @@ python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
 
 The legacy file-producing flags `--write-receipt`, `--write-receipts`, and `--write-anchors` are removed. Standalone Artifact diagnostics use `diagnose-artifact`, generate no authority files, and report `authorization_valid: false`.
 
+The exact active Stage-version map is `/decompose@1.0.0`, `/architectures@1.1.0`, `/score-evidence@1.3.0`, and `/score-audit@1.2.0`; every other Stage/version pair is rejected. Evidence-backed inactive unknowns remain audit evidence but do not propagate as active Stage 4 uncertainty. Structural sequence defects return deterministic non-authorizing preflight results without publishing a Bundle. Stage 4 payload lineage is exactly bound to the regenerated Stage 3 Artifact. Bundle replacement is allowed only for Validator-owned output and is published atomically.
+
 A user-facing Anchor never independently authorizes continuation. Historical `ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` records remain historical evidence only. The current `ev4-stage-anchor@1.3.0` binds a `boundary_ref`, an optional failure-only `failure_event_ref`, and an evidence-derived `handoff_state` with structured `confidence_delta`.
 
 Exact-Head CI establishes repository CI evidence only for the tested Head. Runtime-tool enforcement, chat-runtime enforcement, downstream rejection, real non-synthetic handoff, and production readiness remain `insufficient_evidence` unless separately proven.

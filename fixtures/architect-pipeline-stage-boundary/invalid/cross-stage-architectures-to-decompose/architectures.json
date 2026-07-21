@@ -14,14 +14,86 @@
       }
     ],
     "architecture_coverage_matrix": [
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A01","included_as_candidate": true,"reason": "required family considered","status": "viable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A02","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A03","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A04","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A05","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A06","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A07","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"},
-      {"considered": true,"evidence_refs": ["s2"],"family_id": "A08","included_as_candidate": false,"reason": "required family considered","status": "not_applicable"}
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A01",
+        "included_as_candidate": true,
+        "reason": "required family considered",
+        "status": "viable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A02",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A03",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A04",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A05",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A06",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A07",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A08",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      }
     ],
     "hidden_recommendation_self_audit": {},
     "rejected_or_approval_gated_candidates": [],
@@ -40,5 +112,5 @@
     }
   ],
   "stage_id": "/architectures",
-  "stage_version": "1.0.0"
+  "stage_version": "1.1.0"
 }

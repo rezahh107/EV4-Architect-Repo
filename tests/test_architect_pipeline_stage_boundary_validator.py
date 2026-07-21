@@ -2,6 +2,8 @@ import copy
 import importlib.util
 import json
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -245,3 +247,283 @@ def test_confidence_delta_is_structured_and_receipt_status_is_gate_result(tmp_pa
     assert all(isinstance(item, dict) for item in anchor["handoff_state"]["confidence_delta"])
     assert anchor["handoff_state"]["gate_results"]["receipt_status"] == "valid"
     assert "receipt_status:valid" not in anchor["handoff_state"]["confidence_delta"]
+
+
+RESOLVED = ROOT / "fixtures/architect-pipeline-stage-boundary/valid/resolved-inactive-unknowns-sequence"
+STAGE_FILES = {
+    "/decompose": "decompose.json",
+    "/architectures": "architectures.json",
+    "/score-evidence": "score-evidence.json",
+    "/score-audit": "score-audit.json",
+}
+
+
+@pytest.mark.parametrize("stage,filename", list(STAGE_FILES.items()))
+def test_exact_stage_version_map_rejects_each_independent_mutation(tmp_path, stage, filename):
+    sequence = copy_sequence(tmp_path)
+    mutate_artifact(
+        sequence,
+        filename,
+        lambda value: value.update(stage_version="0.0.0-stale"),
+    )
+    bundle = tmp_path / "bundle"
+    generated = asb.generate_transaction(sequence, bundle, ROOT)
+    assert generated["run_validation_status"] == "invalid"
+    assert generated["authorization_valid"] is False
+    assert generated["manifest"]["repair_target_stage"] == stage
+    receipt = load(bundle / f"receipts/{asb.PREFIX[stage]}.receipt.json")
+    assert any(item["code"] == "ASB-STAGE-VERSION-MISMATCH" for item in receipt["diagnostics"])
+    assert asb.validate_bundle(bundle, ROOT)["verification_status"] == "invalid_bundle_verified"
+
+
+def test_stage_documents_use_only_current_transaction_authority_path():
+    for relative in [
+        "stages/02_DECOMPOSE.md",
+        "stages/03_ARCHITECTURES.md",
+        "stages/04_SCORE_EVIDENCE.md",
+        "stages/05_SCORE_AUDIT.md",
+    ]:
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "--write-receipt" not in text
+        assert "--write-receipts" not in text
+        assert "--write-anchors" not in text
+        assert "validate-run" in text
+        assert "validate-bundle" in text
+        assert "diagnose-artifact" in text
+        assert "non-authorizing" in text
+    for stage, filename in STAGE_FILES.items():
+        stage_path = {
+            "/decompose": ROOT / "stages/02_DECOMPOSE.md",
+            "/architectures": ROOT / "stages/03_ARCHITECTURES.md",
+            "/score-evidence": ROOT / "stages/04_SCORE_EVIDENCE.md",
+            "/score-audit": ROOT / "stages/05_SCORE_AUDIT.md",
+        }[stage]
+        assert f"Version: {asb.STAGE_VERSIONS[stage]}" in stage_path.read_text(encoding="utf-8")
+
+
+def test_resolved_and_inactive_unknowns_authorize_without_active_propagation(tmp_path):
+    bundle = tmp_path / "bundle"
+    generated = asb.generate_transaction(RESOLVED, bundle, ROOT)
+    verified = asb.validate_bundle(bundle, ROOT)
+    assert generated["bundle_integrity_status"] == "valid"
+    assert generated["run_validation_status"] == "valid"
+    assert generated["authorization_valid"] is True
+    assert verified["bundle_integrity_status"] == "valid"
+    assert verified["run_validation_status"] == "valid"
+    assert verified["authorization_valid"] is True
+    stage4 = load(bundle / "artifacts/score-evidence.json")
+    assert stage4["payload"]["uncertainty_register"] == []
+    anchor = load(bundle / "anchors/architectures.anchor.json")
+    assert anchor["handoff_state"]["critical_unknowns"] == []
+    assert anchor["handoff_state"]["blocking_items"] == []
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda row: row.pop("resolving_evidence_refs"),
+        lambda row: row.update(resolving_evidence_refs=["forged-evidence"]),
+        lambda row: row.update(resolution_reason=""),
+        lambda row: row.update(evidence_refs=["s2"]),
+    ],
+)
+def test_resolved_unknown_requires_exact_named_evidence(tmp_path, mutation):
+    sequence = tmp_path / "sequence"
+    shutil.copytree(RESOLVED, sequence)
+    artifact_path = sequence / "architectures.json"
+    artifact = load(artifact_path)
+    row = artifact["payload"]["unknown_propagation_ledger"][0]
+    mutation(row)
+    write(artifact_path, artifact)
+    bundle = tmp_path / "bundle"
+    generated = asb.generate_transaction(sequence, bundle, ROOT)
+    assert generated["run_validation_status"] == "invalid"
+    assert generated["authorization_valid"] is False
+    assert generated["manifest"]["repair_target_stage"] == "/architectures"
+    receipt = load(bundle / "receipts/architectures.receipt.json")
+    assert receipt["status"] == "invalid"
+
+
+@pytest.mark.parametrize(
+    "case,expected_repair",
+    [
+        ("T19-missing-stage2", "/decompose"),
+        ("T20-missing-stage3", "/architectures"),
+        ("T21-missing-stage4", "/score-evidence"),
+        ("T22-duplicate-stage2", "/decompose"),
+        ("T23-stage-file-mismatch", "/architectures"),
+    ],
+)
+def test_structural_failures_are_deterministic_non_authorizing_cli_results(tmp_path, case, expected_repair):
+    sequence = ROOT / "fixtures/architect-pipeline-stage-boundary/invalid" / case
+    outputs = [tmp_path / "one", tmp_path / "two"]
+    results = []
+    for output in outputs:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "validate-run",
+                "--sequence",
+                str(sequence),
+                "--output",
+                str(output),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 1
+        assert completed.stderr == ""
+        results.append(json.loads(completed.stdout))
+        assert not output.exists()
+    assert results[0] == results[1]
+    result = results[0]
+    assert result["bundle_integrity_status"] == "not_produced"
+    assert result["run_validation_status"] == "invalid"
+    assert result["authorization_valid"] is False
+    assert result["output_published"] is False
+    assert result["diagnostics"][0]["repair_target_stage"] == expected_repair
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda refs: refs[0].update(run_id="other-run"),
+        lambda refs: refs[0].update(artifact_id="forged-artifact"),
+        lambda refs: refs[0].update(artifact_schema="historical"),
+        lambda refs: refs[0].update(artifact_sha256="0" * 64),
+        lambda refs: refs[0].update(source_stage="/decompose"),
+        lambda refs: refs.clear(),
+        lambda refs: refs.append(copy.deepcopy(refs[0])),
+    ],
+)
+def test_stage4_payload_lineage_is_exactly_bound_to_regenerated_stage3(tmp_path, mutation):
+    sequence = copy_sequence(tmp_path)
+    stage4_path = sequence / "score-evidence.json"
+    stage4 = load(stage4_path)
+    mutation(stage4["payload"]["validated_upstream_artifact_refs"])
+    write(stage4_path, stage4)
+    # The top-level source_artifacts reference remains untouched and valid.
+    assert stage4["source_artifacts"] == load(VALID / "score-evidence.json")["source_artifacts"]
+    bundle = tmp_path / "bundle"
+    generated = asb.generate_transaction(sequence, bundle, ROOT)
+    assert generated["run_validation_status"] == "invalid"
+    assert generated["authorization_valid"] is False
+    assert generated["manifest"]["repair_target_stage"] == "/architectures"
+    event = load(bundle / "failure-event.json")
+    assert event["failed_stage"] == "/score-evidence"
+    assert event["repair_target_stage"] == "/architectures"
+    assert asb.validate_bundle(bundle, ROOT)["verification_status"] == "invalid_bundle_verified"
+
+
+def assert_safe_output_rejection(sequence, output, marker=None):
+    result = asb.generate_transaction(sequence, output, ROOT)
+    assert result["bundle_integrity_status"] == "not_produced"
+    assert result["run_validation_status"] == "invalid"
+    assert result["authorization_valid"] is False
+    assert result["output_published"] is False
+    if marker is not None:
+        assert marker.read_text(encoding="utf-8") == "preserve-me"
+
+
+def test_output_safety_rejects_repository_root_without_deletion():
+    marker = ROOT / "README.md"
+    before = marker.read_bytes()
+    result = asb.generate_transaction(VALID, ROOT, ROOT)
+    assert result["bundle_integrity_status"] == "not_produced"
+    assert marker.read_bytes() == before
+
+
+def test_output_safety_rejects_sequence_and_overlapping_paths(tmp_path):
+    sequence = tmp_path / "workspace/sequence"
+    shutil.copytree(VALID, sequence)
+    assert_safe_output_rejection(sequence, sequence)
+    marker = sequence.parent / "marker.txt"
+    marker.write_text("preserve-me", encoding="utf-8")
+    assert_safe_output_rejection(sequence, sequence.parent, marker)
+    assert_safe_output_rejection(sequence, sequence / "nested-output")
+    alias = tmp_path / "sequence-alias"
+    alias.symlink_to(sequence, target_is_directory=True)
+    assert_safe_output_rejection(sequence, alias)
+
+
+def test_output_safety_rejects_unrelated_existing_directory_before_deletion(tmp_path):
+    output = tmp_path / "unrelated"
+    output.mkdir()
+    marker = output / "marker.txt"
+    marker.write_text("preserve-me", encoding="utf-8")
+    assert_safe_output_rejection(VALID, output, marker)
+
+
+def test_owned_bundle_replacement_is_permitted_and_deterministic(tmp_path):
+    output = tmp_path / "bundle"
+    first = asb.generate_transaction(VALID, output, ROOT)
+    first_bytes = {
+        path.relative_to(output): path.read_bytes()
+        for path in output.rglob("*")
+        if path.is_file()
+    }
+    (output / "unlisted-user-file.txt").write_text("must not survive owned replacement", encoding="utf-8")
+    second = asb.generate_transaction(VALID, output, ROOT)
+    second_bytes = {
+        path.relative_to(output): path.read_bytes()
+        for path in output.rglob("*")
+        if path.is_file()
+    }
+    assert first["authorization_valid"] is True
+    assert second["authorization_valid"] is True
+    assert first_bytes == second_bytes
+    assert Path("unlisted-user-file.txt") not in second_bytes
+
+
+def test_failed_generation_never_publishes_partial_or_replaces_owned_output(tmp_path, monkeypatch):
+    output = tmp_path / "bundle"
+    asb.generate_transaction(VALID, output, ROOT)
+    before = {
+        path.relative_to(output): path.read_bytes()
+        for path in output.rglob("*")
+        if path.is_file()
+    }
+    globals_map = asb.generate_transaction.__globals__
+    original = globals_map["_render_transaction"]
+
+    def fail_after_partial_write(result, sequence, temp_output, root):
+        (temp_output / "partial.txt").write_text("partial", encoding="utf-8")
+        raise RuntimeError("synthetic render failure")
+
+    monkeypatch.setitem(globals_map, "_render_transaction", fail_after_partial_write)
+    with pytest.raises(RuntimeError, match="synthetic render failure"):
+        asb.generate_transaction(VALID, output, ROOT)
+    monkeypatch.setitem(globals_map, "_render_transaction", original)
+    after = {
+        path.relative_to(output): path.read_bytes()
+        for path in output.rglob("*")
+        if path.is_file()
+    }
+    assert before == after
+    assert not list(tmp_path.glob(".bundle.asb-tmp-*"))
+
+
+def test_manifest_stage_documents_and_all_artifact_fixtures_share_exact_version_map():
+    manifest = load(ROOT / "manifests/architect-pipeline-manifest.v1.json")
+    assert manifest["intermediate_stage_artifact_boundary"]["stage_version_map"] == asb.STAGE_VERSIONS
+    fixture_root = ROOT / "fixtures/architect-pipeline-stage-boundary"
+    checked = 0
+    for path in sorted(fixture_root.rglob("*.json")):
+        try:
+            value = load(path)
+        except (json.JSONDecodeError, OSError):
+            continue
+        if (
+            isinstance(value, dict)
+            and value.get("artifact_schema") == asb.ARTIFACT_SCHEMA
+            and "payload" in value
+            and value.get("stage_id") in asb.STAGE_VERSIONS
+        ):
+            checked += 1
+            assert value["stage_version"] == asb.STAGE_VERSIONS[value["stage_id"]], path
+    assert checked >= 100

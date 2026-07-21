@@ -19,7 +19,7 @@
     "validated_stage_4_artifact_ref": {
       "artifact_id": "art-s4",
       "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "783fb460a7a9dc097a2ebcf1e9128d335ebffc3bd2d8bd149f45193ba25284fd",
+      "artifact_sha256": "e3d9a38ac73c031c2d4e777035de1ce590e7c813f29913f67abc926da3ec2df4",
       "run_id": "run-asb-fixture",
       "source_stage": "/score-evidence"
     }
@@ -29,11 +29,11 @@
     {
       "artifact_id": "art-s4",
       "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "783fb460a7a9dc097a2ebcf1e9128d335ebffc3bd2d8bd149f45193ba25284fd",
+      "artifact_sha256": "e3d9a38ac73c031c2d4e777035de1ce590e7c813f29913f67abc926da3ec2df4",
       "run_id": "run-asb-fixture",
       "source_stage": "/score-evidence"
     }
   ],
   "stage_id": "/score-audit",
-  "stage_version": "1.0.0"
+  "stage_version": "1.2.0"
 }

@@ -183,6 +183,17 @@ python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
 
 `validate-run` is the only file-producing production path. `validate-bundle` independently regenerates success and failure evidence from exact contained Artifact bytes. The removed legacy flags `--write-receipt`, `--write-receipts`, and `--write-anchors` must not be reintroduced.
 
+The exact active Stage-version map is:
+
+```yaml
+/decompose: 1.0.0
+/architectures: 1.1.0
+/score-evidence: 1.3.0
+/score-audit: 1.2.0
+```
+
+Evidence-backed inactive unknowns remain in the Stage 3 audit ledger but are excluded from active Stage 4 uncertainty. Structural sequence failures produce a deterministic non-authorizing preflight result and publish no Bundle. Stage 4 payload lineage must exactly equal the regenerated Stage 3 Artifact reference. Output replacement is permitted only for a Validator-owned Bundle directory and complete generation is atomically published.
+
 Standalone Artifact diagnostics use `diagnose-artifact`, produce no authorization files, and always report:
 
 ```yaml

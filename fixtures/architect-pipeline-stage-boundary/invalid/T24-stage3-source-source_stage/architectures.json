@@ -124,9 +124,9 @@
       "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
       "artifact_sha256": "93950a7321f82215dc409d403800278bf654544668bdb09f50cd86d8cb6fe6da",
       "run_id": "run-asb-fixture",
-      "source_stage": "/score-audit"
+      "source_stage": "/score-evidence"
     }
   ],
   "stage_id": "/architectures",
-  "stage_version": "1.0.0"
+  "stage_version": "1.1.0"
 }

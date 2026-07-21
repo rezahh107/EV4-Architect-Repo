@@ -43,6 +43,45 @@ generated_authorization_files: []
 
 The removed legacy file-producing flags are `--write-receipt`, `--write-receipts`, and `--write-anchors`.
 
+
+## Exact Stage versions
+
+The executable Stage-version authority is closed and exact:
+
+```yaml
+/decompose: 1.0.0
+/architectures: 1.1.0
+/score-evidence: 1.3.0
+/score-audit: 1.2.0
+```
+
+The Manifest, active Stage documents, Schema conditionals, semantic Validator, and fixtures must agree with this map. Any other Stage/version pair produces an invalid Receipt and cannot authorize continuation.
+
+## Unknown lifecycle
+
+Stage 3 may preserve active unknown states or close an unknown only through a supported inactive state: `resolved_with_evidence`, `not_applicable`, or `stale`. Inactive records require a non-empty resolution reason and named evidence; `resolved_with_evidence` additionally requires exact `resolving_evidence_refs` contained in `evidence_refs`. Active unknowns propagate to Stage 4. Valid inactive records remain audit evidence and are excluded from the Stage 4 active uncertainty register. Silent disappearance or evidence-free resolution fails at `/architectures`.
+
+## Structural preflight failures
+
+Missing Stages, duplicate Stages, filename/Stage mismatches, malformed JSON, and unrecognized Stage inputs are structural preflight failures. They return one deterministic structured result with:
+
+```yaml
+bundle_integrity_status: not_produced
+run_validation_status: invalid
+authorization_valid: false
+output_published: false
+```
+
+No Bundle directory or partial carrier set is published. Semantic failures with exact failing Artifact bytes continue to produce a complete independently verifiable Failure Bundle.
+
+## Stage 4 payload lineage
+
+`/score-evidence.payload.validated_upstream_artifact_refs` contains exactly one reference and must equal the regenerated `/architectures` `artifact_ref` in every field. The independent top-level `source_artifacts` check remains required; one valid duplicate lineage surface cannot compensate for a forged or stale other surface.
+
+## Output ownership and atomic publication
+
+Before generation, the Validator resolves repository, Sequence, and output paths. It rejects filesystem root, repository root, every Sequence/output overlap or alias, and every unrelated existing directory. Replacement is permitted only when the existing directory has the exact current Validator-owned `manifest.json` sentinel. Generation occurs in a temporary sibling and is atomically published only after all carriers pass validation. Failed generation leaves no new partial output and does not replace an existing owned Bundle.
+
 ## State machines
 
 Success:

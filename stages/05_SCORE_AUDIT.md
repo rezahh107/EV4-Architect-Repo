@@ -1,7 +1,7 @@
 # Stage 5 — /score-audit: Independent Scoring Audit
 
 Status: confirmed_v1.0.0  
-Version: 1.0.0  
+Version: 1.2.0  
 Depends on: Stage 4 — `/score-evidence`  
 Next stage: Stage 6 — `/recommend`  
 Input payload schema: `ev4-score-evidence-payload@1.2.0`  
@@ -530,4 +530,17 @@ Return to the precise repair route indicated by Score_Audit_Payload.next_action.
 
 Producer-owned intermediate Artifact: `/score-audit` emits `ev4-architect-pipeline-stage-artifact@1.1.0` and remains an independent audit. Missing Stage 2, Stage 3, or Stage 4 validated lineage returns the earliest repair target and must not be silently repaired. Passing audit preserves `selected_candidate_id: null`, `scores_audited: true`, and `allowed_next_stage: /recommend`.
 
-If an executable validator/tool is available, write the canonical Stage Artifact, execute `python scripts/check-architect-pipeline-stage-boundary.py --artifact <artifact.json> --write-receipt <receipt.json>`, obtain the receipt, and emit a receipt-bound `NEXT STAGE ANCHOR` only after `status=valid`. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact, and provide the manual validator command.
+If an executable validator/tool is available, place the complete ordered Stage Artifact sequence in one directory and execute the canonical Validation Transaction:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle-directory> \
+  --format json
+
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle <validation-bundle-directory> \
+  --format json
+```
+
+Only a Bundle independently verified by `validate-bundle` with `bundle_integrity_status=valid`, `run_validation_status=valid`, and `authorization_valid=true` authorizes next-stage continuation. `diagnose-artifact` is non-authorizing and must never be used to construct a Receipt, Boundary, Anchor, or continuation claim. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact sequence, and provide both canonical commands above.

@@ -1,13 +1,13 @@
 {
   "artifact_id": "art-s4",
   "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-  "artifact_sha256": "783fb460a7a9dc097a2ebcf1e9128d335ebffc3bd2d8bd149f45193ba25284fd",
+  "artifact_sha256": "f458ae10eae882b3c99d460a262c6117d523d112e02b14d861fbc60f7138b75a",
   "diagnostics": [],
-  "receipt_id": "asb-receipt-run-asb-fixture-art-s4-783fb460a7a9",
+  "receipt_id": "asb-receipt-run-asb-fixture-art-s4-f458ae10eae8",
   "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
   "run_id": "run-asb-fixture",
   "stage_id": "/score-evidence",
   "status": "valid",
   "validator_id": "architect-pipeline-stage-boundary-validator",
-  "validator_version": "1.1.0"
+  "validator_version": "1.2.0"
 }

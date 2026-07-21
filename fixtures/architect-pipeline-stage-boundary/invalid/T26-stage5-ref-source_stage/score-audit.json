@@ -19,9 +19,9 @@
     "validated_stage_4_artifact_ref": {
       "artifact_id": "art-s4",
       "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "783fb460a7a9dc097a2ebcf1e9128d335ebffc3bd2d8bd149f45193ba25284fd",
+      "artifact_sha256": "f458ae10eae882b3c99d460a262c6117d523d112e02b14d861fbc60f7138b75a",
       "run_id": "run-asb-fixture",
-      "source_stage": "/score-audit"
+      "source_stage": "/architectures"
     }
   },
   "run_id": "run-asb-fixture",
@@ -29,11 +29,11 @@
     {
       "artifact_id": "art-s4",
       "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "783fb460a7a9dc097a2ebcf1e9128d335ebffc3bd2d8bd149f45193ba25284fd",
+      "artifact_sha256": "f458ae10eae882b3c99d460a262c6117d523d112e02b14d861fbc60f7138b75a",
       "run_id": "run-asb-fixture",
       "source_stage": "/score-evidence"
     }
   ],
   "stage_id": "/score-audit",
-  "stage_version": "1.0.0"
+  "stage_version": "1.2.0"
 }

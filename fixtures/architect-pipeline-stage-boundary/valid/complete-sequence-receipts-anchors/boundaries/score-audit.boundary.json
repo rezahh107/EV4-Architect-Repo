@@ -2,21 +2,23 @@
   "artifact": {
     "artifact_id": "art-s5",
     "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-    "artifact_sha256": "784ec203c539057c742e1e91156ccae0b2a73f52a1be500c1088a5ecaea36dbc"
+    "artifact_sha256": "c699a51daa2678384f3c07756216c9f442856cc7d394bc0ea9e66cfed14a992e"
   },
   "authorization": {
-    "authorization_reason": "generated_valid_receipt",
+    "authorization_reason": "regenerated_valid_bundle",
     "next_stage_authorized": true
   },
-  "boundary_id": "asb-boundary-run-asb-fixture-score-audit-784ec203c539",
-  "boundary_schema": "ev4-stage-boundary-record@1.0.0",
+  "boundary_id": "asb-boundary-run-asb-fixture-score-audit-3d5e99000139",
+  "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+  "failed_stage": null,
+  "failure_event_ref": null,
   "receipt": {
-    "receipt_id": "asb-receipt-run-asb-fixture-art-s5-784ec203c539",
+    "receipt_id": "asb-receipt-run-asb-fixture-art-s5-c699a51daa26",
     "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-    "receipt_sha256": "dc614582b3712f3d08e866b9a3998d5c00f34b03e046cf4903445fcc0b3b6b08",
+    "receipt_sha256": "63946ab1d0ea5ee00d5292682c1e56c0d4f2a17898c841d091024519b3a77a1c",
     "status": "valid",
     "validator_id": "architect-pipeline-stage-boundary-validator",
-    "validator_version": "1.1.0"
+    "validator_version": "1.2.0"
   },
   "repair_target_stage": null,
   "run_id": "run-asb-fixture",

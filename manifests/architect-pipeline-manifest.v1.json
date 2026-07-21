@@ -9,18 +9,28 @@
     "compatibility": "additive_nonbreaking_for_final_payload",
     "downstream_enforcement": "insufficient_evidence",
     "failure_event_schema": "ev4-architect-validation-failure-event@1.0.0",
+    "inactive_unknown_lifecycle": "evidence_backed_and_excluded_from_active_propagation",
     "legacy_file_producing_authority_paths": "removed",
+    "output_replacement": "validator_owned_manifest_sentinel_and_atomic_publish",
     "production_generate_command": "validate-run",
     "production_verify_command": "validate-bundle",
     "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
     "runtime_enforcement": "insufficient_evidence",
+    "stage4_payload_lineage": "exact_regenerated_stage3_artifact_ref",
     "stage_ids": [
       "/decompose",
       "/architectures",
       "/score-evidence",
       "/score-audit"
     ],
+    "stage_version_map": {
+      "/architectures": "1.1.0",
+      "/decompose": "1.0.0",
+      "/score-audit": "1.2.0",
+      "/score-evidence": "1.3.0"
+    },
     "standalone_authorization": "forbidden",
+    "structural_failure_contract": "deterministic_non_authorizing_preflight_no_bundle",
     "validator": "scripts/check-architect-pipeline-stage-boundary.py"
   },
   "legacy_compatibility_outputs": [
@@ -43,145 +53,244 @@
   "project_execution_stages": [
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/research",
       "ordinal": 1,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["user-intake"],
-      "required_outputs": ["intake-artifact"],
+      "required_inputs": [
+        "user-intake"
+      ],
+      "required_outputs": [
+        "intake-artifact"
+      ],
       "stage_id": "/intake",
       "stage_version": "1.0.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/decompose",
       "ordinal": 2,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["research-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "research-artifact"
+      ],
       "stage_id": "/research",
       "stage_version": "1.0.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/architectures",
       "ordinal": 3,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["decompose-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "decompose-artifact"
+      ],
       "stage_id": "/decompose",
       "stage_version": "1.0.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/score-evidence",
       "ordinal": 4,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["verified-validation-bundle", "stage-anchor"],
-      "required_outputs": ["architectures-artifact"],
+      "required_inputs": [
+        "verified-validation-bundle",
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "architectures-artifact"
+      ],
       "stage_id": "/architectures",
       "stage_version": "1.1.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/score-audit",
       "ordinal": 5,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["verified-validation-bundle", "stage-anchor"],
-      "required_outputs": ["score-evidence-artifact"],
+      "required_inputs": [
+        "verified-validation-bundle",
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "score-evidence-artifact"
+      ],
       "stage_id": "/score-evidence",
       "stage_version": "1.3.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/recommend",
       "ordinal": 6,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["verified-validation-bundle", "stage-anchor"],
-      "required_outputs": ["score-audit-artifact"],
+      "required_inputs": [
+        "verified-validation-bundle",
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "score-audit-artifact"
+      ],
       "stage_id": "/score-audit",
       "stage_version": "1.2.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/build-tree",
       "ordinal": 7,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["recommend-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "recommend-artifact"
+      ],
       "stage_id": "/recommend",
       "stage_version": "1.1.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/implementation",
       "ordinal": 8,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["build-tree-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "build-tree-artifact"
+      ],
       "stage_id": "/build-tree",
       "stage_version": "1.0.0"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/final-audit",
       "ordinal": 9,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["implementation-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "implementation-artifact"
+      ],
       "stage_id": "/implementation",
       "stage_version": "1.0.1"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/handoff-export",
       "ordinal": 10,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["final-audit-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "final-audit-artifact"
+      ],
       "stage_id": "/final-audit",
       "stage_version": "1.0.1"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": "/project-gate-export",
       "ordinal": 11,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["handoff-export-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "handoff-export-artifact"
+      ],
       "stage_id": "/handoff-export",
       "stage_version": "1.0.1"
     },
     {
       "applicability": "always",
-      "blocked_statuses": ["blocked", "invalid", "insufficient_evidence"],
+      "blocked_statuses": [
+        "blocked",
+        "invalid",
+        "insufficient_evidence"
+      ],
       "mandatory": true,
       "next_stage": null,
       "ordinal": 12,
       "owner_repository": "rezahh107/EV4-Architect-Repo",
-      "required_inputs": ["stage-anchor"],
-      "required_outputs": ["project-gate-export-artifact"],
+      "required_inputs": [
+        "stage-anchor"
+      ],
+      "required_outputs": [
+        "project-gate-export-artifact"
+      ],
       "stage_id": "/project-gate-export",
       "stage_version": "1.0.0"
     }
@@ -189,22 +298,35 @@
   "validation_tracks": [
     {
       "evidence_requirement": "Existing legacy output contract remains available; it must not be silently substituted for Producer Gate Export.",
-      "mandatory_for": ["legacy compatibility consumers"],
-      "not_required_for": ["producer-gate-export.v1 validation", "Project Gate common contract adoption"],
+      "mandatory_for": [
+        "legacy compatibility consumers"
+      ],
+      "not_required_for": [
+        "producer-gate-export.v1 validation",
+        "Project Gate common contract adoption"
+      ],
       "purpose": "Legacy Builder/CE-facing compatibility output; preserved but not canonical for Project Gate Producer Export.",
       "validation_id": "/builder-feed-export"
     },
     {
       "evidence_requirement": "Structured E2E report; textual fixtures do not prove pixel-accurate screenshot interpretation.",
-      "mandatory_for": ["release-pack confidence claims"],
-      "not_required_for": ["per-run Architect Producer Gate Export emission"],
+      "mandatory_for": [
+        "release-pack confidence claims"
+      ],
+      "not_required_for": [
+        "per-run Architect Producer Gate Export emission"
+      ],
       "purpose": "Repository/prompt-pack full-pipeline validation track through /handoff-export.",
       "validation_id": "/e2e-test"
     },
     {
       "evidence_requirement": "Raster screenshot fixture or real screenshot evidence plus explicit report.",
-      "mandatory_for": ["screenshot interpretation confidence claims"],
-      "not_required_for": ["per-run Architect Producer Gate Export emission without screenshot evidence"],
+      "mandatory_for": [
+        "screenshot interpretation confidence claims"
+      ],
+      "not_required_for": [
+        "per-run Architect Producer Gate Export emission without screenshot evidence"
+      ],
       "purpose": "Conditional screenshot-validation track for raster screenshot interpretation.",
       "validation_id": "/e2e-screenshot-validation"
     }

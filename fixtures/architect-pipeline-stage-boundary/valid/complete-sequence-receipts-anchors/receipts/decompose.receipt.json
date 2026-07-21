@@ -9,5 +9,5 @@
   "stage_id": "/decompose",
   "status": "valid",
   "validator_id": "architect-pipeline-stage-boundary-validator",
-  "validator_version": "1.1.0"
+  "validator_version": "1.2.0"
 }

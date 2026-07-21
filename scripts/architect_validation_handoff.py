@@ -12,8 +12,18 @@ def unknown_state(artifact: dict[str, Any], unknown_id: str) -> tuple[str, list[
     if stage == "/architectures":
         for item in payload.get("unknown_propagation_ledger", []):
             if item.get("unknown_id") == unknown_id:
-                state = "blocked" if item.get("state") == "blocking" else "unknown"
-                return state, list(item.get("evidence_refs", [])), item.get("state") == "blocking"
+                lifecycle = item.get("state")
+                refs = sorted(
+                    set(item.get("evidence_refs", []))
+                    | set(item.get("resolving_evidence_refs", []))
+                )
+                if lifecycle == "blocking":
+                    return "blocked", refs, True
+                if lifecycle == "resolved_with_evidence":
+                    return "confirmed", refs, False
+                if lifecycle in {"not_applicable", "stale"}:
+                    return "not_applicable", refs, False
+                return "unknown", refs, False
     if stage == "/score-evidence":
         for item in payload.get("uncertainty_register", []):
             if isinstance(item, dict) and item.get("unknown_id") == unknown_id:

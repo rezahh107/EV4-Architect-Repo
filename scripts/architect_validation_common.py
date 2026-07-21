@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -29,6 +30,12 @@ VALIDATOR_ID = "architect-pipeline-stage-boundary-validator"
 VALIDATOR_VERSION = "1.2.0"
 DETERMINISM_PROFILE = "deterministic_no_timestamps_v2"
 ORDER = ["/decompose", "/architectures", "/score-evidence", "/score-audit"]
+STAGE_VERSIONS = {
+    "/decompose": "1.0.0",
+    "/architectures": "1.1.0",
+    "/score-evidence": "1.3.0",
+    "/score-audit": "1.2.0",
+}
 PREFIX = {
     "/decompose": "decompose",
     "/architectures": "architectures",
@@ -47,7 +54,10 @@ PREDECESSOR = {
     "/score-audit": "/score-evidence",
 }
 ACTIVE_UNKNOWN_STATES = {"carried", "score_capped", "blocking", "downstream_only"}
+INACTIVE_UNKNOWN_STATES = {"resolved_with_evidence", "not_applicable", "stale"}
+UNKNOWN_STATES = ACTIVE_UNKNOWN_STATES | INACTIVE_UNKNOWN_STATES
 CONFIDENCE = {"confirmed", "likely", "unknown", "blocked", "not_applicable"}
+OUTPUT_OWNERSHIP_SENTINEL = "manifest.json"
 SCHEMA_PATHS = {
     "artifact": "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json",
     "receipt": "schemas/ev4-architect-stage-validation-receipt.v1.schema.json",
@@ -56,9 +66,8 @@ SCHEMA_PATHS = {
     "anchor": "schemas/ev4-stage-anchor.v1.schema.json",
     "bundle": "schemas/ev4-architect-validation-bundle.v1.schema.json",
 }
-# Every repair-causing code has an explicit owner. Dynamic cross-stage ownership
-# is resolved by semantic functions and then checked against this default table.
 DIAGNOSTIC_OWNERS = {
+    "ASB-STAGE-VERSION-MISMATCH": "detected_stage",
     "ASB-SCHEMA-VALIDATION-FAILED": "detected_stage",
     "ASB-RUN-ID-DISCONTINUITY": "detected_stage",
     "ASB-STAGE-SEQUENCE-GAP": "missing_stage",
@@ -69,13 +78,21 @@ DIAGNOSTIC_OWNERS = {
     "ASB-COVERAGE-MATRIX-INCOMPLETE": "/architectures",
     "ASB-UPSTREAM-UNKNOWN-LOST": "/decompose",
     "ASB-UNKNOWN-RESOLUTION-UNSUPPORTED": "/architectures",
+    "ASB-UNKNOWN-RESOLUTION-EVIDENCE-MISSING": "/architectures",
+    "ASB-STAGE3-PAYLOAD-REFERENCE-COUNT": "/architectures",
+    "ASB-STAGE3-PAYLOAD-REFERENCE-MISMATCH": "/architectures",
     "ASB-CANDIDATE-NOT-IN-STAGE3": "/architectures",
     "ASB-STAGE3-UNKNOWN-DISCARDED": "/score-evidence",
     "ASB-SCORE-AUDITED-EARLY": "/score-evidence",
     "ASB-FINAL-TOTAL-WITH-UNKNOWN": "/score-evidence",
     "ASB-STAGE4-REFERENCE-MISMATCH": "/score-evidence",
+    "ASB-UNSAFE-OUTPUT-PATH": "detected_stage",
+    "ASB-OUTPUT-NOT-VALIDATOR-OWNED": "detected_stage",
 }
 DIAGNOSTIC_PRIORITY = {
+    "ASB-UNSAFE-OUTPUT-PATH": 1,
+    "ASB-OUTPUT-NOT-VALIDATOR-OWNED": 2,
+    "ASB-STAGE-VERSION-MISMATCH": 5,
     "ASB-SCHEMA-VALIDATION-FAILED": 10,
     "ASB-RUN-ID-DISCONTINUITY": 20,
     "ASB-STAGE-SEQUENCE-GAP": 30,
@@ -85,6 +102,10 @@ DIAGNOSTIC_PRIORITY = {
     "ASB-SOURCE-REF-MISMATCH": 70,
     "ASB-UPSTREAM-UNKNOWN-LOST": 80,
     "ASB-COVERAGE-MATRIX-INCOMPLETE": 90,
+    "ASB-UNKNOWN-RESOLUTION-UNSUPPORTED": 95,
+    "ASB-UNKNOWN-RESOLUTION-EVIDENCE-MISSING": 96,
+    "ASB-STAGE3-PAYLOAD-REFERENCE-COUNT": 97,
+    "ASB-STAGE3-PAYLOAD-REFERENCE-MISMATCH": 98,
     "ASB-CANDIDATE-NOT-IN-STAGE3": 100,
     "ASB-STAGE3-UNKNOWN-DISCARDED": 110,
     "ASB-SCORE-AUDITED-EARLY": 120,
@@ -92,27 +113,34 @@ DIAGNOSTIC_PRIORITY = {
     "ASB-STAGE4-REFERENCE-MISMATCH": 140,
 }
 
+
 def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
+
 def canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
+
 
 def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(canonical_bytes(value))
 
+
 def sha_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
+
 def sha_file(path: Path) -> str:
     return sha_bytes(path.read_bytes())
+
 
 def stage_index(stage: str | None) -> int:
     try:
         return ORDER.index(stage or "")
     except ValueError:
         return len(ORDER) + 1
+
 
 def diagnostic(
     code: str,
@@ -133,6 +161,7 @@ def diagnostic(
         "repair_target_stage": repair_target_stage,
     }
 
+
 def sort_diagnostics(items: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(
         items,
@@ -145,10 +174,12 @@ def sort_diagnostics(items: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         ),
     )
 
+
 def select_repair_target(items: list[dict[str, Any]], fallback: str) -> str:
     if not items:
         return fallback
     return sort_diagnostics(items)[0]["repair_target_stage"]
+
 
 def schema_validators(root: Path = ROOT) -> dict[str, Draft202012Validator]:
     validators: dict[str, Draft202012Validator] = {}
@@ -157,6 +188,7 @@ def schema_validators(root: Path = ROOT) -> dict[str, Draft202012Validator]:
         Draft202012Validator.check_schema(schema)
         validators[name] = Draft202012Validator(schema)
     return validators
+
 
 def schema_diagnostics(
     validator: Draft202012Validator,

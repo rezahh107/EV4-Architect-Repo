@@ -106,9 +106,11 @@
         "affected_candidates": [],
         "effect": "resolved by named evidence",
         "evidence_refs": [
+          "research-note-1",
           "s2"
         ],
         "handling": "resolved_with_evidence",
+        "resolution_reason": "The named research note closes this uncertainty.",
         "resolving_evidence_refs": [
           "research-note-1"
         ],
@@ -123,6 +125,7 @@
           "s2"
         ],
         "handling": "not_applicable",
+        "resolution_reason": "The uncertainty does not apply to any active candidate.",
         "source_artifact_id": "art-s2",
         "state": "not_applicable",
         "unknown_id": "U-N-A"
@@ -134,6 +137,7 @@
           "s2"
         ],
         "handling": "stale",
+        "resolution_reason": "The uncertainty was superseded by newer named evidence.",
         "source_artifact_id": "art-s2",
         "state": "stale",
         "unknown_id": "U-STALE"
@@ -151,5 +155,5 @@
     }
   ],
   "stage_id": "/architectures",
-  "stage_version": "1.0.0"
+  "stage_version": "1.1.0"
 }

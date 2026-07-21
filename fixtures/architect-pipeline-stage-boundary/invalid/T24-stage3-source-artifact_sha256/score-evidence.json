@@ -34,7 +34,7 @@
       {
         "artifact_id": "art-s3",
         "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-        "artifact_sha256": "7b1b58d05819a26dd7715590078fed4445a3fbe21f8de254d848b808d35b000d",
+        "artifact_sha256": "2c801ef137e706c91c0706d75a0497917f0d8284fd9c67c8a0a0cdd53adb7842",
         "run_id": "run-asb-fixture",
         "source_stage": "/architectures"
       }
@@ -45,11 +45,11 @@
     {
       "artifact_id": "art-s3",
       "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "7b1b58d05819a26dd7715590078fed4445a3fbe21f8de254d848b808d35b000d",
+      "artifact_sha256": "2c801ef137e706c91c0706d75a0497917f0d8284fd9c67c8a0a0cdd53adb7842",
       "run_id": "run-asb-fixture",
       "source_stage": "/architectures"
     }
   ],
   "stage_id": "/score-evidence",
-  "stage_version": "1.0.0"
+  "stage_version": "1.3.0"
 }

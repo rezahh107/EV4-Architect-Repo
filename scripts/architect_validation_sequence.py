@@ -1,13 +1,14 @@
 """Artifact sequence discovery and validation."""
 from architect_validation_semantics import *  # noqa: F401,F403
 
+
 def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, Any]]]:
     diagnostics: list[dict[str, Any]] = []
     by_stage: dict[str, list[Path]] = {}
     for path in sorted(sequence_path.glob("*.json")):
         try:
             value = load_json(path)
-        except Exception as exc:  # deterministic type-only diagnostic
+        except Exception as exc:
             diagnostics.append(
                 diagnostic(
                     "ASB-SCHEMA-VALIDATION-FAILED",
@@ -78,7 +79,20 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                         missing,
                     )
                 )
+    elif not diagnostics:
+        diagnostics.append(
+            diagnostic(
+                "ASB-STAGE-SEQUENCE-GAP",
+                "ASB-R01",
+                "/decompose",
+                "$",
+                "/decompose",
+                "empty sequence",
+                "/decompose",
+            )
+        )
     return [by_stage[stage][0] for stage in ORDER if stage in by_stage], sort_diagnostics(diagnostics)
+
 
 def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
     validators = schema_validators(root)
@@ -91,6 +105,7 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
             "processed": [],
             "failed_stage": discovery_diagnostics[0]["stage_id"],
             "repair_target_stage": select_repair_target(discovery_diagnostics, "/decompose"),
+            "structural_failure": True,
         }
     artifacts: dict[str, dict[str, Any]] = {}
     digests: dict[str, str] = {}
@@ -101,7 +116,26 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
         digest = sha_bytes(raw)
         artifact = json.loads(raw.decode("utf-8"))
         stage = artifact.get("stage_id", "/decompose")
-        diagnostics = schema_diagnostics(validators["artifact"], artifact, stage, "$", stage)
+        diagnostics: list[dict[str, Any]] = []
+        expected_version = STAGE_VERSIONS.get(stage)
+        if artifact.get("stage_version") != expected_version:
+            diagnostics.append(
+                diagnostic(
+                    "ASB-STAGE-VERSION-MISMATCH",
+                    "ASB-R01",
+                    stage,
+                    "$/stage_version",
+                    str(expected_version),
+                    str(artifact.get("stage_version")),
+                    stage,
+                )
+            )
+        schema_errors = schema_diagnostics(validators["artifact"], artifact, stage, "$", stage)
+        if stage == "/score-evidence":
+            for item in schema_errors:
+                if item["path"].startswith("$/payload/validated_upstream_artifact_refs"):
+                    item["repair_target_stage"] = "/architectures"
+        diagnostics.extend(schema_errors)
         if run_id is None:
             run_id = artifact.get("run_id")
         elif artifact.get("run_id") != run_id:
@@ -128,29 +162,10 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
                 "processed": processed,
                 "failed_stage": stage,
                 "repair_target_stage": select_repair_target(diagnostics, stage),
+                "structural_failure": False,
             }
         artifacts[stage] = artifact
         digests[stage] = digest
-    if not processed:
-        diagnostics = [
-            diagnostic(
-                "ASB-STAGE-SEQUENCE-GAP",
-                "ASB-R01",
-                "/decompose",
-                "$",
-                "/decompose",
-                "empty sequence",
-                "/decompose",
-            )
-        ]
-        return {
-            "run_validation_status": "insufficient_evidence",
-            "authorization_valid": False,
-            "diagnostics": diagnostics,
-            "processed": [],
-            "failed_stage": "/decompose",
-            "repair_target_stage": "/decompose",
-        }
     return {
         "run_validation_status": "valid",
         "authorization_valid": True,
@@ -158,4 +173,5 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
         "processed": processed,
         "failed_stage": None,
         "repair_target_stage": None,
+        "structural_failure": False,
     }

@@ -132,9 +132,8 @@ Final Architect Stage Payload v1 authority remains unchanged.
 ```yaml
 pull_request: 32
 base_branch: main
-expected_base_sha: e608954905ed4541f0465460e0a4944026eff01d
-reviewed_head_sha: 5a1b877467d0fd90ac69b6e659214f351adabd41
-implementation_commit_before_status_sync: 9f0be73e93c733b8d1265551d8f587ef2708dd21
+original_reviewed_head_sha: 266f8ad0266b18a5020b9f1f4641237680c477b4
+required_integrated_main_sha: a4b6a8c57d906c69b6f5b4bc79969ffcfbac701a
 production_generate_command: validate-run
 production_verify_command: validate-bundle
 artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
@@ -143,15 +142,21 @@ failure_event_schema: ev4-architect-validation-failure-event@1.0.0
 boundary_schema: ev4-stage-boundary-record@1.1.0
 anchor_schema: ev4-stage-anchor@1.3.0
 bundle_schema: ev4-architect-validation-bundle@1.1.0
+stage_version_map:
+  /decompose: 1.0.0
+  /architectures: 1.1.0
+  /score-evidence: 1.3.0
+  /score-audit: 1.2.0
 legacy_file_producing_paths_removed: true
+inactive_unknown_lifecycle: evidence_backed_and_not_propagated_as_active
+structural_failure_contract: deterministic_non_authorizing_preflight_no_bundle
+stage4_payload_lineage: exact_regenerated_stage3_artifact_ref
+output_replacement: validator_owned_and_atomic
 failed_stage_and_repair_target_stage_separated: true
 success_bundle_regeneration: implemented
 failure_bundle_regeneration: implemented
-focused_test_count: 64
-prior_implementation_head_boundary_workflow:
-  run_id: 29844390177
-  job_id: 88681118316
-  conclusion: success
+focused_test_count: 92
+local_validation_state: passed_before_final_main_integration
 resulting_head_exact_ci: pending
 fresh_independent_pr_inspector_review: required
 owner_merge_required: true
@@ -168,4 +173,13 @@ run_validation_status: invalid
 authorization_valid: false
 ```
 
-A malformed, forged, incomplete, or non-reproducible Bundle has `bundle_integrity_status: invalid` and authorizes no work. Success carriers are forbidden in failure Bundles. User-facing Anchors do not independently authorize continuation.
+A structural preflight failure publishes no Bundle and returns:
+
+```yaml
+bundle_integrity_status: not_produced
+run_validation_status: invalid
+authorization_valid: false
+output_published: false
+```
+
+A malformed, forged, incomplete, or non-reproducible Bundle has `bundle_integrity_status: invalid` and authorizes no work. Success carriers are forbidden in failure Bundles. User-facing Anchors do not independently authorize continuation. Final exact-Head CI and fresh independent PR Inspector review remain required after integrating current `main`.

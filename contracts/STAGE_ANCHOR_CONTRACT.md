@@ -68,7 +68,7 @@ partial_rerun_state:
 stage_boundary:
 ```
 
-Receipt status belongs only under `gate_results`; it is not a confidence delta. Active states `carried`, `score_capped`, `blocking`, and `downstream_only` remain visible. A failed or later Stage cannot erase an active predecessor unknown merely by omitting it.
+Receipt status belongs only under `gate_results`; it is not a confidence delta. Active states `carried`, `score_capped`, `blocking`, and `downstream_only` remain visible. A failed or later Stage cannot erase an active predecessor unknown merely by omitting it. Evidence-backed inactive states `resolved_with_evidence`, `not_applicable`, and `stale` remain represented in `confidence_delta` as resolved or inactive audit evidence, but they are excluded from `critical_unknowns` and `blocking_items`; absence from active lists is valid only after the Stage 3 lifecycle record passes Schema and semantic validation.
 
 ## Historical compatibility
 

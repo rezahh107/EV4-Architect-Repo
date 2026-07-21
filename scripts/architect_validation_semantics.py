@@ -1,6 +1,7 @@
 """Artifact lineage and semantic validation."""
 from architect_validation_common import *  # noqa: F401,F403
 
+
 def artifact_ref(artifact: dict[str, Any], digest: str) -> dict[str, Any]:
     return {
         "run_id": artifact["run_id"],
@@ -9,6 +10,7 @@ def artifact_ref(artifact: dict[str, Any], digest: str) -> dict[str, Any]:
         "artifact_sha256": digest,
         "source_stage": artifact["stage_id"],
     }
+
 
 def receipt_for(
     artifact: dict[str, Any], digest: str, diagnostics: list[dict[str, Any]]
@@ -28,6 +30,7 @@ def receipt_for(
         "diagnostics": ordered,
     }
 
+
 def validate_source_reference(
     artifact: dict[str, Any],
     predecessor: dict[str, Any],
@@ -36,7 +39,11 @@ def validate_source_reference(
     stage = artifact["stage_id"]
     predecessor_stage = predecessor["stage_id"]
     expected = artifact_ref(predecessor, predecessor_digest)
-    matches = [ref for ref in artifact.get("source_artifacts", []) if ref.get("source_stage") == predecessor_stage]
+    matches = [
+        ref
+        for ref in artifact.get("source_artifacts", [])
+        if ref.get("source_stage") == predecessor_stage
+    ]
     if not matches:
         return [
             diagnostic(
@@ -63,6 +70,84 @@ def validate_source_reference(
         ]
     return []
 
+
+def validate_unknown_lifecycle(row: dict[str, Any], index: int) -> list[dict[str, Any]]:
+    diagnostics: list[dict[str, Any]] = []
+    state = row.get("state")
+    handling = row.get("handling")
+    path = f"$/payload/unknown_propagation_ledger/{index}"
+    if state not in UNKNOWN_STATES or handling not in UNKNOWN_STATES or state != handling:
+        diagnostics.append(
+            diagnostic(
+                "ASB-UNKNOWN-RESOLUTION-UNSUPPORTED",
+                "ASB-R04",
+                "/architectures",
+                path,
+                "matching supported state and handling",
+                f"state={state};handling={handling}",
+                "/architectures",
+            )
+        )
+        return diagnostics
+    evidence_refs = {
+        ref for ref in row.get("evidence_refs", []) if isinstance(ref, str) and ref
+    }
+    if state == "resolved_with_evidence":
+        resolving_refs = row.get("resolving_evidence_refs", [])
+        valid_resolving_refs = {
+            ref for ref in resolving_refs if isinstance(ref, str) and ref
+        } if isinstance(resolving_refs, list) else set()
+        if (
+            not valid_resolving_refs
+            or valid_resolving_refs != set(resolving_refs)
+            or not valid_resolving_refs.issubset(evidence_refs)
+            or not isinstance(row.get("resolution_reason"), str)
+            or not row.get("resolution_reason", "").strip()
+        ):
+            diagnostics.append(
+                diagnostic(
+                    "ASB-UNKNOWN-RESOLUTION-EVIDENCE-MISSING",
+                    "ASB-R04",
+                    "/architectures",
+                    path,
+                    "non-empty resolution_reason and resolving_evidence_refs declared in evidence_refs",
+                    json.dumps(
+                        {
+                            "resolution_reason": row.get("resolution_reason"),
+                            "resolving_evidence_refs": row.get("resolving_evidence_refs"),
+                            "evidence_refs": row.get("evidence_refs"),
+                        },
+                        sort_keys=True,
+                    ),
+                    "/architectures",
+                )
+            )
+    elif state in {"not_applicable", "stale"}:
+        if (
+            not evidence_refs
+            or not isinstance(row.get("resolution_reason"), str)
+            or not row.get("resolution_reason", "").strip()
+        ):
+            diagnostics.append(
+                diagnostic(
+                    "ASB-UNKNOWN-RESOLUTION-EVIDENCE-MISSING",
+                    "ASB-R04",
+                    "/architectures",
+                    path,
+                    "non-empty resolution_reason and evidence_refs",
+                    json.dumps(
+                        {
+                            "resolution_reason": row.get("resolution_reason"),
+                            "evidence_refs": row.get("evidence_refs"),
+                        },
+                        sort_keys=True,
+                    ),
+                    "/architectures",
+                )
+            )
+    return diagnostics
+
+
 def semantic_diagnostics(
     artifact: dict[str, Any],
     artifacts: dict[str, dict[str, Any]],
@@ -74,10 +159,15 @@ def semantic_diagnostics(
     predecessor_stage = PREDECESSOR.get(stage)
     if predecessor_stage and predecessor_stage in artifacts:
         diagnostics.extend(
-            validate_source_reference(artifact, artifacts[predecessor_stage], digests[predecessor_stage])
+            validate_source_reference(
+                artifact, artifacts[predecessor_stage], digests[predecessor_stage]
+            )
         )
     if stage == "/architectures":
-        families = {row.get("family_id") for row in payload.get("architecture_coverage_matrix", [])}
+        families = {
+            row.get("family_id")
+            for row in payload.get("architecture_coverage_matrix", [])
+        }
         missing = sorted({f"A{i:02d}" for i in range(1, 9)} - families)
         if missing:
             diagnostics.append(
@@ -92,7 +182,10 @@ def semantic_diagnostics(
                 )
             )
         upstream = artifacts.get("/decompose")
-        ledger = {row.get("unknown_id"): row for row in payload.get("unknown_propagation_ledger", [])}
+        ledger = {
+            row.get("unknown_id"): row
+            for row in payload.get("unknown_propagation_ledger", [])
+        }
         if upstream:
             for unknown in upstream["payload"].get("unknowns", []):
                 unknown_id = unknown.get("unknown_id")
@@ -109,29 +202,54 @@ def semantic_diagnostics(
                         )
                     )
         for idx, row in enumerate(payload.get("unknown_propagation_ledger", [])):
-            if row.get("state") not in ACTIVE_UNKNOWN_STATES or row.get("handling") not in ACTIVE_UNKNOWN_STATES:
-                diagnostics.append(
-                    diagnostic(
-                        "ASB-UNKNOWN-RESOLUTION-UNSUPPORTED",
-                        "ASB-R04",
-                        stage,
-                        f"$/payload/unknown_propagation_ledger/{idx}",
-                        "active evidence state",
-                        f"state={row.get('state')};handling={row.get('handling')}",
-                        stage,
-                    )
-                )
+            diagnostics.extend(validate_unknown_lifecycle(row, idx))
     elif stage == "/score-evidence":
         upstream = artifacts.get("/architectures")
         if upstream:
-            valid_candidates = {row.get("candidate_id") for row in upstream["payload"].get("active_candidates", [])}
+            expected_payload_ref = artifact_ref(
+                upstream, digests["/architectures"]
+            )
+            payload_refs = payload.get("validated_upstream_artifact_refs", [])
+            if len(payload_refs) != 1:
+                diagnostics.append(
+                    diagnostic(
+                        "ASB-STAGE3-PAYLOAD-REFERENCE-COUNT",
+                        "ASB-R05",
+                        stage,
+                        "$/payload/validated_upstream_artifact_refs",
+                        "exactly one Stage 3 artifact_ref",
+                        str(len(payload_refs)),
+                        "/architectures",
+                    )
+                )
+            elif payload_refs[0] != expected_payload_ref:
+                diagnostics.append(
+                    diagnostic(
+                        "ASB-STAGE3-PAYLOAD-REFERENCE-MISMATCH",
+                        "ASB-R05",
+                        stage,
+                        "$/payload/validated_upstream_artifact_refs/0",
+                        json.dumps(expected_payload_ref, sort_keys=True),
+                        json.dumps(payload_refs[0], sort_keys=True),
+                        "/architectures",
+                    )
+                )
+            valid_candidates = {
+                row.get("candidate_id")
+                for row in upstream["payload"].get("active_candidates", [])
+            }
             active_unknowns = {
                 row.get("unknown_id")
-                for row in upstream["payload"].get("unknown_propagation_ledger", [])
-                if row.get("state") in ACTIVE_UNKNOWN_STATES or row.get("handling") in ACTIVE_UNKNOWN_STATES
+                for row in upstream["payload"].get(
+                    "unknown_propagation_ledger", []
+                )
+                if row.get("state") in ACTIVE_UNKNOWN_STATES
+                and row.get("handling") in ACTIVE_UNKNOWN_STATES
             }
             recorded_unknowns = {
-                row.get("unknown_id") for row in payload.get("uncertainty_register", []) if isinstance(row, dict)
+                row.get("unknown_id")
+                for row in payload.get("uncertainty_register", [])
+                if isinstance(row, dict)
             }
             for idx, score in enumerate(payload.get("candidate_scores", [])):
                 if score.get("candidate_id") not in valid_candidates:
@@ -159,7 +277,8 @@ def semantic_diagnostics(
                         )
                     )
                 critical_unknown = any(
-                    criterion.get("contract_critical") and criterion.get("value") == "?"
+                    criterion.get("contract_critical")
+                    and criterion.get("value") == "?"
                     for criterion in score.get("criteria", [])
                 )
                 if critical_unknown and score.get("final_total") is not None:

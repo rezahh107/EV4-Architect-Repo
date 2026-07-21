@@ -121,12 +121,12 @@
   "source_artifacts": [
     {
       "artifact_id": "art-s2",
-      "artifact_schema": "mutated",
+      "artifact_schema": "historical",
       "artifact_sha256": "93950a7321f82215dc409d403800278bf654544668bdb09f50cd86d8cb6fe6da",
       "run_id": "run-asb-fixture",
       "source_stage": "/decompose"
     }
   ],
   "stage_id": "/architectures",
-  "stage_version": "1.0.0"
+  "stage_version": "1.1.0"
 }

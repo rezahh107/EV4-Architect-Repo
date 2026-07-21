@@ -25,7 +25,7 @@
     ],
     "unknowns": [
       {
-        "blocking": false,
+        "blocking": true,
         "description": "mobile connector",
         "evidence_state": "insufficient_evidence",
         "unknown_id": "U-1",
@@ -41,6 +41,6 @@
   },
   "run_id": "run-asb-fixture",
   "source_artifacts": [],
-  "stage_id": "/architectures",
+  "stage_id": "/decompose",
   "stage_version": "1.0.0"
 }

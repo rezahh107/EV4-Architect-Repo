@@ -1,96 +1,127 @@
 {
+  "anchors": [
+    {
+      "id": "asb-anchor-run-asb-fixture-decompose-549e672ff9a6",
+      "path": "anchors/decompose.anchor.json",
+      "schema": "ev4-stage-anchor@1.3.0",
+      "sha256": "c317b8a07a4092606a6593f8e547a423083d4fc2bce9cfbe5b30fb8d7fceebbb"
+    },
+    {
+      "id": "asb-anchor-run-asb-fixture-architectures-7e2177521649",
+      "path": "anchors/architectures.anchor.json",
+      "schema": "ev4-stage-anchor@1.3.0",
+      "sha256": "39d6f3f72ff7cc81921ecb7afc7df7b3f46c8998bd057ec90b5954d126a91a47"
+    },
+    {
+      "id": "asb-anchor-run-asb-fixture-score-evidence-38a0a1566038",
+      "path": "anchors/score-evidence.anchor.json",
+      "schema": "ev4-stage-anchor@1.3.0",
+      "sha256": "7de32bd8078b74ce395e287ed46d64e3829c188030cf514ba4f0d99c710717b1"
+    },
+    {
+      "id": "asb-anchor-run-asb-fixture-score-audit-63a229c40d29",
+      "path": "anchors/score-audit.anchor.json",
+      "schema": "ev4-stage-anchor@1.3.0",
+      "sha256": "8f4b968581c004cbe4e5a39b901cba5751cd2a4400092994fecf0bcf6e974e2d"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "art-s2",
+      "path": "artifacts/decompose.json",
+      "schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "sha256": "93950a7321f82215dc409d403800278bf654544668bdb09f50cd86d8cb6fe6da"
+    },
+    {
+      "id": "art-s3",
+      "path": "artifacts/architectures.json",
+      "schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "sha256": "5996ee7be86035cb8819e12a82c2300b1ee75c1bbbd1686e3b6f5cc5d3937c4a"
+    },
+    {
+      "id": "art-s4",
+      "path": "artifacts/score-evidence.json",
+      "schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "sha256": "f458ae10eae882b3c99d460a262c6117d523d112e02b14d861fbc60f7138b75a"
+    },
+    {
+      "id": "art-s5",
+      "path": "artifacts/score-audit.json",
+      "schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "sha256": "c699a51daa2678384f3c07756216c9f442856cc7d394bc0ea9e66cfed14a992e"
+    }
+  ],
+  "authorization_valid": true,
   "authorized_next_stage": "/recommend",
-  "bundle_content_digest": "532b5cd2115786ba25a8c53d626e339b82c7ef551978f09391b4cfdfbd6a0e8d",
-  "bundle_id": "asb-bundle-run-asb-fixture",
-  "bundle_schema": "ev4-architect-validation-bundle@1.0.0",
-  "determinism_profile": "deterministic_no_timestamps_v1",
+  "boundaries": [
+    {
+      "id": "asb-boundary-run-asb-fixture-decompose-cd803e91bc91",
+      "path": "boundaries/decompose.boundary.json",
+      "schema": "ev4-stage-boundary-record@1.1.0",
+      "sha256": "549e672ff9a660de4130c23209b487cd3165db4ffbaea71976aa64d4023861b6"
+    },
+    {
+      "id": "asb-boundary-run-asb-fixture-architectures-422bff98581d",
+      "path": "boundaries/architectures.boundary.json",
+      "schema": "ev4-stage-boundary-record@1.1.0",
+      "sha256": "7e2177521649aa5d5e014e932d329663d43bc8ea7eaf275d4a787e7014037ccd"
+    },
+    {
+      "id": "asb-boundary-run-asb-fixture-score-evidence-b07f5e1845ac",
+      "path": "boundaries/score-evidence.boundary.json",
+      "schema": "ev4-stage-boundary-record@1.1.0",
+      "sha256": "38a0a1566038f1b401c16eb02954b36d900617ab7c1df63eeb6dafe2f681e355"
+    },
+    {
+      "id": "asb-boundary-run-asb-fixture-score-audit-3d5e99000139",
+      "path": "boundaries/score-audit.boundary.json",
+      "schema": "ev4-stage-boundary-record@1.1.0",
+      "sha256": "63a229c40d2958876a71859855474f68fcb4b9e1bb1609e6ee6768cc1d61fe6a"
+    }
+  ],
+  "bundle_content_digest": "affa8718279fd7cbb49b35b68377caa00d653735c52efd9777bc2b7c3c5c370d",
+  "bundle_id": "asb-bundle-run-asb-fixture-valid",
+  "bundle_integrity_status": "valid",
+  "bundle_schema": "ev4-architect-validation-bundle@1.1.0",
+  "determinism_profile": "deterministic_no_timestamps_v2",
+  "failure_event_path": null,
+  "failure_event_sha256": null,
   "overall_status": "valid",
+  "receipts": [
+    {
+      "id": "asb-receipt-run-asb-fixture-art-s2-93950a7321f8",
+      "path": "receipts/decompose.receipt.json",
+      "schema": "ev4-architect-stage-validation-receipt@1.1.0",
+      "sha256": "cf970e7b76fa1616a4cade612cc619c875149e7579a0ab221b23e1dba61ac020"
+    },
+    {
+      "id": "asb-receipt-run-asb-fixture-art-s3-5996ee7be860",
+      "path": "receipts/architectures.receipt.json",
+      "schema": "ev4-architect-stage-validation-receipt@1.1.0",
+      "sha256": "5357ff665a6bf30b2312f38369a6395194e2dcad62ae83b5edbccb0393bb1c08"
+    },
+    {
+      "id": "asb-receipt-run-asb-fixture-art-s4-f458ae10eae8",
+      "path": "receipts/score-evidence.receipt.json",
+      "schema": "ev4-architect-stage-validation-receipt@1.1.0",
+      "sha256": "9ff704e2195f7c3d7669edc4e88074f9da99cb943226181ec7e67d23e041d2bc"
+    },
+    {
+      "id": "asb-receipt-run-asb-fixture-art-s5-c699a51daa26",
+      "path": "receipts/score-audit.receipt.json",
+      "schema": "ev4-architect-stage-validation-receipt@1.1.0",
+      "sha256": "63946ab1d0ea5ee00d5292682c1e56c0d4f2a17898c841d091024519b3a77a1c"
+    }
+  ],
   "repair_target_stage": null,
   "run_id": "run-asb-fixture",
+  "run_validation_status": "valid",
   "stage_sequence": [
     "/decompose",
     "/architectures",
     "/score-evidence",
     "/score-audit"
   ],
-  "stages": [
-    {
-      "anchor_id": "asb-anchor-run-asb-fixture-decompose-8139d62c9ee8",
-      "anchor_path": "anchors/decompose.anchor.json",
-      "anchor_schema": "ev4-stage-anchor@1.2.0",
-      "anchor_sha256": "dfa830622c5466cc240e10e2f7f4be089af6bf98dc10a673c658279585ee6da6",
-      "artifact_id": "art-s2",
-      "artifact_path": "artifacts/decompose.json",
-      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "93950a7321f82215dc409d403800278bf654544668bdb09f50cd86d8cb6fe6da",
-      "boundary_id": "asb-boundary-run-asb-fixture-decompose-93950a7321f8",
-      "boundary_path": "boundaries/decompose.boundary.json",
-      "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-      "boundary_sha256": "8139d62c9ee80f4e2c71ce36b16c9770e27d9dec908a2d47aef8ffdf743bf65e",
-      "receipt_id": "asb-receipt-run-asb-fixture-art-s2-93950a7321f8",
-      "receipt_path": "receipts/decompose.receipt.json",
-      "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-      "receipt_sha256": "60a0b20b8433dbe3937809994e44984c2084c9269cc946de2d3f567370166caf",
-      "stage_id": "/decompose"
-    },
-    {
-      "anchor_id": "asb-anchor-run-asb-fixture-architectures-39e8d720de7f",
-      "anchor_path": "anchors/architectures.anchor.json",
-      "anchor_schema": "ev4-stage-anchor@1.2.0",
-      "anchor_sha256": "9f5b047edf6befe9e67b727d27471263601b58ab327f1acca3466e0e85195b95",
-      "artifact_id": "art-s3",
-      "artifact_path": "artifacts/architectures.json",
-      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "7b1b58d05819a26dd7715590078fed4445a3fbe21f8de254d848b808d35b000d",
-      "boundary_id": "asb-boundary-run-asb-fixture-architectures-7b1b58d05819",
-      "boundary_path": "boundaries/architectures.boundary.json",
-      "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-      "boundary_sha256": "39e8d720de7f510858810b25cbb88cadeb51139eed57facdd26ce01e947bd96b",
-      "receipt_id": "asb-receipt-run-asb-fixture-art-s3-7b1b58d05819",
-      "receipt_path": "receipts/architectures.receipt.json",
-      "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-      "receipt_sha256": "86bd79b0bef32de55be4c661e5390dffc0769fdebcd7a17218652ce98ea84c50",
-      "stage_id": "/architectures"
-    },
-    {
-      "anchor_id": "asb-anchor-run-asb-fixture-score-evidence-87c4216346db",
-      "anchor_path": "anchors/score-evidence.anchor.json",
-      "anchor_schema": "ev4-stage-anchor@1.2.0",
-      "anchor_sha256": "19116d185a5d51f5006522f68a398a49fd696ab30a7dc09d2bbf12843eeb6232",
-      "artifact_id": "art-s4",
-      "artifact_path": "artifacts/score-evidence.json",
-      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "783fb460a7a9dc097a2ebcf1e9128d335ebffc3bd2d8bd149f45193ba25284fd",
-      "boundary_id": "asb-boundary-run-asb-fixture-score-evidence-783fb460a7a9",
-      "boundary_path": "boundaries/score-evidence.boundary.json",
-      "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-      "boundary_sha256": "87c4216346dba59174df101d9fd4ed59f164fb51249a413e62024e8145ab53e8",
-      "receipt_id": "asb-receipt-run-asb-fixture-art-s4-783fb460a7a9",
-      "receipt_path": "receipts/score-evidence.receipt.json",
-      "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-      "receipt_sha256": "ac38bf168886eb6705b52ac2ca0534dadcbf3583639fc46b86d0deae99fc6384",
-      "stage_id": "/score-evidence"
-    },
-    {
-      "anchor_id": "asb-anchor-run-asb-fixture-score-audit-58ce424ab422",
-      "anchor_path": "anchors/score-audit.anchor.json",
-      "anchor_schema": "ev4-stage-anchor@1.2.0",
-      "anchor_sha256": "dff18a9e732a9bb9caee31809308b1635bb3b6e1864c9d9de81da290db11ca69",
-      "artifact_id": "art-s5",
-      "artifact_path": "artifacts/score-audit.json",
-      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-      "artifact_sha256": "784ec203c539057c742e1e91156ccae0b2a73f52a1be500c1088a5ecaea36dbc",
-      "boundary_id": "asb-boundary-run-asb-fixture-score-audit-784ec203c539",
-      "boundary_path": "boundaries/score-audit.boundary.json",
-      "boundary_schema": "ev4-stage-boundary-record@1.0.0",
-      "boundary_sha256": "58ce424ab422219512bd66c96fcce9f1dde9ae8c8b00ab0666c885f32571fd93",
-      "receipt_id": "asb-receipt-run-asb-fixture-art-s5-784ec203c539",
-      "receipt_path": "receipts/score-audit.receipt.json",
-      "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-      "receipt_sha256": "dc614582b3712f3d08e866b9a3998d5c00f34b03e046cf4903445fcc0b3b6b08",
-      "stage_id": "/score-audit"
-    }
-  ],
   "validator_id": "architect-pipeline-stage-boundary-validator",
-  "validator_version": "1.1.0"
+  "validator_version": "1.2.0"
 }
