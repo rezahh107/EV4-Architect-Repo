@@ -1,0 +1,34 @@
+name: Temporary PR snapshot export
+
+on:
+  push:
+    branches:
+      - codex/fix-fail-late-stage-artifact-validation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Prepare repository snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ev4-architect-snapshot
+          rsync -a --exclude='.git/' ./ /tmp/ev4-architect-snapshot/
+      - name: Upload repository snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: ev4-architect-pr-snapshot-${{ github.sha }}
+          path: /tmp/ev4-architect-snapshot
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
