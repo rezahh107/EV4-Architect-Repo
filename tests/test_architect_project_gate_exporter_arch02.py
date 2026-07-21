@@ -312,11 +312,18 @@ def test_status_records_arch01_merge_and_arch02_repair_without_false_closure():
     assert "pull_request: 28" in status
     assert "merge_commit: 5aed1358c8df98eb262986ef7bcddb3acaeaddcf" in status
     assert "implementation_status: merged" in status
-    assert "audit_status: bounded_repair_pr_open" in status
+    assert "audit_status: merged_observed_not_independently_accepted" in status
+    assert "pull_request: 29" in status
+    assert "final_pr_head: 05f9ba12d5d64d49280ca7e596fdeed6c0f37073" in status
+    assert "merge_status: merged" in status
+    assert "merge_commit: be9bdea9ae246b1587043f2582c1a950ea2a6ec5" in status
+    assert "github_state_evidence: observed" in status
     assert "ARCH02-F01" in status
     assert "ARCH02-F03" in status
     assert "ARCH02-F05" in status
     assert "PATH_IS_INTENTIONAL_IDENTITY_INPUT" in status
     assert "real_run_evidence: pending" in status
-    assert "exact_merged_main_closure: pending" in status
-    assert "merge_status: not_merged" not in status
+    assert "exact_merged_main_validation: insufficient_evidence" in status
+    assert "independent_acceptance: not_established" in status
+    assert "audit_status: bounded_repair_pr_open" not in status
+    assert "repair_pr_merge_status: unmerged" not in status

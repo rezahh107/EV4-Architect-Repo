@@ -17,6 +17,32 @@ Responsive validates post-build responsive behavior.
 
 Approved architecture is not automatically approved implementation strategy.
 
+<!-- EV4_ARCHITECT_README_QUICK_START_START -->
+## Quick Start
+
+In a new user-facing Architect session with the repository instructions loaded, send:
+
+```text
+شروع
+```
+
+If no screenshot, section description, active run, or valid Stage Anchor is present, the assistant must return the fixed intake message defined in:
+
+```text
+manifests/architect-conversation-bootstrap.v1.json
+```
+
+If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+
+The controlled opening sequence is:
+
+```text
+/intake → /research → /decompose
+```
+
+See `release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md` for the operator prompts used after each stage.
+<!-- EV4_ARCHITECT_README_QUICK_START_END -->
+
 ## EV4 Project Gate Workflow
 
 ```text

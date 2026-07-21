@@ -1,22 +1,83 @@
 # EV4 First Run Guide
 
 Status: release_candidate_for_controlled_use
-Version: 1.0.0
+Version: 1.2.0
 
 ---
 
-## Recommended First Prompt
+<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_START -->
+## Fast Start
+
+In a new user-facing Architect chat with the project or repository instructions loaded, send only:
 
 ```text
-Use the EV4 Architect Project Instructions and uploaded reference files.
+شروع
+```
 
-Input: I will provide a screenshot of one Elementor V4 section.
+When no screenshot, section description, active run, or valid Stage Anchor is present, the expected response is exactly:
 
-Goal: run the controlled pipeline for this section.
+<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_START -->
+```text
+EV4 Architect آماده است.
 
-Start with /intake and /decompose only.
+برای شروع یک سکشن جدید:
+1. تصویر سکشن را ارسال کن.
+2. اگر معلوم است، مشخص کن تصویر مربوط به Desktop، Tablet یا Mobile است.
+3. محدودیت‌ها، Assetها یا رفتارهای مورد انتظار را فقط در صورت وجود اضافه کن.
+
+پس از دریافت ورودی، مسیر رسمی از اینجا شروع می‌شود:
+/intake → /research → /decompose
+
+تا پیش از دریافت ورودی، هیچ معماری، Elementor tree، مقدار دقیق یا توصیه‌ای تولید نمی‌شود.
+```
+<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_END -->
+
+The canonical machine-readable source for this response is:
+
+```text
+manifests/architect-conversation-bootstrap.v1.json
+```
+
+If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_END -->
+
+---
+
+## Recommended First Input
+
+Upload one Elementor V4 section screenshot and optionally include:
+
+```text
+- Device context: Desktop, Tablet, Mobile, or unknown
+- Available assets
+- Known interaction or content requirements
+- Explicit constraints or exceptions
+```
+
+Do not provide details that are already obvious from the screenshot unless they are important constraints.
+
+The model must run `/intake` first. It must not recommend architecture, produce an Elementor tree, or invent exact values during intake.
+
+---
+
+## After /intake
+
+```text
+Continue to /research using the Stage Anchor from /intake.
+Research only the current section's architecture-changing unknowns and version-sensitive Elementor capabilities.
+Preserve unsupported or project-specific behavior as unknown.
+Produce a STAGE ANCHOR for /decompose.
+```
+
+---
+
+## After /research
+
+```text
+Continue to /decompose using the Stage Anchor from /research.
+Decompose by visual role, not implementation.
 Do not recommend architecture yet.
-Do not build Elementor tree yet.
+Do not build an Elementor tree yet.
 Do not use TUYA/RAG/docs to invent visual groups.
 Mark unknowns explicitly.
 Produce a STAGE ANCHOR for /architectures.
@@ -98,12 +159,26 @@ Route all defects.
 
 ---
 
-## Final Step
+## After /final-audit
 
 ```text
 Run /handoff-export.
 Produce either FINAL BUILDER HANDOFF or HANDOFF BLOCKED REPORT.
 ```
+
+---
+
+<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_START -->
+## Final Project Gate Step
+
+When `/handoff-export` is accepted and its Stage Anchor authorizes the next stage:
+
+```text
+Run /project-gate-export.
+Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.
+Do not substitute the legacy /builder-feed-export.
+```
+<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_END -->
 
 ---
 
@@ -113,6 +188,7 @@ Stop and repair if:
 
 ```text
 - Stage Anchor is missing or stale.
+- A mandatory stage in the manifest is skipped.
 - Screenshot evidence does not support a visual claim.
 - Unknown is converted into a number.
 - Recommendation appears before /recommend.
