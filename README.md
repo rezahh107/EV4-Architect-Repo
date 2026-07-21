@@ -175,3 +175,43 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 ## Status Authority
 
 Mutable project and stage status is maintained only in `STATUS.md`. The summary at the top of this README is derived for orientation and must not override `STATUS.md`, exact repository evidence, or the live default branch.
+
+## Architect Stage Boundary Validation Transaction
+
+Stages `/decompose` through `/score-audit` use one deterministic Validation Transaction. The current carrier identities are:
+
+```yaml
+artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
+receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
+failure_event_schema: ev4-architect-validation-failure-event@1.0.0
+boundary_schema: ev4-stage-boundary-record@1.1.0
+anchor_schema: ev4-stage-anchor@1.3.0
+bundle_schema: ev4-architect-validation-bundle@1.1.0
+```
+
+The only production generator is:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle> \
+  --format json
+```
+
+Every Bundle must then be independently verified:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle <validation-bundle> \
+  --format json
+```
+
+`validate-bundle` regenerates both success and failure transactions from exact contained Artifact bytes and compares every deterministic file byte-for-byte. A truthfully represented failed Run has valid Bundle integrity but no authorization. A malformed, incomplete, substituted, or forged Bundle has invalid integrity.
+
+The legacy file-producing flags `--write-receipt`, `--write-receipts`, and `--write-anchors` are removed. Standalone Artifact diagnostics use `diagnose-artifact`, generate no authority files, and report `authorization_valid: false`.
+
+The exact active Stage-version map is `/decompose@1.0.0`, `/architectures@1.1.0`, `/score-evidence@1.3.0`, and `/score-audit@1.2.0`; every other Stage/version pair is rejected. Evidence-backed inactive unknowns remain audit evidence but do not propagate as active Stage 4 uncertainty. Structural sequence defects return deterministic non-authorizing preflight results without publishing a Bundle. Stage 4 payload lineage is exactly bound to the regenerated Stage 3 Artifact. Bundle replacement is allowed only for Validator-owned output and is published atomically.
+
+A user-facing Anchor never independently authorizes continuation. Historical `ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` records remain historical evidence only. The current `ev4-stage-anchor@1.3.0` binds a `boundary_ref`, an optional failure-only `failure_event_ref`, and an evidence-derived `handoff_state` with structured `confidence_delta`.
+
+Exact-Head CI establishes repository CI evidence only for the tested Head. Runtime-tool enforcement, chat-runtime enforcement, downstream rejection, real non-synthetic handoff, and production readiness remain `insufficient_evidence` unless separately proven.

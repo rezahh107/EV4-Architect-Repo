@@ -1,0 +1,56 @@
+{
+  "artifact_id": "art-s4",
+  "artifact_revision": 1,
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+  "payload": {
+    "arithmetic_evidence": {},
+    "audit_trail_payload": {},
+    "candidate_scores": [
+      {
+        "candidate_id": "C-A01",
+        "criteria": [
+          {
+            "contract_critical": false,
+            "criterion_id": "editability",
+            "value": 4
+          },
+          {
+            "contract_critical": true,
+            "criterion_id": "responsive_unknown",
+            "value": "?"
+          }
+        ],
+        "final_total": null,
+        "scores_audited": false
+      }
+    ],
+    "hidden_recommendation_scan": {},
+    "normalization_claim": "normalized missing matrix from prose",
+    "uncertainty_register": [
+      {
+        "unknown_id": "U-1"
+      }
+    ],
+    "validated_upstream_artifact_refs": [
+      {
+        "artifact_id": "art-s3",
+        "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+        "artifact_sha256": "bc3a72cfa026d1d567048ed627960cad79e71cde60a0d050fad9e5db7c5ff7ae",
+        "run_id": "run-asb-fixture",
+        "source_stage": "/architectures"
+      }
+    ]
+  },
+  "run_id": "run-asb-fixture",
+  "source_artifacts": [
+    {
+      "artifact_id": "art-s3",
+      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "artifact_sha256": "bc3a72cfa026d1d567048ed627960cad79e71cde60a0d050fad9e5db7c5ff7ae",
+      "run_id": "run-asb-fixture",
+      "source_stage": "/architectures"
+    }
+  ],
+  "stage_id": "/score-evidence",
+  "stage_version": "1.3.0"
+}

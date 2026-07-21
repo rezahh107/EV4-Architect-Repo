@@ -1,0 +1,116 @@
+{
+  "artifact_id": "art-s3",
+  "artifact_revision": 1,
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+  "payload": {
+    "active_candidates": [
+      {
+        "candidate_id": "C-A01",
+        "depends_on_unknown_ids": [],
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A01"
+      }
+    ],
+    "architecture_coverage_matrix": [
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A01",
+        "included_as_candidate": true,
+        "reason": "required family considered",
+        "status": "viable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A02",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A03",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A04",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A05",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A06",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A07",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A08",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      }
+    ],
+    "hidden_recommendation_self_audit": {},
+    "rejected_or_approval_gated_candidates": [],
+    "stage_2_evidence_digest": "4d4e049c23ea77bbe0c3d100d486cc14e037fe366b0f7aec2162f8471c6975e2",
+    "tradeoff_records": [],
+    "unknown_propagation_ledger": []
+  },
+  "run_id": "run-asb-transaction",
+  "source_artifacts": [
+    {
+      "artifact_id": "art-s2",
+      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+      "artifact_sha256": "4d4e049c23ea77bbe0c3d100d486cc14e037fe366b0f7aec2162f8471c6975e2",
+      "run_id": "run-asb-transaction",
+      "source_stage": "/decompose"
+    }
+  ],
+  "stage_id": "/architectures",
+  "stage_version": "1.1.0"
+}

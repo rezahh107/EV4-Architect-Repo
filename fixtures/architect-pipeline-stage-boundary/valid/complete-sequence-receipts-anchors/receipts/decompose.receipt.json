@@ -1,0 +1,13 @@
+{
+  "artifact_id": "art-s2",
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+  "artifact_sha256": "93950a7321f82215dc409d403800278bf654544668bdb09f50cd86d8cb6fe6da",
+  "diagnostics": [],
+  "receipt_id": "asb-receipt-run-asb-fixture-art-s2-93950a7321f8",
+  "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
+  "run_id": "run-asb-fixture",
+  "stage_id": "/decompose",
+  "status": "valid",
+  "validator_id": "architect-pipeline-stage-boundary-validator",
+  "validator_version": "1.2.0"
+}

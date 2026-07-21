@@ -1,0 +1,68 @@
+{
+  "anchor_id": "asb-anchor-run-asb-fixture-score-audit-63a229c40d29",
+  "anchor_schema": "ev4-stage-anchor@1.3.0",
+  "anchor_type": "NEXT_STAGE_ANCHOR",
+  "boundary_ref": {
+    "boundary_id": "asb-boundary-run-asb-fixture-score-audit-3d5e99000139",
+    "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+    "boundary_sha256": "63a229c40d2958876a71859855474f68fcb4b9e1bb1609e6ee6768cc1d61fe6a"
+  },
+  "failure_event_ref": null,
+  "handoff_state": {
+    "audit_flags": [
+      "machine_authorization_forbidden"
+    ],
+    "blocking_items": [],
+    "confidence_delta": [
+      {
+        "current_confidence": "unknown",
+        "direction": "unchanged",
+        "downstream_impact": "must_remain_visible_downstream",
+        "evidence_refs": [],
+        "previous_confidence": "unknown",
+        "reason": "derived_from_validated_stage_artifact",
+        "subject_id": "U-1",
+        "subject_type": "unknown"
+      }
+    ],
+    "critical_unknowns": [
+      {
+        "evidence_refs": [],
+        "state": "unknown",
+        "unknown_id": "U-1"
+      }
+    ],
+    "gate_results": {
+      "boundary_transition": "next_stage",
+      "next_stage_authorized": true,
+      "receipt_status": "valid"
+    },
+    "partial_rerun_state": {
+      "downstream_payloads_dependent_on_this_stage": [],
+      "earliest_safe_rerun_stage": "/score-audit",
+      "invalidation_triggers": [
+        "artifact_bytes_changed",
+        "upstream_lineage_changed",
+        "diagnostic_ownership_changed"
+      ],
+      "reusable_until": null
+    },
+    "required_user_confirmations": [],
+    "stage_boundary": {
+      "allowed_work": [
+        "/recommend"
+      ],
+      "forbidden_work": [
+        "independent_authorization",
+        "downstream_reconstruction"
+      ],
+      "stop_conditions": [
+        "bundle_integrity_invalid"
+      ]
+    }
+  },
+  "repair_target_stage": null,
+  "run_id": "run-asb-fixture",
+  "source_stage": "/score-audit",
+  "target_stage": "/recommend"
+}

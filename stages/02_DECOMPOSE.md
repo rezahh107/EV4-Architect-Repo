@@ -1,7 +1,7 @@
 # Stage 2 — /decompose: Controlled Visual Role Decomposition
 
 Status: confirmed  
-Version: 1.0.1  
+Version: 1.0.0  
 
 ---
 
@@ -408,3 +408,23 @@ DECOMPOSITION SNAPSHOT
 Allowed next step:
 - /architectures
 ```
+
+
+## Intermediate Stage Artifact Boundary
+
+Producer-owned intermediate Artifact: `/decompose` emits `ev4-architect-pipeline-stage-artifact@1.1.0` with all canonical sections. Missing Decoration Layers, Overlay / Connector Candidates, Unknowns, or any other canonical section fails at the Stage 2 boundary under ASB-R01/ASB-R02.
+
+If an executable validator/tool is available, place the complete ordered Stage Artifact sequence in one directory and execute the canonical Validation Transaction:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle-directory> \
+  --format json
+
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle <validation-bundle-directory> \
+  --format json
+```
+
+Only a Bundle independently verified by `validate-bundle` with `bundle_integrity_status=valid`, `run_validation_status=valid`, and `authorization_valid=true` authorizes next-stage continuation. `diagnose-artifact` is non-authorizing and must never be used to construct a Receipt, Boundary, Anchor, or continuation claim. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact sequence, and provide both canonical commands above.

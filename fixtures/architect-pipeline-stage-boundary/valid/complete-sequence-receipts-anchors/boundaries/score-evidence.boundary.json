@@ -1,0 +1,28 @@
+{
+  "artifact": {
+    "artifact_id": "art-s4",
+    "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
+    "artifact_sha256": "f458ae10eae882b3c99d460a262c6117d523d112e02b14d861fbc60f7138b75a"
+  },
+  "authorization": {
+    "authorization_reason": "regenerated_valid_bundle",
+    "next_stage_authorized": true
+  },
+  "boundary_id": "asb-boundary-run-asb-fixture-score-evidence-b07f5e1845ac",
+  "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+  "failed_stage": null,
+  "failure_event_ref": null,
+  "receipt": {
+    "receipt_id": "asb-receipt-run-asb-fixture-art-s4-f458ae10eae8",
+    "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
+    "receipt_sha256": "9ff704e2195f7c3d7669edc4e88074f9da99cb943226181ec7e67d23e041d2bc",
+    "status": "valid",
+    "validator_id": "architect-pipeline-stage-boundary-validator",
+    "validator_version": "1.2.0"
+  },
+  "repair_target_stage": null,
+  "run_id": "run-asb-fixture",
+  "source_stage": "/score-evidence",
+  "target_stage": "/score-audit",
+  "transition": "next_stage"
+}

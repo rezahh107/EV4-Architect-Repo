@@ -1,7 +1,7 @@
 # Stage 4 — /score-evidence: Evidence-Bound Architecture Scoring
 
 Status: confirmed_hardened_v1.2.0  
-Version: 1.2.0  
+Version: 1.3.0  
 Depends on: Stage 3 — `/architectures`  
 Next stage: Stage 5 — `/score-audit`  
 Payload schema: `ev4-score-evidence-payload@1.2.0`
@@ -955,3 +955,23 @@ Stage 4 passes only if:
 ```text
 /score-audit
 ```
+
+
+## Intermediate Stage Artifact Boundary
+
+Producer-owned intermediate Artifact: `/score-evidence` emits `ev4-architect-pipeline-stage-artifact@1.1.0` and must reference a valid Stage 3 receipt and exact artifact digest before scoring acceptance. It must not reconstruct a missing Matrix/Ledger from prose or anchors, normalize absent artifacts, score candidates absent from validated Stage 3, discard Stage 3 unknowns, emit final totals for contract-critical `?`, or claim audited scores.
+
+If an executable validator/tool is available, place the complete ordered Stage Artifact sequence in one directory and execute the canonical Validation Transaction:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle-directory> \
+  --format json
+
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle <validation-bundle-directory> \
+  --format json
+```
+
+Only a Bundle independently verified by `validate-bundle` with `bundle_integrity_status=valid`, `run_validation_status=valid`, and `authorization_valid=true` authorizes next-stage continuation. `diagnose-artifact` is non-authorizing and must never be used to construct a Receipt, Boundary, Anchor, or continuation claim. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact sequence, and provide both canonical commands above.

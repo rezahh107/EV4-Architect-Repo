@@ -1,0 +1,83 @@
+{
+  "anchor_id": "asb-anchor-run-asb-fixture-architectures-7e2177521649",
+  "anchor_schema": "ev4-stage-anchor@1.3.0",
+  "anchor_type": "NEXT_STAGE_ANCHOR",
+  "boundary_ref": {
+    "boundary_id": "asb-boundary-run-asb-fixture-architectures-422bff98581d",
+    "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+    "boundary_sha256": "7e2177521649aa5d5e014e932d329663d43bc8ea7eaf275d4a787e7014037ccd"
+  },
+  "failure_event_ref": null,
+  "handoff_state": {
+    "audit_flags": [
+      "machine_authorization_forbidden"
+    ],
+    "blocking_items": [
+      {
+        "evidence_refs": [
+          "s2"
+        ],
+        "state": "blocked",
+        "unknown_id": "U-1"
+      }
+    ],
+    "confidence_delta": [
+      {
+        "current_confidence": "blocked",
+        "direction": "unchanged",
+        "downstream_impact": "blocks_or_caps_downstream_work",
+        "evidence_refs": [
+          "s2"
+        ],
+        "previous_confidence": "blocked",
+        "reason": "derived_from_validated_stage_artifact",
+        "subject_id": "U-1",
+        "subject_type": "unknown"
+      }
+    ],
+    "critical_unknowns": [
+      {
+        "evidence_refs": [
+          "s2"
+        ],
+        "state": "blocked",
+        "unknown_id": "U-1"
+      }
+    ],
+    "gate_results": {
+      "boundary_transition": "next_stage",
+      "next_stage_authorized": true,
+      "receipt_status": "valid"
+    },
+    "partial_rerun_state": {
+      "downstream_payloads_dependent_on_this_stage": [
+        "/score-evidence",
+        "/score-audit"
+      ],
+      "earliest_safe_rerun_stage": "/architectures",
+      "invalidation_triggers": [
+        "artifact_bytes_changed",
+        "upstream_lineage_changed",
+        "diagnostic_ownership_changed"
+      ],
+      "reusable_until": null
+    },
+    "required_user_confirmations": [],
+    "stage_boundary": {
+      "allowed_work": [
+        "/score-evidence"
+      ],
+      "forbidden_work": [
+        "independent_authorization",
+        "downstream_reconstruction"
+      ],
+      "stop_conditions": [
+        "bundle_integrity_invalid"
+      ]
+    }
+  },
+  "repair_target_stage": null,
+  "run_id": "run-asb-fixture",
+  "source_stage": "/architectures",
+  "target_stage": "/score-evidence"
+}

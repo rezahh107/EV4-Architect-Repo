@@ -1,0 +1,78 @@
+{
+  "anchor_id": "asb-anchor-run-asb-fixture-decompose-549e672ff9a6",
+  "anchor_schema": "ev4-stage-anchor@1.3.0",
+  "anchor_type": "NEXT_STAGE_ANCHOR",
+  "boundary_ref": {
+    "boundary_id": "asb-boundary-run-asb-fixture-decompose-cd803e91bc91",
+    "boundary_schema": "ev4-stage-boundary-record@1.1.0",
+    "boundary_sha256": "549e672ff9a660de4130c23209b487cd3165db4ffbaea71976aa64d4023861b6"
+  },
+  "failure_event_ref": null,
+  "handoff_state": {
+    "audit_flags": [
+      "machine_authorization_forbidden"
+    ],
+    "blocking_items": [
+      {
+        "evidence_refs": [],
+        "state": "blocked",
+        "unknown_id": "U-1"
+      }
+    ],
+    "confidence_delta": [
+      {
+        "current_confidence": "blocked",
+        "direction": "new_unknown",
+        "downstream_impact": "blocks_or_caps_downstream_work",
+        "evidence_refs": [],
+        "previous_confidence": "unknown",
+        "reason": "derived_from_validated_stage_artifact",
+        "subject_id": "U-1",
+        "subject_type": "unknown"
+      }
+    ],
+    "critical_unknowns": [
+      {
+        "evidence_refs": [],
+        "state": "blocked",
+        "unknown_id": "U-1"
+      }
+    ],
+    "gate_results": {
+      "boundary_transition": "next_stage",
+      "next_stage_authorized": true,
+      "receipt_status": "valid"
+    },
+    "partial_rerun_state": {
+      "downstream_payloads_dependent_on_this_stage": [
+        "/architectures",
+        "/score-evidence",
+        "/score-audit"
+      ],
+      "earliest_safe_rerun_stage": "/decompose",
+      "invalidation_triggers": [
+        "artifact_bytes_changed",
+        "upstream_lineage_changed",
+        "diagnostic_ownership_changed"
+      ],
+      "reusable_until": null
+    },
+    "required_user_confirmations": [],
+    "stage_boundary": {
+      "allowed_work": [
+        "/architectures"
+      ],
+      "forbidden_work": [
+        "independent_authorization",
+        "downstream_reconstruction"
+      ],
+      "stop_conditions": [
+        "bundle_integrity_invalid"
+      ]
+    }
+  },
+  "repair_target_stage": null,
+  "run_id": "run-asb-fixture",
+  "source_stage": "/decompose",
+  "target_stage": "/architectures"
+}
