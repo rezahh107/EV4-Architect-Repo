@@ -1,0 +1,90 @@
+name: temporary-repair-policy
+
+on:
+  push:
+    branches:
+      - policy/architect-decision-policy-r001
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ !contains(github.event.head_commit.message, '[policy-repair-bot]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: policy/architect-decision-policy-r001
+          persist-credentials: true
+      - name: Repair policy deterministically
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('policies/EV4_ARCHITECT_DESIGN_DECISION_POLICY_r001.md')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace('**Status:** `READY_FOR_TEMPORARY_ARCHITECT_USE`', '**Status:** `MANUAL_SUPPLEMENTAL_REFERENCE_ONLY`')
+          text = text.replace('**Operating mode:** Silent internal decision support inside the existing Architect pipeline', '**Operating mode:** Manual supplemental reference inside the existing Architect pipeline; not an activation or enforcement carrier')
+          text = text.replace('**Primary objective:** Improve the quality, completeness, evidence discipline, and professional detail of architecture decisions before Architect output is handed to Constructability Engineer review.', '**Primary objective:** Help Architect interpret and document architecture decisions within existing authority, without activating new decision routes or replacing repository contracts, Kernel decisions, schemas, validators, or stage controls.')
+
+          kernel = '**Kernel relationship:** This policy is a supplemental role-specific decision aid. It does not replace, emulate, supersede, bypass, or weaken the EV4 Decision Kernel, Kernel decision cards, required Kernel consultation, decision lineage, or any active Kernel-owned rule. When a Kernel decision applies, the Kernel remains authoritative and this policy may only help the role interpret or apply that decision within its own boundaries.\n'
+          domain = '\n**Domain-artifact boundary:** EV4 Domain artifacts are optional external evidence. Use them only when the current task explicitly supplies an exact artifact identity, Domain ID, revision, stable reference or digest, and approval/validation context. When that identity is absent, treat Domain-specific evidence as `unavailable_or_unverified`, use this policy and repository-authoritative sources only, and do not search for, invent, select, or silently substitute external Domain files.\n'
+          if domain.strip() not in text:
+              text = text.replace(kernel, kernel + domain)
+
+          text = text.replace('4. applicable EV4 Domain guidance;', '4. exactly identified and explicitly supplied EV4 Domain guidance, when its revision and approval/validation context are available;')
+
+          marker = '\n---\n\n## 5. Quick routing index'
+          subsection = '''\n### 4.2 External Domain-artifact input\n\nEV4 Domain artifacts are not repository-authoritative merely because a file name, heading, or attachment describes them as approved.\n\nUse a Domain artifact only when the current task supplies enough exact identity to distinguish it from stale, modified, or incompatible alternatives. At minimum, preserve the supplied:\n\n- Domain ID;\n- artifact/revision identity;\n- stable reference or digest when provided;\n- registry or approval context when provided;\n- compatibility scope when provided.\n\nIf these facts are absent:\n\n- do not make Domain artifacts mandatory;\n- do not choose an external file from conversation history, repository search, or similarity of names;\n- mark Domain-specific evidence as `unavailable_or_unverified`;\n- continue with repository-authoritative contracts and this supplemental reference where possible;\n- preserve any decision that materially requires the missing Domain evidence as an explicit evidence gap.\n\n'''
+          if '### 4.2 External Domain-artifact input' not in text:
+              text = text.replace(marker, '\n' + subsection + '---\n\n## 5. Quick routing index')
+
+          text = text.replace('Attach this policy and the approved EV4 Domain artifacts alongside the repository’s normal instructions.', 'This policy may be attached manually alongside the repository’s normal instructions. Attach EV4 Domain artifacts only when their exact identity and approval/validation context are explicitly supplied for the current task.')
+          text = text.replace('''Use the attached EV4 Architect Design Decision Policy and EV4 Domain artifacts\nas silent mandatory architecture-quality guidance inside the existing Architect\npipeline.''', '''Use the attached EV4 Architect Design Decision Policy as a manual supplemental\nreference inside the existing Architect pipeline. It does not activate a new\ndecision route and does not override repository contracts, Stage Anchors, active\noverrides, or Kernel authority.\n\nUse any attached EV4 Domain artifact only when the current task supplies its\nexact identity, Domain ID, revision, stable reference or digest, and approval or\nvalidation context. Otherwise treat Domain-specific evidence as unavailable or\nunverified, do not invent or select an external artifact, and preserve any\nmaterial dependency as an evidence gap.''')
+          text = text.replace('as silent mandatory architecture-quality guidance', 'as manual supplemental architecture-quality guidance')
+          text = text.replace('EV4_ARCHITECT_DESIGN_DECISION_POLICY_READY', 'EV4_ARCHITECT_DESIGN_DECISION_POLICY_MANUAL_REFERENCE_ONLY')
+          text = text.replace('This policy is intended for immediate temporary use as a role-specific Architect decision-quality aid.', 'This policy is intended for manual supplemental use as a role-specific Architect decision-quality reference.')
+
+          lines = text.splitlines()
+          out = []
+          in_target = False
+          for line in lines:
+              top = re.match(r'^## (\d+)\. ', line)
+              if top:
+                  in_target = int(top.group(1)) in (7, 8)
+                  out.append(line)
+                  continue
+              if in_target and re.match(r'^## (7|8)\.\d+ ', line):
+                  out.append('#' + line)
+                  continue
+              if in_target and line.startswith('### ') and not re.match(r'^### (7|8)\.\d+ ', line):
+                  out.append('#' + line)
+                  continue
+              out.append(line)
+          text = '\n'.join(out) + '\n'
+
+          assert '**Status:** `MANUAL_SUPPLEMENTAL_REFERENCE_ONLY`' in text
+          assert '### 4.2 External Domain-artifact input' in text
+          assert 'unavailable_or_unverified' in text
+          assert not re.search(r'^## (7|8)\.\d+ ', text, re.M)
+          assert re.search(r'^### 7\.1 ', text, re.M)
+          assert re.search(r'^### 8\.1 ', text, re.M)
+          assert 'silent mandatory' not in text.lower()
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit repaired policy and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/temporary-repair-policy.yml
+          git config user.name 'policy-repair-bot'
+          git config user.email 'policy-repair-bot@users.noreply.github.com'
+          git add policies/EV4_ARCHITECT_DESIGN_DECISION_POLICY_r001.md .github/workflows/temporary-repair-policy.yml
+          git commit -m '[policy-repair-bot] Repair Architect policy findings'
+          git push origin HEAD:policy/architect-decision-policy-r001
