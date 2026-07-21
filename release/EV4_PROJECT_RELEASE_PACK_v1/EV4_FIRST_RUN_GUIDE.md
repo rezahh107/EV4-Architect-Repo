@@ -1,10 +1,11 @@
 # EV4 First Run Guide
 
 Status: release_candidate_for_controlled_use
-Version: 1.1.0
+Version: 1.2.0
 
 ---
 
+<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_START -->
 ## Fast Start
 
 In a new user-facing Architect chat with the project or repository instructions loaded, send only:
@@ -37,7 +38,8 @@ The canonical machine-readable source for this response is:
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-If `شروع` is sent together with a screenshot or usable section description, the model must skip the empty-state response and run `/intake` directly.
+If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_END -->
 
 ---
 
@@ -166,6 +168,7 @@ Produce either FINAL BUILDER HANDOFF or HANDOFF BLOCKED REPORT.
 
 ---
 
+<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_START -->
 ## Final Project Gate Step
 
 When `/handoff-export` is accepted and its Stage Anchor authorizes the next stage:
@@ -175,6 +178,7 @@ Run /project-gate-export.
 Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.
 Do not substitute the legacy /builder-feed-export.
 ```
+<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_END -->
 
 ---
 
