@@ -1,0 +1,33 @@
+name: validate-architect-bootstrap
+
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'README.md'
+      - 'manifests/architect-conversation-bootstrap.v1.json'
+      - 'manifests/architect-pipeline-manifest.v1.json'
+      - 'release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md'
+      - 'scripts/check-architect-bootstrap.py'
+      - '.github/workflows/validate-architect-bootstrap.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact pull request head
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Assert exact pull request head
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Validate Architect bootstrap contract
+        run: python scripts/check-architect-bootstrap.py
