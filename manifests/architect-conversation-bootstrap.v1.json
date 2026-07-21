@@ -1,0 +1,49 @@
+{
+  "contract_id": "ev4-architect-conversation-bootstrap",
+  "contract_version": "1.0.0",
+  "owner_repository": "rezahh107/EV4-Architect-Repo",
+  "activation": {
+    "mode": "new_architect_run",
+    "accepted_triggers": [
+      "شروع",
+      "شروع کن",
+      "شروع سکشن جدید",
+      "start",
+      "begin",
+      "start a new section"
+    ],
+    "preconditions": [
+      "repository instructions are loaded",
+      "no active Architect run is being continued",
+      "no valid Stage Anchor has been supplied",
+      "no screenshot or section description has been supplied"
+    ]
+  },
+  "bootstrap_response": "EV4 Architect آماده است.\n\nبرای شروع یک سکشن جدید:\n1. تصویر سکشن را ارسال کن.\n2. اگر معلوم است، مشخص کن تصویر مربوط به Desktop، Tablet یا Mobile است.\n3. محدودیت‌ها، Assetها یا رفتارهای مورد انتظار را فقط در صورت وجود اضافه کن.\n\nپس از دریافت ورودی، مسیر رسمی از اینجا شروع می‌شود:\n/intake → /research → /decompose\n\nتا پیش از دریافت ورودی، هیچ معماری، Elementor tree، مقدار دقیق یا توصیه‌ای تولید نمی‌شود.",
+  "first_stage": "/intake",
+  "initial_sequence": [
+    "/intake",
+    "/research",
+    "/decompose"
+  ],
+  "input_present_behavior": {
+    "trigger_with_screenshot_or_section_description": "run_intake_without_repeating_bootstrap_questions",
+    "do_not_ask_again_for": [
+      "information already visible in the supplied screenshot",
+      "constraints already supplied by the user"
+    ]
+  },
+  "routing_rules": {
+    "valid_stage_anchor_present": "continue_from_anchor_without_restarting",
+    "latest_stage_output_without_valid_anchor": "request_or_regenerate_required_anchor",
+    "explicit_repository_maintenance_request": "repository_maintenance_mode_not_project_run"
+  },
+  "before_input_forbidden": [
+    "run_any_pipeline_stage",
+    "recommend_architecture",
+    "produce_elementor_tree",
+    "invent_exact_values",
+    "claim_stage_anchor",
+    "claim_builder_or_production_readiness"
+  ]
+}
