@@ -17,10 +17,11 @@ It does not prove constructability, execute Elementor actions, or claim responsi
 3. `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md`
 4. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
 5. `manifests/architect-conversation-bootstrap.v1.json`
-6. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
-7. `schemas/ev4-architect-stage-payload.v1.schema.json`
-8. `scripts/check-architect-stage-payload.py`
-9. the relevant stage, contract, schema, fixture, and diagnostic files for the task
+6. `schemas/architect-conversation-bootstrap.v1.schema.json`
+7. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
+8. `schemas/ev4-architect-stage-payload.v1.schema.json`
+9. `scripts/check-architect-stage-payload.py`
+10. the relevant stage, contract, schema, fixture, and diagnostic files for the task
 
 When sources conflict, follow the highest-authority current contract or explicit active override. Do not silently merge incompatible rules.
 
@@ -52,13 +53,31 @@ EV4 Architect آماده است.
 ```
 <!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_END -->
 
-Additional routing rules:
+The routing and pre-input prohibitions below are rendered from the canonical manifest. Do not paraphrase, reverse, or supplement them inside this controlled block.
 
-- If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
-- If a valid Stage Anchor is present, do not restart the run. Continue only from the anchor's authorized target stage.
-- If a prior stage output exists but its required Stage Anchor is missing or stale, request or regenerate the required anchor instead of guessing from conversation memory.
-- If the user explicitly requests repository maintenance, code changes, audit, PR work, or documentation work, operate in repository-maintenance mode; do not interpret `شروع` inside that request as a new Architect project run.
-- Before usable project input exists, do not run a pipeline stage, recommend architecture, produce an Elementor tree, invent exact values, emit a Stage Anchor, or claim downstream readiness.
+<!-- EV4_ARCHITECT_BOOTSTRAP_ROUTING_START -->
+```text
+trigger_with_screenshot_or_section_description:
+If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+
+valid_stage_anchor_present:
+If a valid Stage Anchor is present, do not restart the run. Continue only from the anchor's authorized target stage.
+
+latest_stage_output_without_valid_anchor:
+If a prior stage output exists but its required Stage Anchor is missing or stale, request or regenerate the required anchor instead of guessing from conversation memory.
+
+explicit_repository_maintenance_request:
+If the user explicitly requests repository maintenance, code changes, audit, PR work, or documentation work, operate in repository-maintenance mode; do not interpret `شروع` inside that request as a new Architect project run.
+
+before_input_forbidden:
+- run_any_pipeline_stage: Do not run any pipeline stage before usable project input exists.
+- recommend_architecture: Do not recommend architecture before usable project input exists.
+- produce_elementor_tree: Do not produce an Elementor tree before usable project input exists.
+- invent_exact_values: Do not invent exact values before usable project input exists.
+- claim_stage_anchor: Do not emit or claim a Stage Anchor before a pipeline stage has produced one.
+- claim_builder_or_production_readiness: Do not claim Builder readiness, responsive completion, or production readiness from bootstrap state.
+```
+<!-- EV4_ARCHITECT_BOOTSTRAP_ROUTING_END -->
 
 The first controlled project sequence is always:
 
@@ -149,7 +168,9 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_va
 For bootstrap or first-run changes, run:
 
 ```bash
+python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
 python scripts/check-architect-bootstrap.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_bootstrap_semantics.py
 ```
 
 This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.
