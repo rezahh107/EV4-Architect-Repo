@@ -176,22 +176,40 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 
 Mutable project and stage status is maintained only in `STATUS.md`. The summary at the top of this README is derived for orientation and must not override `STATUS.md`, exact repository evidence, or the live default branch.
 
+## Architect Stage Boundary Validation Transaction
 
-## Architect Stage Boundary Artifact Enforcement
+Stages `/decompose` through `/score-audit` use one deterministic Validation Transaction. The current carrier identities are:
 
-Stage 2 through Stage 5 now have an additive intermediate Artifact contract, `ev4-architect-pipeline-stage-artifact@1.1.0`, validated by `scripts/check-architect-pipeline-stage-boundary.py` with receipts using `ev4-architect-stage-validation-receipt@1.1.0`. The earliest owning producer boundary must fail when a required canonical artifact is missing; downstream reconstruction from prose, Stage Anchor text, or self-declared `gate_results: pass` is forbidden. This does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
+```yaml
+artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
+receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
+failure_event_schema: ev4-architect-validation-failure-event@1.0.0
+boundary_schema: ev4-stage-boundary-record@1.1.0
+anchor_schema: ev4-stage-anchor@1.3.0
+bundle_schema: ev4-architect-validation-bundle@1.1.0
+```
 
-If an executable validator/tool is available:
-- write the canonical Stage Artifact;
-- execute the official validator;
-- obtain the receipt;
-- emit the separate Boundary-referenced NEXT_STAGE_ANCHOR only from a valid generated Validation Bundle.
+The only production generator is:
 
-If execution is unavailable:
-- do not claim machine validation;
-- do not emit a validated separate NEXT STAGE ANCHOR;
-- return validation_required or insufficient_evidence;
-- provide the exact manual validator command;
-- preserve the Artifact for external validation.
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle> \
+  --format json
+```
 
-Canonical production authorization command: `python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json`. Caller-supplied Receipts, Boundary Records, Anchors, and Manifests are untrusted assertions; only a freshly generated and independently `validate-bundle`-verified Validation Bundle authorizes the next stage. Standalone `--artifact` and `--anchor` paths are diagnostic-only and report `authorization_valid: false`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced only after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.
+Every Bundle must then be independently verified:
+
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle <validation-bundle> \
+  --format json
+```
+
+`validate-bundle` regenerates both success and failure transactions from exact contained Artifact bytes and compares every deterministic file byte-for-byte. A truthfully represented failed Run has valid Bundle integrity but no authorization. A malformed, incomplete, substituted, or forged Bundle has invalid integrity.
+
+The legacy file-producing flags `--write-receipt`, `--write-receipts`, and `--write-anchors` are removed. Standalone Artifact diagnostics use `diagnose-artifact`, generate no authority files, and report `authorization_valid: false`.
+
+A user-facing Anchor never independently authorizes continuation. Historical `ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` records remain historical evidence only. The current `ev4-stage-anchor@1.3.0` binds a `boundary_ref`, an optional failure-only `failure_event_ref`, and an evidence-derived `handoff_state` with structured `confidence_delta`.
+
+Exact-Head CI establishes repository CI evidence only for the tested Head. Runtime-tool enforcement, chat-runtime enforcement, downstream rejection, real non-synthetic handoff, and production readiness remain `insufficient_evidence` unless separately proven.

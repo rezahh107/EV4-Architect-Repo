@@ -141,22 +141,38 @@ It does not claim:
 
 Those enforcement carriers belong to later authorized increments and must be reported according to their actual evidence state.
 
+## Architect Stage Boundary Validation Transaction
 
-## Architect Stage Boundary Artifact Enforcement
+Stages `/decompose` through `/score-audit` use one additive deterministic transaction without replacing `ev4-architect-stage-payload@1.0.0`:
 
-Stage 2 through Stage 5 now have an additive intermediate Artifact contract, `ev4-architect-pipeline-stage-artifact@1.1.0`, validated by `scripts/check-architect-pipeline-stage-boundary.py` with receipts using `ev4-architect-stage-validation-receipt@1.1.0`. The earliest owning producer boundary must fail when a required canonical artifact is missing; downstream reconstruction from prose, Stage Anchor text, or self-declared `gate_results: pass` is forbidden. This does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
+```yaml
+artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
+receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
+failure_event_schema: ev4-architect-validation-failure-event@1.0.0
+boundary_schema: ev4-stage-boundary-record@1.1.0
+anchor_schema: ev4-stage-anchor@1.3.0
+bundle_schema: ev4-architect-validation-bundle@1.1.0
+```
 
-If an executable validator/tool is available:
-- write the canonical Stage Artifact;
-- execute the official validator;
-- obtain the receipt;
-- emit the separate Boundary-referenced NEXT_STAGE_ANCHOR only from a valid generated Validation Bundle.
+The earliest owning producer boundary must fail when a required canonical Artifact is missing or semantically invalid. `failed_stage` records where validation detected failure; `repair_target_stage` records the earliest owning Stage that must change. They are not assumed equal.
 
-If execution is unavailable:
-- do not claim machine validation;
-- do not emit a validated separate NEXT STAGE ANCHOR;
-- return validation_required or insufficient_evidence;
-- provide the exact manual validator command;
-- preserve the Artifact for external validation.
+Production authority is limited to:
 
-Canonical production authorization command: `python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json`. Caller-supplied Receipts, Boundary Records, Anchors, and Manifests are untrusted assertions; only a freshly generated and independently `validate-bundle`-verified Validation Bundle authorizes the next stage. Standalone `--artifact` and `--anchor` paths are diagnostic-only and report `authorization_valid: false`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced only after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.
+```bash
+python scripts/check-architect-pipeline-stage-boundary.py validate-run \
+  --sequence <artifact-directory> \
+  --output <validation-bundle> \
+  --format json
+
+python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
+  --bundle <validation-bundle> \
+  --format json
+```
+
+A Bundle authorizes continuation only when it independently regenerates from exact contained Artifact bytes with `bundle_integrity_status: valid`, `run_validation_status: valid`, and `authorization_valid: true`. A truthfully represented failed Run has valid Bundle integrity but no authorization. A malformed, forged, incomplete, or non-reproducible Bundle has invalid integrity.
+
+Caller-supplied Receipts, Failure Events, Boundaries, Anchors, and Manifests are untrusted assertions. A user-facing Anchor never independently authorizes work. Historical Anchor and Bundle identities remain historical evidence only.
+
+The legacy file-producing flags `--write-receipt`, `--write-receipts`, and `--write-anchors` are removed. Standalone Artifact diagnostics use `diagnose-artifact`, generate no authority files, and report `authorization_valid: false`.
+
+Schema, Validator, fixture, mutation-test, and exact-Head Workflow evidence may establish repository CI enforcement for the exact tested Head. Runtime-tool enforcement and downstream enforcement remain `insufficient_evidence` until separately proven. Fresh independent PR Inspector review remains mandatory after every Head change.

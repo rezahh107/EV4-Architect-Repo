@@ -2,10 +2,6 @@ name: validate-architect-pipeline-stage-boundary
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
     paths:
       - 'contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md'
       - 'contracts/STAGE_ANCHOR_CONTRACT.md'
@@ -14,6 +10,7 @@ on:
       - 'scripts/check-architect-pipeline-stage-boundary.py'
       - 'scripts/architect_validation_*.py'
       - 'tests/test_architect_pipeline_stage_boundary_validator.py'
+      - 'tests/test_architect_validation_transaction_mutations.py'
       - 'stages/02_DECOMPOSE.md'
       - 'stages/03_ARCHITECTURES.md'
       - 'stages/04_SCORE_EVIDENCE.md'
@@ -36,11 +33,9 @@ jobs:
           persist-credentials: false
 
       - name: Assert exact pull request head
-        shell: sh
         run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
 
-      - name: Record clean checkout
-        shell: bash
+      - name: Check clean checkout
         run: |
           set -euo pipefail
           echo 'repository_status_checkpoint=after_checkout'
@@ -52,7 +47,6 @@ jobs:
           python-version: '3.11'
 
       - name: Install pinned validation dependencies and check cleanliness
-        shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
@@ -62,13 +56,13 @@ jobs:
           test -z "$(git status --porcelain)"
 
       - name: Compile outside repository and check cleanliness
-        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
         run: |
           set -euo pipefail
-          python -B - <<'PY'
+          python - <<'PY'
           import py_compile
           from pathlib import Path
-
           paths = [Path('scripts/check-architect-pipeline-stage-boundary.py')]
           paths.extend(sorted(Path('scripts').glob('architect_validation_*.py')))
           for path in paths:
@@ -83,13 +77,13 @@ jobs:
           test -z "$(git status --porcelain)"
 
       - name: Validate current Schemas with Draft 2020-12
-        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
         run: |
-          python -B - <<'PY'
+          python - <<'PY'
           import json
           from pathlib import Path
           from jsonschema import Draft202012Validator
-
           names = [
               'ev4-architect-pipeline-stage-artifact.v1.schema.json',
               'ev4-architect-stage-validation-receipt.v1.schema.json',
@@ -104,48 +98,52 @@ jobs:
           PY
 
       - name: Run deterministic success and failure Bundle transactions
-        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
         run: |
           set -euo pipefail
           rm -rf /tmp/ev4-valid-bundle-1 /tmp/ev4-valid-bundle-2 /tmp/ev4-failure-bundle-1 /tmp/ev4-failure-bundle-2
-          python -B scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-1 --format json
-          python -B scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-2 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-1 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-valid-bundle-2 --format json
           diff -ru /tmp/ev4-valid-bundle-1 /tmp/ev4-valid-bundle-2
-          python -B scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-valid-bundle-1 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-valid-bundle-1 --format json
           set +e
-          python -B scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-1 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-1 --format json
           failure_exit_1=$?
-          python -B scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-2 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/invalid/cross-stage-architectures-to-decompose --output /tmp/ev4-failure-bundle-2 --format json
           failure_exit_2=$?
           set -e
           test "$failure_exit_1" -eq 1
           test "$failure_exit_2" -eq 1
           diff -ru /tmp/ev4-failure-bundle-1 /tmp/ev4-failure-bundle-2
-          python -B scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-failure-bundle-1 --format json
+          python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-failure-bundle-1 --format json
           echo 'repository_status_checkpoint=after_bundle_tests'
           git status --porcelain
           test -z "$(git status --porcelain)"
 
       - name: Validate fixtures and focused regression tests
-        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
         run: |
           set -euo pipefail
-          python -B scripts/check-architect-pipeline-stage-boundary.py --fixtures
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -B -m pytest -p no:cacheprovider -q tests/test_architect_pipeline_stage_boundary_validator.py
+          python scripts/check-architect-pipeline-stage-boundary.py --fixtures
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
+            tests/test_architect_pipeline_stage_boundary_validator.py \
+            tests/test_architect_validation_transaction_mutations.py
           echo 'repository_status_checkpoint=after_pytest'
           git status --porcelain
           test -z "$(git status --porcelain)"
 
       - name: Run legacy payload and governance compatibility checks
-        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
         run: |
           set -euo pipefail
-          python -B scripts/check-architect-stage-payload.py
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -B -m pytest -p no:cacheprovider -q tests/test_architect_stage_payload_validator.py
-          python -B scripts/check-decision-escape-routes.py
+          python scripts/check-architect-stage-payload.py
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_stage_payload_validator.py
+          python scripts/check-decision-escape-routes.py
 
       - name: Final repository cleanliness assertion
-        shell: bash
         run: |
           set -euo pipefail
           echo 'repository_status_checkpoint=final'
