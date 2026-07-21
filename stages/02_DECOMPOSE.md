@@ -408,3 +408,10 @@ DECOMPOSITION SNAPSHOT
 Allowed next step:
 - /architectures
 ```
+
+
+## Intermediate Stage Artifact Boundary
+
+Producer-owned intermediate Artifact: `/decompose` emits `ev4-architect-pipeline-stage-artifact@1.0.0` with all canonical sections. Missing Decoration Layers, Overlay / Connector Candidates, Unknowns, or any other canonical section fails at the Stage 2 boundary under ASB-R01/ASB-R02.
+
+If an executable validator/tool is available, write the canonical Stage Artifact, execute `python scripts/check-architect-pipeline-stage-boundary.py --artifact <artifact.json> --write-receipt <receipt.json>`, obtain the receipt, and emit a receipt-bound `NEXT STAGE ANCHOR` only after `status=valid`. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact, and provide the manual validator command.

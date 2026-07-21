@@ -26,4 +26,6 @@
     {"output_id":"/builder-feed-export","status":"preserved","canonical_for_project_gate":false,"retirement_status":"retirement_forbidden"}
   ],
   "final_project_gate_export_stage": "/project-gate-export"
+,
+  "intermediate_stage_artifact_boundary": {"artifact_schema":"ev4-architect-pipeline-stage-artifact@1.0.0","receipt_schema":"ev4-architect-stage-validation-receipt@1.0.0","validator":"scripts/check-architect-pipeline-stage-boundary.py","stage_ids":["/decompose","/architectures","/score-evidence","/score-audit"],"compatibility":"additive_nonbreaking","runtime_enforcement":"insufficient_evidence","downstream_enforcement":"insufficient_evidence"}
 }

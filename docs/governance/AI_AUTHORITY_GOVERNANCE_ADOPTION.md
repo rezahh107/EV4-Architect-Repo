@@ -140,3 +140,23 @@ It does not claim:
 - production readiness.
 
 Those enforcement carriers belong to later authorized increments and must be reported according to their actual evidence state.
+
+
+## Architect Stage Boundary Artifact Enforcement
+
+Stage 2 through Stage 5 now have an additive intermediate Artifact contract, `ev4-architect-pipeline-stage-artifact@1.0.0`, validated by `scripts/check-architect-pipeline-stage-boundary.py` with receipts using `ev4-architect-stage-validation-receipt@1.0.0`. The earliest owning producer boundary must fail when a required canonical artifact is missing; downstream reconstruction from prose, Stage Anchor text, or self-declared `gate_results: pass` is forbidden. This does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
+
+If an executable validator/tool is available:
+- write the canonical Stage Artifact;
+- execute the official validator;
+- obtain the receipt;
+- emit the receipt-bound NEXT STAGE ANCHOR only after status=valid.
+
+If execution is unavailable:
+- do not claim machine validation;
+- do not emit a validated NEXT STAGE ANCHOR;
+- return validation_required or insufficient_evidence;
+- provide the exact manual validator command;
+- preserve the Artifact for external validation.
+
+Validation command: `python scripts/check-architect-pipeline-stage-boundary.py --fixtures`. Achieved evidence levels in this repository are schema_backed, fixture_tested, sequence_fixture_tested, and ci_enforced after the workflow runs on an exact PR head; runtime_tool_enforced and downstream_enforced remain insufficient_evidence until separately proven.

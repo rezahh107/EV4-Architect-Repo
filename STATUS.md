@@ -119,3 +119,12 @@ The current state does not claim:
 
 Final PR-head CI and independent review evidence belongs in the PR review record because
 writing a final tested Head SHA into this file would itself create a new, unvalidated Head.
+
+
+## ARCH-GOV-STAGE-BOUNDARY-001
+
+Status: proposed_additive_nonbreaking_pending_independent_review
+Scope gate: authorized for bounded intermediate Stage Artifact enforcement at `/decompose` through `/score-audit`.
+Evidence state: schema_backed and fixture_tested locally after validation; CI enforcement requires exact PR-head workflow execution.
+Runtime enforcement: insufficient_evidence. Downstream enforcement: insufficient_evidence.
+Final Architect Stage Payload v1 authority remains unchanged.

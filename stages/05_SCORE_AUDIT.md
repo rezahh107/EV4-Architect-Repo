@@ -524,3 +524,10 @@ If Stage 5 fails:
 ```text
 Return to the precise repair route indicated by Score_Audit_Payload.next_action.
 ```
+
+
+## Intermediate Stage Artifact Boundary
+
+Producer-owned intermediate Artifact: `/score-audit` emits `ev4-architect-pipeline-stage-artifact@1.0.0` and remains an independent audit. Missing Stage 2, Stage 3, or Stage 4 validated lineage returns the earliest repair target and must not be silently repaired. Passing audit preserves `selected_candidate_id: null`, `scores_audited: true`, and `allowed_next_stage: /recommend`.
+
+If an executable validator/tool is available, write the canonical Stage Artifact, execute `python scripts/check-architect-pipeline-stage-boundary.py --artifact <artifact.json> --write-receipt <receipt.json>`, obtain the receipt, and emit a receipt-bound `NEXT STAGE ANCHOR` only after `status=valid`. If execution is unavailable, do not claim machine validation or emit a validated next-stage anchor; return `validation_required` or `insufficient_evidence`, preserve the Artifact, and provide the manual validator command.

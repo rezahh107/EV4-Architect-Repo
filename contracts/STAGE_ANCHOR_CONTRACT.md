@@ -250,3 +250,26 @@ A valid anchor passes if:
 - It defines allowed and forbidden work for the next stage.
 - It does not expose hidden chain-of-thought.
 - It does not introduce new claims not present in prior stage outputs.
+
+
+## Receipt-Bound Stage Anchor v1.2.0
+
+New Stage 2-5 outputs after activation use `ev4-stage-anchor@1.2.0` when they claim a validated next-stage boundary. Historical `ev4-stage-anchor@1.1.0` records remain readable as historical evidence only and are not silently upgraded.
+
+Required binding:
+
+```yaml
+source_artifact:
+  artifact_id:
+  artifact_schema:
+  artifact_sha256:
+  stage_id:
+source_validation:
+  receipt_id:
+  receipt_schema:
+  validator_id:
+  validator_version:
+  status:
+```
+
+Rules: a `NEXT STAGE ANCHOR` may be emitted only when the machine-generated receipt status is `valid`; `invalid` or `insufficient_evidence` emits a `REPAIR ANCHOR`; the next stage verifies expected previous stage, artifact ID, schema, exact SHA-256, receipt status, and validator identity/version. A self-authored `gate_results: pass` is not a receipt. Changed artifact bytes invalidate the prior receipt and downstream Anchor. Do not claim chat runtime validation unless the validator actually executed.

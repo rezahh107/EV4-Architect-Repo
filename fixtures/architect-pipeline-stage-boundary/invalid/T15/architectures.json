@@ -1,0 +1,151 @@
+{
+  "artifact_id": "art-s3",
+  "artifact_revision": 1,
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+  "payload": {
+    "active_candidates": [
+      {
+        "candidate_id": "C-A01",
+        "depends_on_unknown_ids": [
+          "U-1"
+        ],
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A01"
+      }
+    ],
+    "architecture_coverage_matrix": [
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A01",
+        "included_as_candidate": true,
+        "reason": "required family considered",
+        "status": "viable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A02",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A03",
+        "included_as_candidate": true,
+        "reason": "required family considered",
+        "status": "viable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A04",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A05",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A06",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A07",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      },
+      {
+        "considered": true,
+        "evidence_refs": [
+          "s2"
+        ],
+        "family_id": "A08",
+        "included_as_candidate": false,
+        "reason": "required family considered",
+        "status": "not_applicable"
+      }
+    ],
+    "hidden_recommendation_self_audit": {},
+    "rejected_or_approval_gated_candidates": [],
+    "stage_2_evidence_digest": "e40cb822ddf20766abe90dba1f153400513d429e0cb210b8cdfa5e1922c29063",
+    "tradeoff_records": [],
+    "unknown_propagation_ledger": [
+      {
+        "affected_candidates": [
+          "C-A01"
+        ],
+        "effect": "caps responsive confidence",
+        "evidence_refs": [
+          "s2"
+        ],
+        "handling": "score_capped",
+        "source_artifact_id": "art-s2",
+        "state": "score_capped",
+        "unknown_id": "U-1"
+      }
+    ]
+  },
+  "run_id": "run-asb-fixture",
+  "source_artifacts": [
+    {
+      "artifact_id": "art-s2",
+      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+      "artifact_sha256": "e40cb822ddf20766abe90dba1f153400513d429e0cb210b8cdfa5e1922c29063",
+      "source_stage": "/decompose",
+      "validation_receipt_id": "asb-receipt-art-s2-e40cb822ddf2",
+      "validation_status": "valid"
+    }
+  ],
+  "stage_anchor": {
+    "allowed_next_stage": "/score-evidence",
+    "anchor_schema": "ev4-stage-anchor@1.2.0",
+    "anchor_type": "NEXT STAGE ANCHOR",
+    "source_artifact": {
+      "artifact_id": "art-s3",
+      "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+      "artifact_sha256": "1c9951914ab6305c2abc344d8ddb10381d5d39e0329833d2d0bf27051620c051",
+      "stage_id": "/architectures"
+    },
+    "source_validation": {
+      "receipt_id": "r",
+      "receipt_schema": "ev4-architect-stage-validation-receipt@1.0.0",
+      "status": "invalid",
+      "validator_id": "architect-pipeline-stage-boundary-validator",
+      "validator_version": "1.0.0"
+    }
+  },
+  "stage_id": "/architectures",
+  "stage_version": "1.0.0"
+}

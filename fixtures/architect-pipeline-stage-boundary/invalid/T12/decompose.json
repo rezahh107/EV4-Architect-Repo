@@ -1,0 +1,46 @@
+{
+  "artifact_id": "art-s2",
+  "artifact_revision": 1,
+  "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.0.0",
+  "payload": {
+    "allowed_next_stage": "/architectures",
+    "decoration_layers": [
+      "glow"
+    ],
+    "gate_results": "pass",
+    "implementation_assumptions_not_allowed_yet": [
+      "no widget choice yet"
+    ],
+    "meaningful_content": [
+      "headline"
+    ],
+    "overlay_connector_candidates": [
+      "line"
+    ],
+    "repeated_component_candidates": [
+      "cards"
+    ],
+    "responsive_risks": [
+      "stack"
+    ],
+    "unknowns": [
+      {
+        "blocking": false,
+        "description": "mobile connector",
+        "evidence_state": "insufficient_evidence",
+        "unknown_id": "U-1",
+        "why_it_matters": "affects overlay"
+      }
+    ],
+    "visible_groups": [
+      "hero"
+    ],
+    "visual_core": [
+      "dashboard"
+    ]
+  },
+  "run_id": "run-asb-fixture",
+  "source_artifacts": [],
+  "stage_id": "/decompose",
+  "stage_version": "1.0.0"
+}

@@ -295,3 +295,40 @@ records:
       evidence_state: observed
     notes: >-
       Existing validation catches silent removal of responsive uncertainty, but Wave 1 found no exact active Kernel family mapping or Kernel decision-record requirement for responsive strategy assertions; the closest inspected Kernel evidence is positioning_safety, but broad responsive strategy remains insufficient_evidence in Wave 1.
+
+  - escape_route_id: ARCH-ESC-007
+    rule_id: ARCH-GOV-STAGE-BOUNDARY-001
+    concept: Intermediate Architect stages can falsely advance when required producer artifacts lack deterministic boundary validation
+    risk: Critical
+    session_scope: cross_turn_sequence
+    recovery_action: block
+    consumer_repo: EV4-Architect-Repo
+    consumer_stage: /decompose-through-/score-audit
+    surface_type: schema_validator_fixture_ci
+    file_path: schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json
+    trigger_type: next_stage_acceptance
+    detected_problem: >-
+      Required intermediate Stage 2, Stage 3, and Stage 4 artifacts could be omitted while downstream stages reconstructed or normalized missing evidence from prose and declared pass, causing fail-late detection at score audit instead of the earliest owning boundary.
+    rule_shape:
+      trigger: A Stage 2-5 intermediate Architect artifact is emitted or accepted as input to the next stage.
+      predicate: The artifact must validate against the canonical intermediate stage schema and semantic validator, carry exact upstream receipt lineage, and reject downstream reconstruction of missing required artifacts.
+      enforcement: Additive Stage Artifact schema, validation receipt schema, semantic validator, positive and negative fixtures, targeted pytest, and exact-head CI workflow are introduced for this bounded stage sequence.
+    carriers:
+      prose_source: contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md
+      schema_carrier: schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json
+      receipt_schema: schemas/ev4-architect-stage-validation-receipt.v1.schema.json
+      validator_rule: scripts/check-architect-pipeline-stage-boundary.py
+      valid_fixture: fixtures/architect-pipeline-stage-boundary/valid/complete-sequence
+      invalid_fixture: fixtures/architect-pipeline-stage-boundary/invalid/incident-fail-late
+      validator_diagnostic: ASB-UPSTREAM-VALIDATION-REQUIRED
+      test_command: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_pipeline_stage_boundary_validator.py
+      CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Validate Architect stage boundary fixtures
+      sequence_CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Run stage boundary regression tests
+      runtime_monitor: null
+      os_harness_policy: null
+      downstream_contract: null
+    status:
+      enforcement_status: sequence_ci_enforced
+      evidence_state: proposed
+    notes: >-
+      This record is an additive cross-turn/sequence integrity repair. Runtime, downstream, Project Gate, Builder, Responsive, OS/harness, release, and production enforcement remain insufficient_evidence unless separately implemented and validated. It must not be marked resolved from prose-only evidence or single-artifact validation.
