@@ -1,21 +1,46 @@
 # EV4 Project Release Pack v1
 
-Status: release_candidate_fail_closed_by_validation_profile
-Pack schema: ev4-project-release-pack@1.0.0
-Date: 2026-06-22
+Status: release_candidate_quality_first_runtime  
+Pack schema: `ev4-project-release-pack@1.0.0`  
+Date: 2026-07-22  
 Target runtime: ChatGPT Project
-
----
 
 ## Purpose
 
-This folder packages the EV4 Architect Prompt Pack into a small set of files suitable for upload into a ChatGPT Project.
+This folder packages EV4 Architect into a compact operational subset. The repository remains the source of truth.
 
-The repository remains the source of truth. This release pack is the operational subset for day-to-day use.
+## Runtime Model
 
----
+Normal internal continuation is quality-driven through `ev4-architect-stage-result@1.0.0` and `contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md`.
 
-## Files
+```text
+Stage output
+→ Stage quality checks
+→ pass | needs_input | blocked
+→ exact Manifest successor, minimum input, or repair route
+```
+
+Stage Anchors, Validation Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are optional audit/repository workflow evidence and are not ordinary project-run transition requirements.
+
+## Quality Controls Retained
+
+```text
+mandatory Stage order
+mandatory /research disposition
+observation/inference separation
+architecture option coverage
+evidence-bound scoring
+Score Audit before recommendation
+selected candidate lock
+unknown lifecycle
+build-tree fidelity
+implementation fidelity
+Final Audit
+fail-closed Project Gate export
+legacy-output non-substitution
+```
+
+## Release Files
 
 ```text
 PROJECT_INSTRUCTIONS_FINAL.md
@@ -24,50 +49,31 @@ EV4_STAGE_PROTOCOLS_BUNDLE.md
 EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md
 EV4_FIRST_RUN_GUIDE.md
 PROJECT_SOURCE_MANIFEST.md
+EV4_RUN_COPILOT_INSTRUCTIONS.md
 ```
-
----
 
 ## Release Boundary
 
-This pack is ready for controlled use with real screenshots.
-
-Validated:
+Validated only after exact-Head CI:
 
 ```text
-- full prompt-pack contract through /handoff-export using E2E-001 textual fixture
-- raster screenshot role interpretation using E2E-002 screenshot validation
-- historical Stage Anchor v1.1 evidence readability
-- current Stage Anchor v1.4 + Validation Bundle v1.2 transaction for `/decompose` through `/score-audit`
-- fail-closed Validation Profiles for every other non-terminal Stage
-- RAG/TUYA source boundaries
-- Stage 8–10 alignment patch
+quality-first logical pipeline regression through /project-gate-export
+negative coverage for Stage skipping, premature recommendation, candidate drift, unknown loss, fidelity failure, and invalid final export
+bootstrap and Manifest authority alignment
 ```
 
-Not validated:
+Not established by the release pack:
 
 ```text
-- live Elementor rendering
-- real Elementor export JSON
-- EDIS validation
-- browser/device QA
-- exact pixel matching
+live ChatGPT/model-host enforcement
+live Elementor rendering
+real Elementor export JSON
+browser/device QA
+exact pixel matching
+downstream acceptance of a real non-synthetic Run
+production readiness
 ```
 
----
+## Recommended Setup
 
-## Recommended ChatGPT Project Setup
-
-Upload the five operational files plus this README if file budget allows. Use `PROJECT_INSTRUCTIONS_FINAL.md` as the Project Instructions source.
-
-Recommended project name:
-
-```text
-EV4 Architect — Controlled Use
-```
-
-Recommended memory mode:
-
-```text
-Project-only memory, where available.
-```
+Use `PROJECT_INSTRUCTIONS_FINAL.md` as Project Instructions and upload the five core release files listed in `PROJECT_SOURCE_MANIFEST.md`.
