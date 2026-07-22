@@ -1,50 +1,81 @@
 # EV4 Core Contracts Bundle
 
-Status: release_candidate_fail_closed_by_validation_profile
-Version: 1.1.0
+Status: release_candidate_quality_first_runtime  
+Version: 1.2.0
 
----
+## 1. Runtime Alignment
 
-## 1. Stage Anchor Contract
+The active runtime alignment is:
+
+```text
+contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
+```
+
+It supersedes only authorization-driven continuation clauses in older contracts and mirrors. All stricter non-conflicting quality controls remain active.
+
+## 2. Stage Result Contract
 
 Schema:
+
+```text
+ev4-architect-stage-result@1.0.0
+```
+
+Purpose: govern ordinary internal continuation through Stage-specific quality criteria.
+
+```text
+pass → exact Manifest successor
+needs_input → minimum blocking question
+blocked → evidence-based repair route
+```
+
+This is the active user-facing continuation carrier.
+
+## 3. Stage Anchor Contract
+
+Current Schema:
 
 ```text
 ev4-stage-anchor@1.4.0
 ```
 
-Purpose: carry user-facing critical facts, unknowns, flags, gates, and repair routes without becoming independent authorization. Legal topology comes only from the Pipeline Manifest. Executable capability comes only from the Validation Profiles Registry. Current continuation additionally requires an independently regenerated `ev4-architect-validation-bundle@1.2.0` from a `full_transaction_implemented` source Stage.
-
-Historical Anchor versions 1.1.0, 1.2.0, and 1.3.0 are readable but non-authorizing. A blocked Validation Profile emits no authorization Bundle.
-
-Required fields:
-
-```text
-anchor_schema
-anchor_id
-run_id
-anchor_type
-source_stage
-target_stage
-repair_target_stage
-boundary_ref
-failure_event_ref
-handoff_state:
-  critical_unknowns
-  blocking_items
-  confidence_delta
-  gate_results
-  audit_flags
-  required_user_confirmations
-  partial_rerun_state
-  stage_boundary
+```yaml
+active_runtime_role: optional_resume_checkpoint
+authorization_role: none
+required_for_internal_continuation: false
 ```
 
-Stop if anchor is missing, stale, contradicted, or schema-mismatched.
+Anchors preserve user-facing facts, unknowns, flags, gates, and repair history for optional audit or resume diagnostics. They are not required for ordinary Stage movement.
 
----
+Historical Anchor versions remain readable evidence and are never silently upgraded.
 
-## 2. Partial Rerun Contract
+## 4. Validation Bundle and Carrier Tooling
+
+Current deterministic audit carrier identities remain:
+
+```yaml
+artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
+receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
+failure_event_schema: ev4-architect-validation-failure-event@1.0.0
+boundary_schema: ev4-stage-boundary-record@1.1.0
+anchor_schema: ev4-stage-anchor@1.4.0
+bundle_schema: ev4-architect-validation-bundle@1.2.0
+```
+
+Optional roles:
+
+```text
+repository audit tool
+compatibility evidence
+deterministic validator regression
+historical carrier readability
+```
+
+These carriers do not authorize normal internal continuation. Missing Bundle evidence, missing independent regeneration, or an incomplete Validation Profile does not block an ordinary project Run.
+
+`authorization_valid` is retained only for optional/historical transaction compatibility.
+
+## 5. Partial Rerun Contract
 
 Schema:
 
@@ -55,24 +86,13 @@ ev4-partial-rerun@1.0.0
 Core rule:
 
 ```text
-Rerun from the earliest stage whose owned information changed.
-Never reuse downstream payloads that depend on stale upstream facts.
+Rerun from the earliest Stage whose owned information changed.
+Never reuse downstream outputs that depend on stale upstream facts.
 ```
 
-Examples:
+Use the latest valid Stage output and Stage Result. Optional Anchors/Bundles may provide audit context but are not required.
 
-```text
-Screenshot changed → rerun from /decompose.
-Platform capability changed → rerun from /research or /architectures depending on impact.
-Rubric changed → rerun from /score-evidence.
-Selected candidate changed → rerun from /recommend or /build-tree.
-Naming-only issue → rerun from /build-tree.
-Implementation setting issue → rerun from /implementation.
-```
-
----
-
-## 3. Debug Trace Contract
+## 6. Debug Trace Contract
 
 Schema:
 
@@ -82,7 +102,7 @@ ev4-debug-trace@1.0.0
 
 Debug must be external and auditable, not private chain-of-thought.
 
-Required trace components:
+Required trace components remain:
 
 ```text
 input_digest
@@ -95,63 +115,58 @@ repair_route
 handoff_payload_schema
 ```
 
----
-
-## 4. Source Access Contract
-
-Rules:
+## 7. Source Access Contract
 
 ```text
-/decompose must only use visible screenshot/user evidence.
-/research owns source pinning and platform capability facts.
-TUYA is internal conceptual reference only.
+/decompose uses visible screenshot/user evidence only.
+/research owns platform capability evidence and source freshness.
+TUYA is an internal conceptual reference only.
 RAG may ground platform capability claims.
 RAG/TUYA must not infer screenshot content, boost scores, break ties, or soften audit findings.
 ```
 
----
+Older source-access clauses requiring Anchor, Bundle, independent regeneration, or profile completeness before ordinary source use are superseded.
 
-## 5. TUYA Concept Reference Contract
-
-Schema:
+## 8. Quality Invariants
 
 ```text
-ev4-tuya-concept-reference@1.0.0
+mandatory Stage order
+mandatory /research disposition
+observation/inference separation
+unknown preservation
+architecture coverage
+evidence-backed scoring
+Score Audit before recommendation
+selected candidate lock
+build-tree fidelity
+implementation fidelity
+Final Audit
+fail-closed Project Gate export
+legacy-output non-substitution
 ```
 
-TUYA may guide:
+## 9. Final Project Gate Boundary
+
+The final Architect → Project Gate handoff remains strongly validated through the canonical Architect Stage Payload and Producer Gate Export contracts.
+
+Invalid payloads, identity drift, digest/provenance failure, blocker/high final-audit findings, and legacy output substitution remain fail-closed.
+
+## 10. Release Boundary
 
 ```text
-Context → Structure → Flow/Display → Size/Units → Position/Layering → Responsive → Design System → DOM/Audit
+Controlled architecture analysis: allowed.
+Quality-first internal continuation: implemented in repository contracts and deterministic tests.
+Live chat-runtime enforcement: insufficient_evidence.
+Production-grade Elementor implementation claim: not allowed.
 ```
 
-TUYA must not prove platform capability or override official docs/export evidence.
-
-Confidence lifecycle:
-
-```text
-confirmed → SUPPORTED_EVIDENCE
-provisional → PARTIALLY_SUPPORTED_EVIDENCE unless upgraded or contradicted
-unknown → ABSENT_EVIDENCE unless later contradicted
-provisional + direct conflicting evidence → CONTRADICTED_EVIDENCE
-```
-
----
-
-## 6. Release Boundary
-
-Current pack status:
-
-```text
-Controlled real screenshot use: allowed.
-Production-grade implementation claim: not allowed.
-```
-
-Still future work:
+Still outside the current evidence boundary:
 
 ```text
 live Elementor rendering
 real Elementor export JSON / EDIS validation
 browser/device QA
 exact pixel matching
+downstream acceptance of a real non-synthetic Run
+production readiness
 ```
