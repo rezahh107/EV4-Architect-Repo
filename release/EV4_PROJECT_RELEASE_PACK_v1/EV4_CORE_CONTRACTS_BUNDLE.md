@@ -1,7 +1,7 @@
 # EV4 Core Contracts Bundle
 
 Status: release_candidate_quality_first_runtime  
-Version: 1.2.0
+Version: 1.3.0
 
 ## 1. Runtime Alignment
 
@@ -11,7 +11,7 @@ The active runtime alignment is:
 contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
 ```
 
-It supersedes only authorization-driven continuation clauses in older contracts and mirrors. All stricter non-conflicting quality controls remain active.
+It supersedes only authorization-driven continuation clauses in older contracts and mirrors. All non-conflicting quality controls remain active.
 
 ## 2. Stage Result Contract
 
@@ -21,15 +21,19 @@ Schema:
 ev4-architect-stage-result@1.0.0
 ```
 
-Purpose: govern ordinary internal continuation through Stage-specific quality criteria.
+Canonical continuation authority:
 
 ```text
-pass → exact Manifest successor
-needs_input → minimum blocking question
-blocked → evidence-based repair route
+scripts/architect_quality_runtime.py#evaluate_stage
 ```
 
-This is the active user-facing continuation carrier.
+```text
+Stage Output + Run State + finite Stage rules
+→ evaluator-derived Stage Result
+→ exact Manifest successor, minimum blocking input, or repair route
+```
+
+A serialized Stage Result is readable but non-authorizing until recomputed from the corresponding Stage Output and Run State.
 
 ## 3. Stage Anchor Contract
 
@@ -45,13 +49,11 @@ authorization_role: none
 required_for_internal_continuation: false
 ```
 
-Anchors preserve user-facing facts, unknowns, flags, gates, and repair history for optional audit or resume diagnostics. They are not required for ordinary Stage movement.
-
 Historical Anchor versions remain readable evidence and are never silently upgraded.
 
 ## 4. Validation Bundle and Carrier Tooling
 
-Current deterministic audit carrier identities remain:
+Current optional audit-carrier identities remain:
 
 ```yaml
 artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
@@ -73,9 +75,23 @@ historical carrier readability
 
 These carriers do not authorize normal internal continuation. Missing Bundle evidence, missing independent regeneration, or an incomplete Validation Profile does not block an ordinary project Run.
 
-`authorization_valid` is retained only for optional/historical transaction compatibility.
+## 5. Research Contract
 
-## 5. Partial Rerun Contract
+`/research` remains mandatory, but external lookup is conditional.
+
+Valid passing dispositions include:
+
+```text
+active_lookup_completed
+existing_evidence_sufficient
+no_platform_question
+```
+
+`blocked_by_missing_required_source` blocks only when a downstream decision genuinely requires unobtainable evidence.
+
+No URL, citation, retrieval receipt, or external lookup is required for a truthful `no_platform_question` result.
+
+## 6. Partial Rerun Contract
 
 Schema:
 
@@ -87,35 +103,35 @@ Core rule:
 
 ```text
 Rerun from the earliest Stage whose owned information changed.
-Never reuse downstream outputs that depend on stale upstream facts.
+Never reuse downstream results that depend on invalidated upstream work.
 ```
 
-Use the latest valid Stage output and Stage Result. Optional Anchors/Bundles may provide audit context but are not required.
+Preserve unaffected Run State, reactivate unknowns whose resolutions depended on invalidated work, and invalidate the candidate lock only when the rerun reaches `/recommend` or earlier.
 
-## 6. Debug Trace Contract
+Anchor or Bundle authorization is not required.
 
-Schema:
+## 7. Unknown Lifecycle
+
+Active unknowns live in the small Run State and cannot disappear through omission.
+
+Ordinary resolution requires an explicit resolution type and explanatory note. Resolvable evidence is mandatory only for downstream-critical or Artifact-dependent unknowns.
+
+Do not add a general evidence graph, immutable unknown receipt, or chained hash system.
+
+## 8. Canonical Content and Fidelity
+
+For `/build-tree` and `/implementation`, the existing structured Stage Output is the canonical content. Do not create wrapper Artifacts merely to compute digests.
 
 ```text
-ev4-debug-trace@1.0.0
+no real canonical content
+→ no claimed digest
 ```
 
-Debug must be external and auditable, not private chain-of-thought.
+The evaluator computes Build Tree and Implementation digests from actual content and rejects fabricated strings, `null == null`, candidate drift, and approved-tree mismatch.
 
-Required trace components remain:
+Conversational Stage output does not require cryptographic identity.
 
-```text
-input_digest
-decision_log
-evidence_map
-unknown_register
-rule_application_log
-failure_symptom_index
-repair_route
-handoff_payload_schema
-```
-
-## 7. Source Access Contract
+## 9. Source Access Contract
 
 ```text
 /decompose uses visible screenshot/user evidence only.
@@ -127,10 +143,10 @@ RAG/TUYA must not infer screenshot content, boost scores, break ties, or soften 
 
 Older source-access clauses requiring Anchor, Bundle, independent regeneration, or profile completeness before ordinary source use are superseded.
 
-## 8. Quality Invariants
+## 10. Quality Invariants
 
 ```text
-mandatory Stage order
+mandatory 12-Stage order
 mandatory /research disposition
 observation/inference separation
 unknown preservation
@@ -141,17 +157,36 @@ selected candidate lock
 build-tree fidelity
 implementation fidelity
 Final Audit
-fail-closed Project Gate export
+fail-closed /project-gate-export
 legacy-output non-substitution
 ```
 
-## 9. Final Project Gate Boundary
+## 11. Final Project Gate Boundary
 
-The final Architect → Project Gate handoff remains strongly validated through the canonical Architect Stage Payload and Producer Gate Export contracts.
+The terminal Stage is:
 
-Invalid payloads, identity drift, digest/provenance failure, blocker/high final-audit findings, and legacy output substitution remain fail-closed.
+```text
+/project-gate-export
+```
 
-## 10. Release Boundary
+Its pass result is derived only from:
+
+```text
+actual canonical Architect Stage Payload
+→ existing Schema and semantic validation
+→ selected-candidate consistency
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
+```
+
+Caller-controlled success Booleans are informational only. Invalid payloads, identity drift, digest/provenance failure, blocking unknowns, and legacy output substitution remain fail-closed.
+
+## 12. Debug Trace Contract
+
+Debug remains external and auditable, not private chain-of-thought. It may report inputs, decisions, evidence use, unknowns, applied rules, failure symptoms, and repair routes without becoming a continuation receipt system.
+
+## 13. Release Boundary
 
 ```text
 Controlled architecture analysis: allowed.
