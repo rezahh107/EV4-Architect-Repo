@@ -17,6 +17,8 @@ Recommend from audited evidence only.
 
 Stage 6 must not invent new evidence, reinterpret Stage 2, re-score Stage 4, or relax Stage 5 findings. It may only select from the audit-eligible candidate set produced by Stage 5.
 
+Executable compatibility boundary: the current Stage 5 transaction authorizes this Stage only for `overall_audit_status: pass` with `allowed_next_stage: /recommend` and `required_repairs: []`. `pass_with_minor_flags` is currently non-authorizing until separately implemented in the Stage 5 Schema and validator.
+
 ## Critic Findings Addressed
 
 This patch addresses these weaknesses in Stage 6 v1.0:
@@ -72,7 +74,7 @@ Rules:
 - No recommendation reason may appear in prose unless it appears in the ledger.
 - If a reason has no Stage 4/Stage 5 provenance, it must be removed.
 - Visual preference alone cannot appear as a decision effect.
-- `pass_with_minor_flags` must be carried forward; it cannot be converted into a clean pass.
+- If future executable support adds `pass_with_minor_flags`, it must be carried forward and cannot be converted into a clean pass.
 
 ## Strict Tie and Near-Tie Handling
 
@@ -139,7 +141,7 @@ Stage 6 must not hand off to `/build-tree` unless all of the following are true:
 - no blocker flags remain
 - no required user confirmation remains unresolved
 - no `decision_requires_user_input` status remains
-- Stage 5 authorization is `pass` or `pass_with_minor_flags`
+- Stage 5 executable authorization is `pass`; `pass_with_minor_flags` remains non-authorizing until separately implemented
 - all carried-forward flags are visible in the handoff
 - naming convention requirement is acknowledged
 

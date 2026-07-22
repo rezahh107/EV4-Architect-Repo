@@ -337,6 +337,47 @@ def validate_score_audit(
                     "/score-evidence",
                 )
             )
+    status = payload.get("overall_audit_status")
+    if status != "pass":
+        repair_target = "/score-evidence" if status == "fail_scoring" else stage
+        diagnostics.append(
+            diagnostic(
+                "ASB-SCORE-AUDIT-NOT-PASSED",
+                "ASB-R08",
+                stage,
+                "$/payload/overall_audit_status",
+                "pass",
+                str(status),
+                repair_target,
+            )
+        )
+    else:
+        allowed_next_stage = payload.get("allowed_next_stage")
+        if allowed_next_stage != "/recommend":
+            diagnostics.append(
+                diagnostic(
+                    "ASB-SCORE-AUDIT-NEXT-STAGE-INCONSISTENT",
+                    "ASB-R08",
+                    stage,
+                    "$/payload/allowed_next_stage",
+                    "/recommend",
+                    json.dumps(allowed_next_stage, sort_keys=True),
+                    stage,
+                )
+            )
+        required_repairs = payload.get("required_repairs", [])
+        if required_repairs:
+            diagnostics.append(
+                diagnostic(
+                    "ASB-SCORE-AUDIT-PASS-HAS-REPAIRS",
+                    "ASB-R08",
+                    stage,
+                    "$/payload/required_repairs",
+                    "[]",
+                    json.dumps(required_repairs, sort_keys=True),
+                    stage,
+                )
+            )
     return diagnostics
 
 

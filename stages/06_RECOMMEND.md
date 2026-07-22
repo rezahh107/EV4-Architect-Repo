@@ -40,10 +40,13 @@ recommendation_status: blocked_missing_input
 
 ## Stage 5 Authorization Gate
 
-Stage 6 may proceed only when Stage 5 returns one of:
+The current executable Stage 5 transaction may authorize Stage 6 only when all of these fields agree:
 
-- `pass`
-- `pass_with_minor_flags`
+- `overall_audit_status: pass`
+- `allowed_next_stage: /recommend`
+- `required_repairs: []`
+
+`pass_with_minor_flags` is not supported by the current executable Stage 5 Schema and is non-authorizing until implemented separately.
 
 Stage 6 must stop when Stage 5 returns any of:
 
@@ -67,7 +70,7 @@ A candidate is eligible for recommendation only if:
 - it does not depend on unapproved third-party plugins
 - it has enough audited evidence to be compared against other eligible candidates
 
-Candidates with `pass_with_minor_flags` may remain eligible, but Stage 6 must carry the flags forward into the recommendation.
+Future support for `pass_with_minor_flags` must define and enforce flag semantics before such candidates can become executable Stage 6 inputs.
 
 ## What Stage 6 Is Allowed To Do
 
