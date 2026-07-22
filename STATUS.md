@@ -126,6 +126,7 @@ production_readiness: not_claimed
 ARCH_01:
   pull_request: 28
   merge_commit: 5aed1358c8df98eb262986ef7bcddb3acaeaddcf
+  implementation_status: merged
 
 ARCH_02:
   pull_request: 29
