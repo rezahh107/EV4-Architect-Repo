@@ -1,225 +1,155 @@
 # EV4 Stage Protocols Bundle
 
-Status: release_candidate_for_controlled_use
-Version: 1.0.2
+Status: release_candidate_quality_first_runtime  
+Version: 1.1.0
 
----
+## Common Stage Result
+
+Every logical Stage closes with `ev4-architect-stage-result@1.0.0`:
+
+```text
+pass → exact Manifest successor
+needs_input → minimum architecture-changing or required-evidence question
+blocked → explicit evidence-based repair route
+```
+
+Stage Anchors, Validation Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not ordinary continuation prerequisites.
+
+All detailed Stage quality and hardening controls remain active. Only old transition-authorization clauses are superseded by `contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md`.
 
 ## /intake
 
-Purpose: read user input and project defaults, ask only blocking questions.
+Capture usable input, defaults, constraints, non-blocking unknowns, and minimum blocking questions.
 
-Forbidden: architecture, scoring, build tree.
+Forbidden: architecture, scoring, recommendation, build tree, invented exact values.
 
-Output: intake snapshot and anchor to `/decompose` or `/research` if platform capability is blocking.
-
----
+`pass → /research`.
 
 ## /research
 
-Purpose: prove/disprove platform capabilities using official or approved sources.
+Govern platform capability evidence and version-sensitive claims.
 
-Allowed: Elementor capability facts, source pinning, freshness notes.
+Disposition:
 
-Forbidden: visual interpretation, scoring, recommendation, build tree.
+```text
+active_lookup_required
+existing_evidence_sufficient
+no_platform_question
+blocked_by_missing_required_source
+```
 
-Payload: `ev4-research-payload@1.0.0`
+Forbidden: visual interpretation, scoring, recommendation, tree, implementation.
 
----
+`pass → /decompose`.
 
 ## /decompose
 
-Purpose: convert screenshot/description into visual role map.
+Produce the visual role map and preserve:
 
-Allowed: visible groups, meaningful content, visual core, decoration, repeated candidates, responsive risks, unknowns.
+```text
+observed
+likely | inferred
+unknown
+not_allowed_yet
+```
 
-Forbidden: architecture choice, scoring, exact CSS, Elementor tree, RAG/TUYA/doc inference.
+Forbidden: architecture choice, scoring, exact values, Elementor tree, DOM inference.
 
----
+`pass → /architectures`.
 
 ## /architectures
 
-Purpose: enumerate viable Elementor V4 architecture candidates.
+Enumerate viable architecture families and prove coverage.
 
-Required: coverage matrix, unknown propagation ledger, hidden recommendation ban, dynamic/loop guardrail, tradeoffs.
+Forbidden: winner selection, scoring, final tree, implementation.
 
-Forbidden: selecting winner, scoring, build tree, CSS implementation.
-
----
+`pass → /score-evidence`.
 
 ## /score-evidence
 
-Purpose: score candidates with rubric and evidence.
-
-Rules:
+Score every eligible candidate using the approved rubric and evidence.
 
 ```text
+? = missing evidence
+N/A = genuinely non-applicable
 Unknowns are not numbers.
-Use ? for insufficient evidence.
-Use N/A only for genuinely non-applicable criteria.
-Use provisional_known_percent only when final score is incomplete.
 ```
 
-Rubric total logic:
+Forbidden: hidden recommendation, invented scores, candidate modification.
 
-```text
-Known weighted average × 20 = provisional_known_percent
-Final normalized score only if all applicable criteria are known.
-```
-
----
+`pass → /score-audit`.
 
 ## /score-audit
 
-Purpose: audit Stage 4 scoring mechanics.
+Audit arithmetic, weights, denominator handling, evidence use, gate overrides, unknown discipline, cross-candidate consistency, and hidden recommendation.
 
-Checks:
+Only accepted state equivalent to `pass` or `pass_with_minor_flags` with no material defect permits recommendation.
 
-```text
-arithmetic
-unknown discipline
-N/A denominator
-gate override detection
-hidden recommendation
-inter-candidate consistency
-responsive cap
-payload schema
-```
-
-Stage 5 must not select a winner.
-
----
+`pass → /recommend`.
 
 ## /recommend
 
-Purpose: select primary architecture only after Stage 5 pass/pass_with_minor_flags.
+Select one candidate from the audited eligible set.
 
-Must use audited candidate set only.
+```text
+selected_candidate_id
+selected_candidate_locked: true
+```
 
-Tie rule: if no audited, provenance-backed tie break exists, ask minimal user question.
+Forbidden: re-scoring, new architecture, tree, implementation, invented exact values.
 
----
+`pass → /build-tree`.
 
 ## /build-tree
 
-Purpose: convert selected architecture into Elementor Structure Panel tree.
+Translate the locked candidate into an auditable Elementor Structure Panel tree.
 
-Must include:
+Required: node identities, parent relationships, wrapper justification, editable content, overlay boundaries, class intent, unknowns, stable tree digest.
 
-```text
-structure labels
-class names
-wrapper justification
-editability map
-decoration map
-responsive structure contract
-design-system hooks
-carried unknowns
-```
+Forbidden: re-architecture, final CSS, implementation settings, exact-value invention.
 
-Naming convention:
-
-```text
-[section-role]__[content-group]--[variant]
-```
-
----
+`pass → /implementation`.
 
 ## /implementation
 
-Purpose: map approved tree to implementation-ready Elementor plan.
+Map the approved tree to Elementor elements, widgets, classes, variables, assets, responsive controls, interactions, accessibility, and scoped CSS needs.
 
-Allowed: widget mapping, settings plan, class/variable map, scoped CSS needs, assets/accessibility, responsive implementation plan.
+Required: exact candidate/tree preservation.
 
-Forbidden: re-architecture, new scoring, new recommendation, screenshot reinterpretation, unscoped CSS, flattening meaningful content.
+Forbidden: unsupported assets, breakpoints, interactions, values, UI paths, global CSS, readiness overclaim.
 
-Payload: `ev4-implementation-payload@1.0.0`
-
----
+`pass → /final-audit`.
 
 ## /final-audit
 
-Purpose: audit implementation before handoff.
+Audit candidate lock, tree/implementation fidelity, required content, responsive validity, accessibility, scoped CSS, unknown lifecycle, and handoff safety.
 
-Checks: preservation, source access, CSS scope, editability, responsive risk, accessibility, unknown survival, handoff readiness.
+Blocker/high findings, candidate drift, unsupported exact values, invalid responsive strategy, missing required content, unresolved downstream-critical unknowns, or implementation/tree mismatch prevent pass.
 
-Payload: `ev4-final-audit-payload@1.0.0`
-
----
+`pass → /handoff-export`.
 
 ## /handoff-export
 
-Purpose: package audited output for builder/reviewer.
+Package accepted outputs without adding decisions.
 
-Allowed: final builder handoff or blocked report.
+Required: candidate lock, matching digests, findings and unknowns preserved, canonical Project Gate payload source.
 
-Forbidden: new decisions, new CSS, new widgets, architecture repair.
+Forbidden: new decisions, hidden repair, legacy export substitution.
 
-Payload: `ev4-handoff-export-payload@1.0.0`
+`pass → /project-gate-export`.
 
----
+## /project-gate-export
 
-## /builder-feed-export
+Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.
 
-Purpose: convert a completed `/handoff-export` into a copy-ready `Builder_Context_Package` for a separate interactive Elementor Builder Assistant chat/model.
+Preserve canonical payload Schema/semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
-Allowed: package approved structure, class creation/application map, Structure Panel naming checklist, widget mapping, editable content map, decoration-only map, scoped CSS need map, responsive/accessibility QA seed, first builder batch, and Builder Assistant prompt seed.
+This is terminal.
 
-Forbidden: redesign, re-score, re-recommend, change selected candidate, add/remove approved classes, write final CSS, resolve unknowns, assume clickability, assume Dynamic Loop, assume mobile connector behavior, or claim production readiness.
+## Partial Rerun
 
-Payloads:
+Use the earliest Stage whose owned information changed. Reuse only unaffected outputs and close the rerun Stage with a new Stage Result.
 
-```text
-Builder_Feed_Export_Payload: ev4-builder-feed-export-payload@1.0.0
-Builder_Context_Package: ev4-builder-context-package@1.0.0
-```
+## Optional Audit Tooling
 
-Required Builder Assistant v0.2.0+ compatibility fields:
-
-```text
-approved_structure_tree[].element_generation
-approved_structure_tree[].element_generation_source
-first_builder_batch.actions[].element_generation
-first_builder_batch.actions[].element_generation_source
-widget_mapping_table minItems: 1
-selected_candidate_locked: true
-production_ready_allowed: false
-```
-
-Required interactive guardrails exported to the downstream builder chat:
-
-```text
-APPROVED_HANDOFF_MODE
-Live Interface Precedence
-Control-Existence Failure Protocol
-Session State Machine
-Persian Control Triggers
-Step Size Contract
-Per-Element Instruction Contract
-V3/V4 Separation Guard
-No-Grid Assumption
-Checkpoint Confirmation Rule
-Completion Gate Extension
-```
-
-Hardening patch:
-
-```text
-stages/11_BUILDER_FEED_EXPORT_v1.1_HARDENING_PATCH.md
-```
-
-This stage is terminal for the main EV4 Architect pipeline and points to a separate Builder Assistant chat/project, not to responsive repair.
-
----
-
-## /e2e-screenshot-validation
-
-Purpose: validate that a raster screenshot can be interpreted without textual-fixture reliance.
-
-Current result:
-
-```text
-E2E-002 screenshot validation: pass_with_minor_flags
-```
-
-Boundary: validates role interpretation for the screenshot, not live Elementor render/export.
+Deterministic Artifact, Receipt, Boundary, Failure Event, Anchor, and Bundle transactions remain optional repository-audit and regression tools. They do not authorize ordinary Stage movement.
