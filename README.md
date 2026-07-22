@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: quality-first Architect runtime implemented on a review branch; canonical Project Gate export remains fail-closed; real non-synthetic handoff and production readiness remain `insufficient_evidence`.
+Status: minimal evaluator-derived quality-first runtime implemented on PR #36; exact-Head CI and fresh rereview remain required before technical acceptance. Real non-synthetic downstream acceptance and production readiness remain `insufficient_evidence`.
 
 Role: `architecture_decision_system`
 
@@ -19,13 +19,13 @@ Approved architecture is not automatically approved implementation strategy.
 
 ## Quick Start
 
-In a new user-facing Architect session with the repository instructions loaded, send:
+In a new user-facing Architect session with repository instructions loaded, send:
 
 ```text
 شروع
 ```
 
-If no screenshot, section description, active run, or resumable passed Stage Result is present, the assistant returns the fixed intake message from:
+If no screenshot, section description, active run, or resumable runtime material is present, the assistant returns the fixed intake message from:
 
 ```text
 manifests/architect-conversation-bootstrap.v1.json
@@ -39,6 +39,8 @@ The controlled opening sequence is:
 /intake → /research → /decompose
 ```
 
+Do not skip `/research`.
+
 ## Canonical Pipeline
 
 ```text
@@ -48,7 +50,7 @@ The controlled opening sequence is:
 → /handoff-export → /project-gate-export
 ```
 
-The canonical machine-readable authority is:
+Canonical machine-readable authority:
 
 ```text
 manifests/architect-pipeline-manifest.v1.json
@@ -56,7 +58,7 @@ manifests/architect-pipeline-manifest.v1.json
 
 `/builder-feed-export` remains a legacy compatibility output, not canonical Project Gate Producer Export.
 
-## Quality-First Continuation
+## Minimal Quality-First Continuation
 
 Active runtime authority:
 
@@ -64,10 +66,18 @@ Active runtime authority:
 contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
 contracts/ARCHITECT_STAGE_RESULT_V1.md
 schemas/ev4-architect-stage-result.v1.schema.json
-scripts/architect_quality_runtime.py
+scripts/architect_quality_runtime.py#evaluate_stage
 ```
 
-Every Stage returns:
+```text
+Stage Output
++ current Run State
++ finite Manifest-owned Stage rules
+→ evaluate_stage
+→ evaluator-derived Stage Result
+```
+
+The evaluator derives:
 
 ```yaml
 stage_status: pass | needs_input | blocked
@@ -75,43 +85,73 @@ blocking_issues: []
 carried_unknowns: []
 quality_checks: {}
 next_stage: exact Manifest successor or null
+evaluation_mode:
+evaluated_stage_output_digest:
 ```
+
+A producer-authored or serialized Stage Result is readable but non-authorizing. Resume recomputes from the smallest available Stage Output and Run State; it does not require a new persistent store, immutable receipt, or Artifact registry.
 
 The normal Run does not require internal Stage Anchors, Validation Bundles, independent Bundle regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, or repository maintenance.
 
-Those artifacts and checks remain optional repository-audit and deterministic-regression tooling.
+Those controls remain optional repository-development, audit, compatibility, or deterministic-regression tooling.
 
 ## Quality Boundaries Preserved
 
 The runtime rejects:
 
 - mandatory Stage skipping or non-successor continuation;
-- screenshot-to-build-tree shortcuts;
+- missing, unknown, cross-Stage, failed, or unresolved required checks;
+- screenshot-to-Build-Tree shortcuts;
 - recommendation before accepted `/score-audit`;
 - hidden recommendation during scoring;
 - conversion of unknown evidence into exact values;
 - `selected_candidate_id` drift after lock;
-- re-architecture during `/build-tree`;
-- implementation/tree mismatch;
 - silent unknown disappearance;
-- blocker/high final-audit findings at handoff;
-- invalid canonical Project Gate payload;
+- arbitrary closure of a downstream-critical unknown;
+- missing canonical Build Tree or Implementation content;
+- caller-fabricated digest authority and `null == null` fidelity;
+- implementation/approved-tree mismatch;
+- blocker/high Final Audit findings at handoff;
+- invalid canonical Project Gate payload or export;
 - legacy Builder Feed substitution.
 
 All detailed evidence, RAG/TUYA source-access, scoring, accessibility, responsive, performance, and Stage hardening controls remain active unless they conflict only on continuation authorization.
 
 ## Research Stage
 
-`/research` remains mandatory and records one disposition:
+`/research` remains mandatory and records exactly one disposition:
 
 ```text
-active_lookup_required
+active_lookup_completed
 existing_evidence_sufficient
 no_platform_question
 blocked_by_missing_required_source
 ```
 
-Only a genuinely required unavailable source blocks. Research establishes platform capability, not screenshot interpretation or architecture recommendation.
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. No citations, URLs, retrieval metadata, or source receipts are required when no platform-capability claim needs active lookup.
+
+Only genuinely required unavailable evidence blocks. Research establishes platform capability, not screenshot interpretation or architecture recommendation.
+
+## Unknown Lifecycle
+
+Active unknowns persist in the small Run State. Omission from later output is not resolution.
+
+Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+
+## Candidate and Content Fidelity
+
+After `/recommend`, `selected_candidate_id` is locked unless a legitimate rerun reaches `/recommend` or earlier.
+
+For `/build-tree` and `/implementation`, canonical content means the existing structured Stage Output. Do not create wrapper Artifacts solely to compute digests.
+
+```text
+no real canonical content
+→ no claimed digest
+```
+
+The evaluator computes content identities from actual canonical content and verifies Implementation against the approved Build Tree representation.
+
+Conversational Stage output does not require cryptographic identity.
 
 ## EV4 Project Gate Workflow
 
@@ -122,7 +162,20 @@ Architect output
 → needs repair: Architect Repair Package
 ```
 
-The final Architect → Project Gate boundary remains strongly fail-closed.
+The terminal `/project-gate-export` boundary remains strongly fail-closed.
+
+A pass result is derived only from:
+
+```text
+actual canonical Architect Stage Payload
+→ existing JSON Schema and semantic validation
+→ selected-candidate consistency
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
+```
+
+Caller-controlled success Booleans cannot substitute for actual validation.
 
 Canonical Architect payload identity:
 
@@ -162,7 +215,7 @@ Existing payload, governance, release-pack, and optional transaction suites rema
 
 ## Boundaries
 
-This repository does not perform interactive Elementor execution, prove constructability, complete responsive QA, or claim production readiness without downstream evidence.
+This repository does not perform interactive Elementor execution, prove constructability, complete responsive QA, establish live model-host enforcement, or claim production readiness without downstream evidence.
 
 ## Companion Repositories
 
