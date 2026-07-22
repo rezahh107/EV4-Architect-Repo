@@ -68,7 +68,25 @@ jobs:
         run: python scripts/check-architect-quality-runtime.py
 
       - name: Validate Architect bootstrap semantics
-        run: python scripts/check-architect-bootstrap.py
+        id: bootstrap_semantics
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/check-architect-bootstrap.py 2>&1 | tee architect-bootstrap-semantics.log
+
+      - name: Upload bootstrap semantic diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-bootstrap-semantics-${{ github.event.pull_request.head.sha }}
+          path: architect-bootstrap-semantics.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce bootstrap semantic result
+        if: steps.bootstrap_semantics.outcome != 'success'
+        run: exit 1
 
       - name: Run quality runtime and bootstrap mutation tests
         run: |
