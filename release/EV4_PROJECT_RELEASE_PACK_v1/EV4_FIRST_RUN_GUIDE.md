@@ -1,7 +1,7 @@
 # EV4 First Run Guide
 
 Status: release_candidate_for_controlled_use  
-Version: 1.4.0
+Version: 1.4.1
 
 ## Fast Start
 
@@ -17,7 +17,7 @@ When no screenshot, section description, active run, or resumable runtime materi
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-If the user supplies `شروع` together with a screenshot or usable section description, run `/intake` without repeating supplied information.
+If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
 
 The controlled opening sequence is:
 
