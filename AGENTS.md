@@ -37,7 +37,7 @@ The user may perform the administrative Merge action after a valid technical rec
 
 ## Runtime Authority
 
-The Pipeline Manifest is the sole machine-readable authority for Stage inventory, order, versions, legal successor, and terminal identity.
+The Pipeline Manifest is the sole machine-readable authority for Stage inventory, order, versions, legal successor, terminal identity, and the finite quality-check inventory owned by each Stage.
 
 Normal user-facing continuation is owned by:
 
@@ -45,15 +45,19 @@ Normal user-facing continuation is owned by:
 contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
 contracts/ARCHITECT_STAGE_RESULT_V1.md
 schemas/ev4-architect-stage-result.v1.schema.json
-scripts/architect_quality_runtime.py
+scripts/architect_quality_runtime.py#evaluate_stage
 ```
 
 ```text
-Stage output
-→ Stage-specific quality checks
-→ Stage Result: pass | needs_input | blocked
+Stage Output
++ current Run State
++ fixed Stage rules
+→ evaluate_stage
+→ evaluator-derived Stage Result
 → exact Manifest successor, minimum blocking input, or explicit repair route
 ```
+
+A producer-authored or serialized Stage Result is not continuation authority. It may remain readable as a summary, resume hint, compatibility record, or fixture, but continuation must be recomputed from the corresponding Stage Output and Run State.
 
 Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, independent Bundle regeneration, exact-head CI, PR review, Merge evidence, and repository maintenance are not normal-run continuation prerequisites.
 
@@ -67,11 +71,11 @@ The canonical new-run bootstrap contract is:
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-If the user's intent is only a recognized new-run trigger such as `شروع`, and no screenshot, section description, active run, or resumable passed Stage Result is present, return the exact bootstrap response and do nothing else.
+If the user's intent is only a recognized new-run trigger such as `شروع`, and no screenshot, section description, active run, or resumable runtime material is present, return the exact bootstrap response and do nothing else.
 
 If the user supplies a screenshot or usable section description with the trigger, run `/intake` directly without repeating supplied information.
 
-If a passed Stage Result exists, continue only to its exact Manifest successor.
+If a prior Stage Result is supplied for resume, do not trust it merely because it is Schema-valid. Resolve the smallest available corresponding Stage Output and Run State, then recompute through `evaluate_stage`. Do not create persistent storage, an immutable receipt, or an Artifact registry solely for resume.
 
 The first controlled sequence is always:
 
@@ -86,11 +90,13 @@ Do not skip `/research`.
 `/research` records exactly one disposition:
 
 ```text
-active_lookup_required
+active_lookup_completed
 existing_evidence_sufficient
 no_platform_question
 blocked_by_missing_required_source
 ```
+
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. Do not require external citations, URLs, retrieval receipts, or source metadata when no platform-capability claim requires active lookup.
 
 Research does not score or recommend architecture. Official documentation proves platform capability only; it does not decide project-specific visual interpretation. Unsupported or version-sensitive claims remain unknown unless evidence resolves them.
 
@@ -104,7 +110,9 @@ Do not:
 - run `/recommend` before `/score-audit` is accepted;
 - change `selected_candidate_id` after lock;
 - re-architect during `/build-tree`, `/implementation`, or `/final-audit`;
-- silently remove an active unknown without evidence-backed lifecycle transition;
+- silently remove an active unknown;
+- close a downstream-critical unknown with an arbitrary string;
+- accept a caller-authored digest without canonical content;
 - hand off with blocker/high final-audit findings;
 - substitute legacy Builder Feed for canonical `/project-gate-export`.
 
@@ -126,7 +134,32 @@ blocked:
   next_stage: null
 ```
 
+The evaluator rejects missing, unknown, cross-Stage, failed, unresolved, or improperly `not_applicable` required checks.
+
 Missing Anchor, Bundle, independent regeneration, incomplete Validation Profile, unavailable exact-head CI, unavailable PR review, or pending repository maintenance cannot by itself block a normal Run.
+
+## Unknown Lifecycle
+
+Active unknowns persist in the small Run State until the evaluator accepts an explicit resolution.
+
+Ordinary resolution requires a resolution type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+
+Omission from a later Stage Output is not resolution.
+
+## Candidate and Fidelity Boundary
+
+After `/recommend`, the evaluator locks `selected_candidate_id`. Downstream Stages must preserve it unless a legitimate partial rerun reaches `/recommend` or an earlier Stage.
+
+For `/build-tree` and `/implementation`, use the existing canonical structured Stage Output. Do not create a wrapper Artifact solely to compute a digest.
+
+```text
+no real canonical content
+→ no claimed digest
+```
+
+The evaluator computes Build Tree and Implementation digests from actual content and rejects `null == null`, fabricated SHA-like strings, candidate drift, and approved-tree mismatch.
+
+Conversational Stage output does not require cryptographic identity.
 
 ## Project Gate Handoff
 
@@ -139,7 +172,9 @@ Architect output
 
 The terminal Stage is `/project-gate-export`.
 
-The final boundary remains strongly fail-closed. Preserve canonical Architect Stage Payload validation, semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
+Its pass result must be derived from the actual canonical Architect Stage Payload, existing Schema and semantic validation, selected-candidate consistency, existing Producer Gate exporter, actual canonical export, and contract/digest verification.
+
+Caller-controlled success Booleans cannot substitute for actual validation. Preserve locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
 ## Optional Audit Tooling
 
@@ -159,6 +194,7 @@ For repository changes:
 
 - preserve public contract behavior unless a breaking change is explicitly approved;
 - update owning contracts/Schemas and affected fixtures/tests;
+- classify changed tests as preserved quality invariant, obsolete authorization expectation, historical compatibility, or unrelated;
 - state compatibility and evidence boundaries;
 - preserve locked identity and valid evidence;
 - avoid unrelated refactoring;
