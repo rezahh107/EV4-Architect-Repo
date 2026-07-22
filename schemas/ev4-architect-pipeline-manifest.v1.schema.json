@@ -4,35 +4,50 @@
   "title": "EV4 Architect Pipeline Manifest v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["pipeline_id", "pipeline_version", "owner_repository", "project_execution_stages", "validation_tracks", "legacy_compatibility_outputs", "final_project_gate_export_stage"],
+  "required": ["pipeline_id","pipeline_version","owner_repository","normal_run_continuation","project_execution_stages","validation_tracks","legacy_compatibility_outputs","final_project_gate_export_stage"],
   "properties": {
     "pipeline_id": {"const": "ev4-architect-pipeline"},
-    "pipeline_version": {"const": "1.0.0"},
+    "pipeline_version": {"const": "1.1.0"},
     "owner_repository": {"const": "rezahh107/EV4-Architect-Repo"},
-    "project_execution_stages": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stage"}},
-    "validation_tracks": {"type": "array", "items": {"$ref": "#/$defs/validation_track"}},
-    "legacy_compatibility_outputs": {"type": "array", "items": {"$ref": "#/$defs/legacy_output"}},
+    "normal_run_continuation": {"$ref": "#/$defs/normal_run_continuation"},
+    "project_execution_stages": {"type": "array","minItems": 1,"items": {"$ref": "#/$defs/stage"}},
+    "validation_tracks": {"type": "array","items": {"$ref": "#/$defs/validation_track"}},
+    "legacy_compatibility_outputs": {"type": "array","items": {"$ref": "#/$defs/legacy_output"}},
     "final_project_gate_export_stage": {"const": "/project-gate-export"}
   },
   "$defs": {
-    "stage": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["stage_id", "stage_version", "ordinal", "mandatory", "applicability", "required_inputs", "required_outputs", "next_stage", "blocked_statuses", "owner_repository"],
+    "normal_run_continuation": {
+      "type": "object","additionalProperties": false,
+      "required": ["model","stage_result_schema","internal_anchor_required","internal_validation_bundle_required","independent_regeneration_required","validation_profile_required","exact_head_ci_required","pr_review_required","repository_maintenance_required"],
       "properties": {
-        "stage_id": {"type": "string", "minLength": 1},
-        "stage_version": {"type": "string", "minLength": 1},
-        "ordinal": {"type": "integer", "minimum": 1},
+        "model": {"const": "quality_driven"},
+        "stage_result_schema": {"const": "ev4-architect-stage-result@1.0.0"},
+        "internal_anchor_required": {"const": false},
+        "internal_validation_bundle_required": {"const": false},
+        "independent_regeneration_required": {"const": false},
+        "validation_profile_required": {"const": false},
+        "exact_head_ci_required": {"const": false},
+        "pr_review_required": {"const": false},
+        "repository_maintenance_required": {"const": false}
+      }
+    },
+    "stage": {
+      "type": "object","additionalProperties": false,
+      "required": ["stage_id","stage_version","ordinal","mandatory","applicability","required_inputs","required_outputs","next_stage","blocked_statuses","owner_repository"],
+      "properties": {
+        "stage_id": {"type": "string","minLength": 1},
+        "stage_version": {"type": "string","minLength": 1},
+        "ordinal": {"type": "integer","minimum": 1},
         "mandatory": {"type": "boolean"},
-        "applicability": {"type": "string", "minLength": 1},
-        "required_inputs": {"type": "array", "items": {"type": "string"}},
-        "required_outputs": {"type": "array", "items": {"type": "string"}},
-        "next_stage": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-        "blocked_statuses": {"type": "array", "items": {"enum": ["blocked", "invalid", "insufficient_evidence"]}},
+        "applicability": {"type": "string","minLength": 1},
+        "required_inputs": {"type": "array","items": {"type": "string"}},
+        "required_outputs": {"type": "array","items": {"type": "string"}},
+        "next_stage": {"anyOf": [{"type": "string"},{"type": "null"}]},
+        "blocked_statuses": {"type": "array","items": {"enum": ["needs_input","blocked","invalid","insufficient_evidence"]}},
         "owner_repository": {"const": "rezahh107/EV4-Architect-Repo"}
       }
     },
-    "validation_track": {"type": "object", "additionalProperties": false, "required": ["validation_id", "purpose", "mandatory_for", "not_required_for", "evidence_requirement"], "properties": {"validation_id": {"type": "string"}, "purpose": {"type": "string"}, "mandatory_for": {"type": "array"}, "not_required_for": {"type": "array"}, "evidence_requirement": {"type": "string"}}},
-    "legacy_output": {"type": "object", "additionalProperties": false, "required": ["output_id", "status", "canonical_for_project_gate", "retirement_status"], "properties": {"output_id": {"type": "string"}, "status": {"const": "preserved"}, "canonical_for_project_gate": {"const": false}, "retirement_status": {"const": "retirement_forbidden"}}}
+    "validation_track": {"type": "object","additionalProperties": false,"required": ["validation_id","purpose","mandatory_for","not_required_for","evidence_requirement"],"properties": {"validation_id": {"type": "string"},"purpose": {"type": "string"},"mandatory_for": {"type": "array"},"not_required_for": {"type": "array"},"evidence_requirement": {"type": "string"}}},
+    "legacy_output": {"type": "object","additionalProperties": false,"required": ["output_id","status","canonical_for_project_gate","retirement_status"],"properties": {"output_id": {"type": "string"},"status": {"const": "preserved"},"canonical_for_project_gate": {"const": false},"retirement_status": {"const": "retirement_forbidden"}}}
   }
 }
