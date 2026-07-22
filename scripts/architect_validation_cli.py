@@ -65,7 +65,7 @@ def diagnostic_artifact(path: Path, root: Path = ROOT) -> dict[str, Any]:
         artifact = load_json(path)
         stage = artifact.get("stage_id", "/decompose")
         errors = schema_diagnostics(validators["artifact"], artifact, stage, "$", stage)
-        expected_version = STAGE_VERSIONS.get(stage)
+        expected_version = stage_version(stage)
         if expected_version and artifact.get("stage_version") != expected_version:
             errors.insert(
                 0,

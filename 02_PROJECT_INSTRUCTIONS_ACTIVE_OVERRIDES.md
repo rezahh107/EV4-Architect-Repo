@@ -16,7 +16,9 @@ When creating a ChatGPT Project or Custom GPT release pack, include this file wi
 
 ## Stage Anchor Requirement
 
-Before starting any stage after `/intake`, the user or assistant must provide a current `ev4-stage-anchor@1.3.0` generated inside an independently verified Validation Bundle.
+Every transition uses the source Stage's active profile in `manifests/architect-stage-validation-profiles.v1.json`. A profile is validation capability, not continuation authority.
+
+A Stage marked `full_transaction_implemented` requires an independently regenerated valid Validation Bundle. A Stage marked `contract_defined_not_implemented`, `blocked_missing_semantics`, or `blocked_contract_conflict` authorizes no continuation. A legal Manifest edge by itself never authorizes continuation. `/research` remains mandatory and `/intake → /decompose` is forbidden.
 
 A Stage Anchor is a user-facing handoff carrier. It never independently authorizes continuation. Machine authorization derives only from a `validate-bundle` result with:
 

@@ -99,7 +99,7 @@ def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
             if collection == "artifacts" and entry["path"] == failing_artifact_path:
                 continue
             stage = value.get("stage_id") or value.get("source_stage") or "bundle"
-            repair = value.get("repair_target_stage") or (stage if stage in ORDER else "/decompose")
+            repair = value.get("repair_target_stage") or (stage if stage in EXECUTABLE_STAGES else "/decompose")
             errors = schema_diagnostics(validators[kind], value, stage, f"$/{entry['path']}", repair)
             if errors:
                 return {

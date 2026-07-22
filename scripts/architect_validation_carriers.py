@@ -19,8 +19,8 @@ def failure_event_for(result: dict[str, Any], receipt_digest: str) -> dict[str, 
     repair_target = result["repair_target_stage"]
     first_invalid_index = stage_index(repair_target)
     failed_index = stage_index(failed_stage)
-    reusable_prefix = ORDER[:first_invalid_index]
-    invalidated = ORDER[first_invalid_index : max(failed_index + 1, first_invalid_index + 1)]
+    reusable_prefix = EXECUTABLE_STAGES[:first_invalid_index]
+    invalidated = EXECUTABLE_STAGES[first_invalid_index : max(failed_index + 1, first_invalid_index + 1)]
     identity_seed = {
         "run_id": artifact["run_id"],
         "failed_stage": failed_stage,
@@ -72,7 +72,7 @@ def success_boundary_for(
     artifact: dict[str, Any], artifact_digest: str, receipt: dict[str, Any], receipt_digest: str
 ) -> dict[str, Any]:
     stage = artifact["stage_id"]
-    seed = f"{artifact_digest}:{receipt_digest}:{NEXT_STAGE[stage]}".encode()
+    seed = f"{artifact_digest}:{receipt_digest}:{successor_stage(stage)}".encode()
     return {
         "boundary_schema": BOUNDARY_SCHEMA,
         "boundary_id": f"asb-boundary-{artifact['run_id']}-{PREFIX[stage]}-{sha_bytes(seed)[:12]}",
@@ -80,7 +80,7 @@ def success_boundary_for(
         "transition": "next_stage",
         "source_stage": stage,
         "failed_stage": None,
-        "target_stage": NEXT_STAGE[stage],
+        "target_stage": successor_stage(stage),
         "repair_target_stage": None,
         "artifact": {
             "artifact_id": artifact["artifact_id"],

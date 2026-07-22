@@ -171,7 +171,7 @@ def _render_transaction(
                 )
             )
             predecessor = processed_by_stage.get(
-                PREDECESSOR.get(stage, ""), {}
+                predecessor_stage(stage) or "", {}
             ).get("artifact")
             anchor = success_anchor_for(
                 artifact, predecessor, boundary, boundary_digest
@@ -186,9 +186,7 @@ def _render_transaction(
                     "anchor",
                 )
             )
-        authorized_next_stage = NEXT_STAGE[
-            result["processed"][-1]["artifact"]["stage_id"]
-        ]
+        authorized_next_stage = successor_stage(result["processed"][-1]["artifact"]["stage_id"])
         overall_status = "valid"
         repair_target = None
         authorization_valid = True
@@ -214,7 +212,7 @@ def _render_transaction(
             )
         )
         predecessor = processed_by_stage.get(
-            PREDECESSOR.get(failed_stage, ""), {}
+            predecessor_stage(failed_stage) or "", {}
         ).get("artifact")
         anchor = repair_anchor_for(
             result,

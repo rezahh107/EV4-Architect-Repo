@@ -29,30 +29,48 @@ BUNDLE_SCHEMA = "ev4-architect-validation-bundle@1.1.0"
 VALIDATOR_ID = "architect-pipeline-stage-boundary-validator"
 VALIDATOR_VERSION = "1.2.0"
 DETERMINISM_PROFILE = "deterministic_no_timestamps_v2"
-ORDER = ["/decompose", "/architectures", "/score-evidence", "/score-audit"]
-STAGE_VERSIONS = {
-    "/decompose": "1.0.0",
-    "/architectures": "1.1.0",
-    "/score-evidence": "1.3.0",
-    "/score-audit": "1.2.0",
-}
+PIPELINE_MANIFEST_PATH = ROOT / "manifests/architect-pipeline-manifest.v1.json"
+VALIDATION_PROFILES_PATH = ROOT / "manifests/architect-stage-validation-profiles.v1.json"
+
+
+def _load_validation_authority() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Load the two canonical authorities; neither is duplicated in code."""
+    manifest = json.loads(PIPELINE_MANIFEST_PATH.read_text(encoding="utf-8"))
+    registry = json.loads(VALIDATION_PROFILES_PATH.read_text(encoding="utf-8"))
+    stages = manifest["project_execution_stages"]
+    profiles = {profile["stage_id"]: profile for profile in registry["profiles"]}
+    manifest_ids = [stage["stage_id"] for stage in stages]
+    if len(manifest_ids) != len(set(manifest_ids)) or set(manifest_ids) != set(profiles):
+        raise RuntimeError("ASB-VALIDATION-PROFILE-TOPOLOGY-DRIFT")
+    return manifest, profiles
+
+
+PIPELINE_MANIFEST, VALIDATION_PROFILES = _load_validation_authority()
+ALL_ORDER = [stage["stage_id"] for stage in PIPELINE_MANIFEST["project_execution_stages"]]
+EXECUTABLE_STAGES = tuple(
+    stage for stage in ALL_ORDER if VALIDATION_PROFILES[stage]["validation"]["executable"]
+)
 PREFIX = {
     "/decompose": "decompose",
     "/architectures": "architectures",
     "/score-evidence": "score-evidence",
     "/score-audit": "score-audit",
 }
-NEXT_STAGE = {
-    "/decompose": "/architectures",
-    "/architectures": "/score-evidence",
-    "/score-evidence": "/score-audit",
-    "/score-audit": "/recommend",
-}
-PREDECESSOR = {
-    "/architectures": "/decompose",
-    "/score-evidence": "/architectures",
-    "/score-audit": "/score-evidence",
-}
+def _manifest_stage(stage_id: str) -> dict[str, Any]:
+    return next(stage for stage in PIPELINE_MANIFEST["project_execution_stages"] if stage["stage_id"] == stage_id)
+
+
+def stage_version(stage_id: str) -> str | None:
+    return _manifest_stage(stage_id)["stage_version"] if stage_id in EXECUTABLE_STAGES else None
+
+
+def successor_stage(stage_id: str) -> str | None:
+    return _manifest_stage(stage_id)["next_stage"]
+
+
+def predecessor_stage(stage_id: str) -> str | None:
+    index = ALL_ORDER.index(stage_id)
+    return ALL_ORDER[index - 1] if index else None
 ACTIVE_UNKNOWN_STATES = {"carried", "score_capped", "blocking", "downstream_only"}
 INACTIVE_UNKNOWN_STATES = {"resolved_with_evidence", "not_applicable", "stale"}
 UNKNOWN_STATES = ACTIVE_UNKNOWN_STATES | INACTIVE_UNKNOWN_STATES
@@ -137,9 +155,9 @@ def sha_file(path: Path) -> str:
 
 def stage_index(stage: str | None) -> int:
     try:
-        return ORDER.index(stage or "")
+        return EXECUTABLE_STAGES.index(stage or "")
     except ValueError:
-        return len(ORDER) + 1
+        return len(EXECUTABLE_STAGES) + 1
 
 
 def diagnostic(

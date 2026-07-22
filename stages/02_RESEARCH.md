@@ -32,7 +32,7 @@ Required:
 
 ```yaml
 required_inputs:
-  - valid Stage Anchor: ev4-stage-anchor@1.1.0
+  - validation profile for `/intake`: currently `contract_defined_not_implemented`; therefore no authorization-valid Anchor or Bundle can authorize `/intake → /research` until its deterministic transaction is defined
   - source_stage: /intake or approved repair/rerun stage
   - target_stage: /research
   - target_stage_hardening_status: confirmed
@@ -64,7 +64,7 @@ Fail the gate if:
 - The stage is being asked to produce a build tree or implementation plan.
 ```
 
-If the gate fails, emit `RESEARCH_REPAIR_ANCHOR` and stop.
+If the gate fails, stop without treating a historical Anchor as authorization.
 
 ---
 

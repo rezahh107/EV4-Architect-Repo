@@ -156,11 +156,11 @@ def semantic_diagnostics(
     stage = artifact["stage_id"]
     payload = artifact["payload"]
     diagnostics: list[dict[str, Any]] = []
-    predecessor_stage = PREDECESSOR.get(stage)
-    if predecessor_stage and predecessor_stage in artifacts:
+    predecessor = predecessor_stage(stage)
+    if predecessor and predecessor in artifacts:
         diagnostics.extend(
             validate_source_reference(
-                artifact, artifacts[predecessor_stage], digests[predecessor_stage]
+                artifact, artifacts[predecessor], digests[predecessor]
             )
         )
     if stage == "/architectures":

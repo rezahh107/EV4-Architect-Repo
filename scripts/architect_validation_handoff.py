@@ -113,10 +113,10 @@ def handoff_state_for(
             "reusable_until": predecessor["stage_id"] if predecessor and repair_target and stage_index(predecessor["stage_id"]) < stage_index(repair_target) else None,
             "invalidation_triggers": ["artifact_bytes_changed", "upstream_lineage_changed", "diagnostic_ownership_changed"],
             "earliest_safe_rerun_stage": earliest,
-            "downstream_payloads_dependent_on_this_stage": ORDER[stage_index(stage) + 1 :],
+            "downstream_payloads_dependent_on_this_stage": EXECUTABLE_STAGES[stage_index(stage) + 1 :],
         },
         "stage_boundary": {
-            "allowed_work": [NEXT_STAGE[stage]] if authorized else [f"repair:{earliest}"],
+            "allowed_work": [successor_stage(stage)] if authorized else [f"repair:{earliest}"],
             "forbidden_work": ["independent_authorization", "downstream_reconstruction"],
             "stop_conditions": ["bundle_integrity_invalid"] if authorized else ["repair_not_completed", "fresh_validation_missing"],
         },
@@ -135,7 +135,7 @@ def success_anchor_for(
         "run_id": artifact["run_id"],
         "anchor_type": "NEXT_STAGE_ANCHOR",
         "source_stage": stage,
-        "target_stage": NEXT_STAGE[stage],
+        "target_stage": successor_stage(stage),
         "repair_target_stage": None,
         "boundary_ref": {
             "boundary_id": boundary["boundary_id"],
@@ -208,6 +208,6 @@ def validate_generated_carriers(output: Path, root: Path = ROOT) -> list[dict[st
         for path in (output / folder).glob(pattern):
             value = load_json(path)
             stage = value.get("stage_id") or value.get("source_stage") or value.get("failed_stage") or "bundle"
-            repair = value.get("repair_target_stage") or (stage if stage in ORDER else "/decompose")
+            repair = value.get("repair_target_stage") or (stage if stage in EXECUTABLE_STAGES else "/decompose")
             diagnostics.extend(schema_diagnostics(validators[kind], value, stage, f"$/{path.relative_to(output)}", repair))
     return sort_diagnostics(diagnostics)

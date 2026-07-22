@@ -22,7 +22,7 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
             )
             continue
         stage = value.get("stage_id") if isinstance(value, dict) else None
-        if stage not in ORDER:
+        if stage not in EXECUTABLE_STAGES:
             diagnostics.append(
                 diagnostic(
                     "ASB-STAGE-FILE-MISMATCH",
@@ -31,7 +31,7 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                     f"$/{path.name}",
                     "recognized stage_id",
                     str(stage),
-                    stage if stage in ORDER else "/decompose",
+                    stage if stage in EXECUTABLE_STAGES else "/decompose",
                 )
             )
             continue
@@ -62,12 +62,12 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                     stage,
                 )
             )
-    present = [stage for stage in ORDER if stage in by_stage]
+    present = [stage for stage in EXECUTABLE_STAGES if stage in by_stage]
     if present:
         highest = max(stage_index(stage) for stage in present)
-        for missing in ORDER[: highest + 1]:
+        for missing in EXECUTABLE_STAGES[: highest + 1]:
             if missing not in by_stage:
-                detected = ORDER[min(highest, len(ORDER) - 1)]
+                detected = EXECUTABLE_STAGES[min(highest, len(EXECUTABLE_STAGES) - 1)]
                 diagnostics.append(
                     diagnostic(
                         "ASB-STAGE-SEQUENCE-GAP",
@@ -91,7 +91,7 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                 "/decompose",
             )
         )
-    return [by_stage[stage][0] for stage in ORDER if stage in by_stage], sort_diagnostics(diagnostics)
+    return [by_stage[stage][0] for stage in EXECUTABLE_STAGES if stage in by_stage], sort_diagnostics(diagnostics)
 
 
 def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
@@ -117,7 +117,7 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
         artifact = json.loads(raw.decode("utf-8"))
         stage = artifact.get("stage_id", "/decompose")
         diagnostics: list[dict[str, Any]] = []
-        expected_version = STAGE_VERSIONS.get(stage)
+        expected_version = stage_version(stage)
         if artifact.get("stage_version") != expected_version:
             diagnostics.append(
                 diagnostic(
