@@ -118,6 +118,33 @@ downstream_runtime_enforcement: insufficient_evidence
 production_readiness: not_claimed
 ```
 
+## Historical Evidence Preserved
+
+```yaml
+ARCH_01:
+  pull_request: 28
+  merge_commit: 5aed1358c8df98eb262986ef7bcddb3acaeaddcf
+
+ARCH_02:
+  pull_request: 29
+  merge_commit: be9bdea9ae246b1587043f2582c1a950ea2a6ec5
+  merge_status: merged
+
+ARCH_BOOTSTRAP:
+  pull_request: 30
+  reviewed_head_sha: 51e21a2d57adc8086a0d320038aaa80993b2318a
+  scope_gate: insufficient_evidence
+
+ARCH_REPOSITORY_REPAIR_HANDOFF:
+  pull_request: 33
+  merge_commit: f6f1912d06c4b6c2e0013c26bb14915a55000c80
+
+ARCH_STAGE_VALIDATION_AUTHORITY:
+  pull_request: 35
+  merge_commit: b433966e44bb89c7949a709728b201ce1d37ac45
+  merge_status: merged
+```
+
 ## Evidence Boundaries
 
 The current branch does not claim:
