@@ -1,10 +1,10 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
 Version: 0.20.0  
-Status: quality_first_runtime_implemented_on_review_branch_pending_pull_request_ci_and_review  
+Status: quality_first_runtime_pr_open_pending_exact_head_ci_and_review  
 Last confirmed `main`: `b433966e44bb89c7949a709728b201ce1d37ac45`  
 Current branch: `simplify/quality-first-architect-runtime`  
-Current pull request: pending creation  
+Current pull request: `#36`  
 Last update: 2026-07-22
 
 ## Current Authority
@@ -16,7 +16,9 @@ repository: rezahh107/EV4-Architect-Repo
 base_branch: main
 verified_starting_main_sha: b433966e44bb89c7949a709728b201ce1d37ac45
 working_branch: simplify/quality-first-architect-runtime
-pull_request: pending_creation
+pull_request: 36
+pull_request_url: https://github.com/rezahh107/EV4-Architect-Repo/pull/36
+exact_head_authority: live GitHub PR metadata and exact-head CI
 implementation_status: implemented_pending_ci_and_review
 merge_performed: false
 approval_performed: false
@@ -108,9 +110,9 @@ The Pipeline Manifest minor version advances because normal-run required-input s
 ## Validation State
 
 ```yaml
-focused_quality_runtime_tests: pending_exact_branch_execution
-bootstrap_alignment_tests: pending_exact_branch_execution
-repository_exact_head_ci: pending_pull_request
+focused_quality_runtime_tests: pending_exact_head_ci
+bootstrap_alignment_tests: pending_exact_head_ci
+repository_exact_head_ci: pending
 full_repository_suite: pending_pull_request_ci
 independent_review: pending
 real_chat_runtime_enforcement: insufficient_evidence
@@ -147,7 +149,7 @@ ARCH_STAGE_VALIDATION_AUTHORITY:
 
 ## Evidence Boundaries
 
-The current branch does not claim:
+The current PR does not claim:
 
 - real ChatGPT/model-host enforcement;
 - live Elementor rendering or export validity;
@@ -159,4 +161,4 @@ The current branch does not claim:
 
 ## Next Step
 
-Open exactly one pull request from `simplify/quality-first-architect-runtime`, run all applicable checks on its exact Head, repair any failure within that same PR, and leave Merge to later review.
+Run all applicable checks on the exact live Head of PR #36, repair any failure within the same PR, and leave Merge to later review.
