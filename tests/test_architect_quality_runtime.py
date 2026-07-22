@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ FIXTURE_PATH = REPO_ROOT / "fixtures" / "architect-quality-runtime" / "valid" / 
 runtime_spec = importlib.util.spec_from_file_location("architect_quality_runtime", RUNTIME_PATH)
 assert runtime_spec and runtime_spec.loader
 runtime = importlib.util.module_from_spec(runtime_spec)
+sys.modules["architect_quality_runtime"] = runtime
 runtime_spec.loader.exec_module(runtime)
 
 check_spec = importlib.util.spec_from_file_location("check_architect_quality_runtime", CHECK_PATH)
