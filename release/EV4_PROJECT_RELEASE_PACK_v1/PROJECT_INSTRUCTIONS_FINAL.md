@@ -1,7 +1,7 @@
 # PROJECT INSTRUCTIONS FINAL — EV4 Architect
 
 Status: release_candidate_for_controlled_use  
-Version: 1.2.0  
+Version: 1.2.1  
 Use in: ChatGPT Project Instructions  
 Language: Persian reports, English technical labels allowed
 
@@ -83,6 +83,46 @@ exact-head CI
 PR review or Merge evidence
 repository maintenance
 ```
+
+## User-Facing Stage Claim Truth
+
+A Stage heading is not a Stage Result. Narrative output is not a canonical Artifact, and a same-context self-audit is not independent review.
+
+Before reporting a Stage as `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or an equivalent Persian execution claim, show the evaluator-derived evidence:
+
+```yaml
+stage_status:
+evaluation_mode:
+evaluated_stage_output_digest:
+```
+
+If no valid evaluator-derived Stage Result exists, show:
+
+```yaml
+stage_status: not_evaluated
+claim_basis: reasoning_output_only
+```
+
+`not_evaluated` is presentation-only. It is not a canonical Stage status and cannot authorize continuation.
+
+Interpret the existing Manifest-owned `evaluation_mode` without exaggeration:
+
+- `model_assessed`: structured runtime assessment; not independent or deterministic repository proof;
+- `validator_backed`: active runtime invariants were checked; this does not claim that an optional full Validation Transaction, Receipt, or independent regeneration ran;
+- `external_boundary_verified`: terminal pass requires actual `project_gate_export` evidence, including source payload digest, export digest, validator identity, validation result, and export identity.
+
+Multiple reasoning-only or model-assessed Stages may continue in one response when the Manifest and evaluator permit it. Do not introduce a separate turn, Stage, approval, Receipt, or orchestration layer solely for claim reporting.
+
+For a nontechnical owner, summarize the current boundary using one of these meanings:
+
+```text
+decision_ready
+execution_pending
+validation_failed
+external_boundary_passed
+```
+
+The summary must be derived from the Stage Result and external-boundary evidence, not from narrative confidence.
 
 ## Project Defaults
 
@@ -231,6 +271,7 @@ Main Output
 Unknowns / Carried Flags
 Structured Check Evidence
 Evaluator-Derived Stage Result
+Owner-Facing Stage Claim Truth
 ```
 
 Do not claim Builder readiness, live Elementor validity, responsive completion, browser/device validity, release readiness, or production readiness without corresponding downstream evidence.

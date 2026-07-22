@@ -21,6 +21,7 @@ CONTROLLED_PATHS = [
     Path("STATUS.md"),
     Path("02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md"),
     Path("contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md"),
+    Path("contracts/ARCHITECT_STAGE_RESULT_V1.md"),
     Path("manifests/architect-conversation-bootstrap.v1.json"),
     Path("manifests/architect-pipeline-manifest.v1.json"),
     Path("schemas/architect-conversation-bootstrap.v1.schema.json"),
@@ -52,6 +53,13 @@ def append(root: Path, relative: str, text: str) -> None:
     path.write_text(path.read_text(encoding="utf-8") + text, encoding="utf-8")
 
 
+def replace_once(root: Path, relative: str, old: str, new: str) -> None:
+    path = root / relative
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
 def manifest_requires_anchor(root: Path) -> None:
     value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
     value["normal_run_continuation"]["internal_anchor_required"] = True
@@ -68,6 +76,39 @@ def remove_research(root: Path) -> None:
     value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
     value["project_execution_stages"].pop(1)
     write_json(root, "manifests/architect-pipeline-manifest.v1.json", value)
+
+
+def terminal_evaluation_mode_drift(root: Path) -> None:
+    value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
+    value["project_execution_stages"][-1]["evaluation_mode"] = "model_assessed"
+    write_json(root, "manifests/architect-pipeline-manifest.v1.json", value)
+
+
+def build_tree_evaluation_mode_drift(root: Path) -> None:
+    value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
+    for stage in value["project_execution_stages"]:
+        if stage["stage_id"] == "/build-tree":
+            stage["evaluation_mode"] = "model_assessed"
+            break
+    write_json(root, "manifests/architect-pipeline-manifest.v1.json", value)
+
+
+def remove_not_evaluated_claim_rule(root: Path) -> None:
+    replace_once(
+        root,
+        "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
+        "stage_status: not_evaluated",
+        "stage_status: pass",
+    )
+
+
+def remove_self_audit_boundary(root: Path) -> None:
+    replace_once(
+        root,
+        "contracts/ARCHITECT_STAGE_RESULT_V1.md",
+        "same-context self-audit is not independent review",
+        "same-context self-audit may be independent review",
+    )
 
 
 def active_intake_shortcut(root: Path) -> None:
@@ -87,6 +128,10 @@ FAILING_MUTATIONS: list[tuple[str, Callable[[Path], None]]] = [
     ("manifest_requires_anchor", manifest_requires_anchor),
     ("serialized_result_authorizes", serialized_result_authorizes),
     ("remove_research", remove_research),
+    ("terminal_evaluation_mode_drift", terminal_evaluation_mode_drift),
+    ("build_tree_evaluation_mode_drift", build_tree_evaluation_mode_drift),
+    ("remove_not_evaluated_claim_rule", remove_not_evaluated_claim_rule),
+    ("remove_self_audit_boundary", remove_self_audit_boundary),
     ("active_intake_shortcut", active_intake_shortcut),
     ("active_research_skip", active_research_skip),
     ("remove_arch02_audit_status", remove_arch02_audit_status),
@@ -98,7 +143,8 @@ def test_canonical_repository_passes() -> None:
     assert result["continuation_model"] == "quality_driven"
     assert result["initial_sequence"] == "/intake → /research → /decompose"
     assert result["final_stage"] == "/project-gate-export"
-    assert result["controlled_runtime_docs"] == 7
+    assert result["controlled_runtime_docs"] == 8
+    assert result["claim_truth_docs"] == 3
 
 
 @pytest.mark.parametrize(("name", "mutate"), FAILING_MUTATIONS, ids=[name for name, _ in FAILING_MUTATIONS])

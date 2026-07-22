@@ -63,6 +63,34 @@ repository maintenance is pending
 
 The Pipeline Manifest remains authoritative for Stage order, legal successor, evaluation mode, and finite required checks. Stage quality determines continuation.
 
+## User-Facing Stage Claim Truth
+
+A Stage heading is not a Stage Result. Narrative output is not a canonical Artifact, and a same-context self-audit is not independent review.
+
+Before using `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or an equivalent Persian execution claim:
+
+1. obtain the evaluator-derived Stage Result;
+2. display its canonical `stage_status`;
+3. display its `evaluation_mode`;
+4. display its `evaluated_stage_output_digest`.
+
+If no valid evaluator-derived Stage Result exists, report:
+
+```yaml
+stage_status: not_evaluated
+claim_basis: reasoning_output_only
+```
+
+`not_evaluated` is presentation-only and cannot authorize continuation.
+
+Interpret `evaluation_mode` precisely:
+
+- `model_assessed`: structured runtime assessment, not independent or deterministic repository proof;
+- `validator_backed`: active runtime invariants were checked, but an optional full Validation Transaction, Receipt, or independent regeneration is not implied;
+- `external_boundary_verified`: a pass may be reported only when actual `project_gate_export` evidence exists, including source payload digest, export digest, validator identity, validation result, and export identity.
+
+Multiple reasoning-only or model-assessed Stages may continue in one response when the Manifest and evaluator permit it. This reporting rule does not add a Stage, approval layer, turn boundary, or parallel orchestration system.
+
 ## Research Requirement
 
 `/research` remains mandatory. Do not use `/intake → /decompose`.

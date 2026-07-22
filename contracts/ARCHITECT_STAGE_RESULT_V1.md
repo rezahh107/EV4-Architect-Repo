@@ -49,6 +49,22 @@ A serialized Stage Result may remain readable as:
 
 It cannot authorize continuation unless the runtime can recompute the decision from the corresponding Stage Output and Run State.
 
+## User-facing Stage claim truth
+
+A Stage heading is not a Stage Result. Narrative output is not a canonical Artifact, and a same-context self-audit is not independent review.
+
+Visible Stage claims must follow these rules:
+
+- When no valid evaluator-derived Stage Result exists, report `stage_status: not_evaluated` and `claim_basis: reasoning_output_only`.
+- `not_evaluated` is presentation-only. It is not added to the canonical `stage_status` enum and cannot authorize continuation.
+- When a valid derived Stage Result exists, display the canonical `stage_status`, `evaluation_mode`, and `evaluated_stage_output_digest` from that result.
+- `model_assessed` means structured runtime assessment. It is not independent or deterministic repository proof.
+- `validator_backed` means the active runtime invariants for that Stage were checked. It does not imply that an optional full Validation Transaction, Receipt, or independent regeneration ran.
+- `external_boundary_verified` may be reported as passed only when the derived terminal result contains the actual `project_gate_export` evidence, including source payload digest, export digest, validator identity, validation result, and export identity.
+- Bare words such as `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or equivalent Persian claims must not be used as execution claims without the corresponding evaluator-derived evidence.
+
+Multiple reasoning-only or model-assessed Stages may continue in one response when the Manifest and evaluator permit it. The claim truth rule changes reporting only; it does not add a Stage, turn boundary, approval layer, or parallel orchestration system.
+
 ## Minimal data separation
 
 ### Stage Output
@@ -152,7 +168,7 @@ Conversational Stage output does not require a digest.
 
 ## Final Project Gate boundary
 
-The terminal result is derived from the actual Architect Stage Payload and actual Producer Gate export through the existing canonical validator and exporter chain.
+The terminal `/project-gate-export` result is derived from the actual Architect Stage Payload and actual Producer Gate export through the existing canonical validator and exporter chain.
 
 A terminal result records the derived payload digest, export digest, validator identity, validation result, and export identity.
 
