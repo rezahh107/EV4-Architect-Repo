@@ -3,9 +3,9 @@ consumer_repo: EV4-Architect-Repo
 consumer_repo_evidence_state: expected_unverified
 
 last_updated:
-  date: "2026-07-09"
-  pr: "22"
-  commit: "54c413c327bd18a3fbca543aa74dd09f7c8dda04"
+  date: "2026-07-22"
+  pr: "35"
+  commit: null
 
 brc_reference:
   document: Behavioral_Rule_Coverage_v0.4.1
@@ -298,17 +298,17 @@ records:
 
   - escape_route_id: ARCH-ESC-008
     rule_id: ARCH-GOV-STAGE-BOUNDARY-001
-    concept: Intermediate Architect stages can falsely advance when required producer artifacts lack deterministic boundary validation
+    concept: Architect Stages can falsely advance when topology, Validation capability, or deterministic producer-boundary semantics drift
     risk: Critical
     session_scope: cross_turn
     recovery_action: block
     consumer_repo: EV4-Architect-Repo
-    consumer_stage: /decompose-through-/score-audit
+    consumer_stage: all-manifest-stages-with-implemented-transaction-subset
     surface_type: schema_validator_fixture_ci
-    file_path: schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json
+    file_path: manifests/architect-stage-validation-profiles.v1.json
     trigger_type: next_stage_acceptance
     detected_problem: >-
-      Required intermediate Stage 2, Stage 3, and Stage 4 artifacts could be omitted while downstream stages reconstructed or normalized missing evidence from prose and declared pass, causing fail-late detection at score audit instead of the earliest owning boundary.
+      Required intermediate Artifacts could be omitted while downstream stages reconstructed or normalized missing evidence from prose and declared pass. Pipeline topology and versions were also duplicated outside the Manifest, while detailed prose for seven non-terminal Stages had no truthful executable capability record. That combination permitted fail-late behavior and made legal topology appear equivalent to authorization.
     kernel_mapping:
       mapping_status: not_applicable_with_reason
       decision_family: null
@@ -316,19 +316,19 @@ records:
       not_applicable_reason: >-
         This escape route governs intermediate stage-boundary evidence control and does not introduce or complete an EV4-Decision-Kernel decision family.
     rule_shape:
-      trigger: A Stage 2-5 intermediate Architect artifact is emitted or accepted as input to the next stage.
-      predicate: The exact stage-artifact byte chain must validate through the canonical validate-run transaction, generate receipts, boundary records, anchors, and a validation-bundle manifest, and reject downstream reconstruction or caller-supplied receipt/anchor authority.
-      enforcement: Additive Stage Artifact, Receipt, Machine Boundary Record, User Handoff Anchor, Validation Bundle schemas, semantic validator, positive/negative fixtures, targeted pytest, and exact-head CI workflow are introduced for this bounded stage sequence.
+      trigger: Any Manifest Stage Artifact is emitted or accepted as input to the next Stage.
+      predicate: The edge and Stage version must derive from the Pipeline Manifest; executable capability must derive from the Validation Profiles Registry; only a full_transaction_implemented source may regenerate a complete byte-bound Bundle transaction. Blocked profiles must emit no Bundle, and caller-supplied Anchors never authorize continuation.
+      enforcement: The Manifest and strict Registry are checked together; Registry-selected handlers implement the existing /decompose-through-/score-audit transaction; Anchor v1.4 and Bundle v1.2 bind current authority; transition-matrix, blocked-stage, historical-carrier, byte-stability, fixture, and mutation tests are included in the exact-head CI workflow.
     carriers:
       prose_source: contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md
-      schema_carrier: schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json
-      validator_rule: scripts/check-architect-pipeline-stage-boundary.py
+      schema_carrier: manifests/architect-stage-validation-profiles.v1.json + schemas/architect-stage-validation-profiles.v1.schema.json
+      validator_rule: scripts/check-architect-validation-profiles.py + scripts/check-architect-pipeline-stage-boundary.py
       valid_fixture: fixtures/architect-pipeline-stage-boundary/valid/complete-sequence
       invalid_fixture: fixtures/architect-pipeline-stage-boundary/invalid/incident-fail-late
       validator_diagnostic: ASB-UPSTREAM-VALIDATION-REQUIRED
-      test_command: python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json && python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-validation-bundle --format json && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_pipeline_stage_boundary_validator.py
-      CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Validate Architect stage boundary fixtures
-      sequence_CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Run stage boundary regression tests
+      test_command: python scripts/check-architect-validation-profiles.py && python scripts/check-architect-pipeline-stage-boundary.py validate-run --sequence fixtures/architect-pipeline-stage-boundary/valid/complete-sequence --output /tmp/ev4-validation-bundle --format json && python scripts/check-architect-pipeline-stage-boundary.py validate-bundle --bundle /tmp/ev4-validation-bundle --format json && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_pipeline_stage_boundary_validator.py tests/test_architect_validation_profiles.py
+      CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Validate Manifest and Validation Profiles authority
+      sequence_CI_step: .github/workflows/validate-architect-pipeline-stage-boundary.yml / validate / Validate Architect stage boundary fixtures and focused regression tests
       runtime_monitor: null
       os_harness_policy: null
       downstream_contract: null
@@ -336,4 +336,4 @@ records:
       enforcement_status: fixture_tested
       evidence_state: proposed
     notes: >-
-      This record is an additive cross-turn sequence-integrity repair whose current authorization source is the generated Validation Bundle; exact-head CI workflow execution remains pending evidence unless a workflow run is observed on the current head. Runtime, downstream, Project Gate, Builder, Responsive, OS/harness, release, and production enforcement remain insufficient_evidence unless separately implemented and validated. It must not be marked resolved from prose-only evidence or single-artifact validation.
+      Local fixture evidence covers all Manifest edges, all blocked profiles, every implemented semantic handler, independent Bundle regeneration, historical non-authorization, and byte stability for the existing four Stages. Exact-head CI remains pending until observed on the final PR Head. Runtime, downstream, Project Gate, Builder, Responsive, OS/harness, release, and production enforcement remain insufficient_evidence unless separately implemented and validated. Neither Registry capability metadata nor a standalone Anchor is authorization.
