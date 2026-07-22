@@ -168,7 +168,7 @@ Conversational Stage output does not require a digest.
 
 ## Final Project Gate boundary
 
-The terminal result is derived from the actual Architect Stage Payload and actual Producer Gate export through the existing canonical validator and exporter chain.
+The terminal `/project-gate-export` result is derived from the actual Architect Stage Payload and actual Producer Gate export through the existing canonical validator and exporter chain.
 
 A terminal result records the derived payload digest, export digest, validator identity, validation result, and export identity.
 
