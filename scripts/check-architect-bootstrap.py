@@ -25,13 +25,13 @@ CORE_BUNDLE_REL = Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CORE_CONTRACTS_B
 PROTOCOLS_REL = Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_STAGE_PROTOCOLS_BUNDLE.md")
 
 EXPECTED_CONTRACT_ID = "ev4-architect-conversation-bootstrap"
-EXPECTED_CONTRACT_VERSION = "1.2.0"
+EXPECTED_CONTRACT_VERSION = "1.3.0"
 EXPECTED_OWNER = "rezahh107/EV4-Architect-Repo"
 EXPECTED_TRIGGERS = ["شروع", "شروع کن", "شروع سکشن جدید", "start", "begin", "start a new section"]
 EXPECTED_PRECONDITION_IDS = [
     "repository_instructions_loaded",
     "no_active_architect_run",
-    "no_resumable_stage_result",
+    "no_resumable_runtime_material",
     "no_project_input",
 ]
 EXPECTED_FORBIDDEN_IDS = [
@@ -39,12 +39,12 @@ EXPECTED_FORBIDDEN_IDS = [
     "recommend_architecture",
     "produce_elementor_tree",
     "invent_exact_values",
-    "claim_unvalidated_stage_result",
+    "trust_serialized_stage_result",
     "claim_builder_or_production_readiness",
 ]
 EXPECTED_ROUTING_ACTIONS = {
-    "resumable_stage_result_present": "continue_from_stage_result_without_restarting",
-    "latest_stage_output_without_stage_result": "validate_or_reconstruct_stage_result",
+    "resumable_stage_result_present": "recompute_from_stage_output_and_run_state",
+    "latest_stage_output_without_stage_result": "evaluate_stage_output_with_run_state",
     "explicit_repository_maintenance_request": "repository_maintenance_mode_not_project_run",
 }
 EXPECTED_INPUT_ACTION = "run_intake_without_repeating_bootstrap_questions"
