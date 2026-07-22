@@ -1,0 +1,3 @@
+472897b96d9aa9a74c10c8e000216ac6cf573cc287adc9b4898bdb600ec6dd90  architect-project-gate.json
+d348b7a06c0f9d78d11ddf73887006cb049357f03b6a99cefcec8277b85fa554  architect-project-gate.receipt.json
+2c599df58da05d8d22a25f1e06fe93836bbd4747c5e7f3bf1f6671fa6762a468  export-metadata.json

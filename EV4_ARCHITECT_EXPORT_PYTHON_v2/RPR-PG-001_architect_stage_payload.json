@@ -1,0 +1,1417 @@
+{
+  "schema_id": "ev4-architect-stage-payload@1.0.0",
+  "schema_version": "1.0.0",
+  "owner_repository": "rezahh107/EV4-Architect-Repo",
+  "payload_status": "complete",
+  "synthetic": false,
+  "payload_identity": {
+    "producer": "ev4_architect",
+    "stage": "architect",
+    "contract_purpose": "project_gate_stage_payload",
+    "created_by": "GPT-5.6 Thinking — EV4 Architect",
+    "synthetic_fixture_notice": "Real run payload prepared from EV4-RUN-VOICE-ASSISTANT-SECTION-001; this is not a synthetic fixture."
+  },
+  "source_stage_lineage": [
+    {
+      "stage": "/intake",
+      "payload_name": "Intake_Payload",
+      "schema_id": "architect-intake-record",
+      "state": "observed",
+      "evidence_refs": [
+        "EV-DESKTOP-OBS",
+        "EV-MOBILE-OBS"
+      ]
+    },
+    {
+      "stage": "/research",
+      "payload_name": "Research_Payload",
+      "schema_id": "architect-research-record",
+      "state": "observed",
+      "evidence_refs": [
+        "EV-IMP-004"
+      ]
+    },
+    {
+      "stage": "/decompose",
+      "payload_name": "Decomposition_Payload",
+      "schema_id": "architect-decompose-record",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-BT-001"
+      ]
+    },
+    {
+      "stage": "/architectures",
+      "payload_name": "Architecture_Candidates_Payload",
+      "schema_id": "architectures-record",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-REC-001"
+      ]
+    },
+    {
+      "stage": "/score-evidence",
+      "payload_name": "Score_Evidence_Payload",
+      "schema_id": "ev4-score-evidence-payload@1.3.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-REC-001"
+      ]
+    },
+    {
+      "stage": "/score-audit",
+      "payload_name": "Score_Audit_Payload",
+      "schema_id": "ev4-score-audit-payload@1.2.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-REC-001"
+      ]
+    },
+    {
+      "stage": "/recommend",
+      "payload_name": "Recommendation_Payload",
+      "schema_id": "ev4-recommend-payload@1.1.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-REC-001",
+        "EV-LOCK-001"
+      ]
+    },
+    {
+      "stage": "/build-tree",
+      "payload_name": "Build_Tree_Payload",
+      "schema_id": "ev4-build-tree-payload@1.0.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-BT-001"
+      ]
+    },
+    {
+      "stage": "/implementation",
+      "payload_name": "Implementation_Payload",
+      "schema_id": "ev4-implementation-payload@1.0.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-IMP-004"
+      ]
+    },
+    {
+      "stage": "/final-audit",
+      "payload_name": "Final_Audit_Payload",
+      "schema_id": "ev4-final-audit-payload@1.0.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-FA-005"
+      ]
+    },
+    {
+      "stage": "/handoff-export",
+      "payload_name": "Handoff_Export_Payload",
+      "schema_id": "ev4-handoff-export-payload@1.0.0",
+      "state": "validated",
+      "evidence_refs": [
+        "EV-HE-002"
+      ]
+    }
+  ],
+  "architecture_identity": {
+    "selected_candidate_id": "ARC-A-FLEX-IMAGE-NORMAL-FLOW",
+    "selected_candidate_locked": true,
+    "architecture_family": "A01 Native Flow Flexbox",
+    "decision_source": {
+      "stage": "/recommend",
+      "payload_name": "Recommendation_Payload",
+      "schema_id": "ev4-recommend-payload@1.1.0",
+      "evidence_refs": [
+        "EV-REC-001"
+      ],
+      "locked_decision_refs": [
+        "EV-LOCK-001"
+      ],
+      "approved_structure_ref": "VA-SEC-001",
+      "source_evidence_refs": [
+        "EV-BT-001",
+        "EV-DESKTOP-OBS",
+        "EV-MOBILE-OBS"
+      ]
+    },
+    "semantic_lock": {
+      "boolean_lock_alone_sufficient": false,
+      "requires_candidate_identity": true,
+      "requires_decision_source": true,
+      "requires_locked_decision_refs": true,
+      "requires_approved_structure_ref": true,
+      "requires_source_evidence_refs": true
+    }
+  },
+  "approved_structure_model": {
+    "structure_schema_version": "architect-structure-model.v1",
+    "root_node_id": "VA-SEC-001",
+    "structure_nodes": [
+      {
+        "node_id": "VA-SEC-001",
+        "parent_node_id": null,
+        "node_kind": "section_root",
+        "role": "section root",
+        "hierarchy_path": [
+          "Voice Assistant Section"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-MED-001",
+          "VA-CNT-001"
+        ]
+      },
+      {
+        "node_id": "VA-MED-001",
+        "parent_node_id": "VA-SEC-001",
+        "node_kind": "wrapper",
+        "role": "media region",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Media Region"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-IMG-001"
+        ],
+        "wrapper_justification": {
+          "reason": "responsive order control",
+          "evidence_refs": [
+            "EV-BT-001"
+          ],
+          "can_remove_if_implementation_simplifies": false
+        }
+      },
+      {
+        "node_id": "VA-IMG-001",
+        "parent_node_id": "VA-MED-001",
+        "node_kind": "widget",
+        "role": "decorative marketing visual core",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Media Region",
+          "Marketing Image"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-CNT-001",
+        "parent_node_id": "VA-SEC-001",
+        "node_kind": "content_group",
+        "role": "content region",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-HDG-001",
+          "VA-ROW-001",
+          "VA-ROW-002",
+          "VA-ROW-003"
+        ]
+      },
+      {
+        "node_id": "VA-HDG-001",
+        "parent_node_id": "VA-CNT-001",
+        "node_kind": "widget",
+        "role": "editable section heading",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Section Heading"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-ROW-001",
+        "parent_node_id": "VA-CNT-001",
+        "node_kind": "content_group",
+        "role": "intro icon-copy row",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Intro Row"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-ICO-001",
+          "VA-TXT-001"
+        ]
+      },
+      {
+        "node_id": "VA-ICO-001",
+        "parent_node_id": "VA-ROW-001",
+        "node_kind": "widget",
+        "role": "intro icon asset",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Intro Row",
+          "Intro Icon"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-TXT-001",
+        "parent_node_id": "VA-ROW-001",
+        "node_kind": "widget",
+        "role": "editable intro copy",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Intro Row",
+          "Intro Copy"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-ROW-002",
+        "parent_node_id": "VA-CNT-001",
+        "node_kind": "content_group",
+        "role": "Alexa example row",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Alexa Example Row"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-ICO-002",
+          "VA-COPY-002"
+        ]
+      },
+      {
+        "node_id": "VA-ICO-002",
+        "parent_node_id": "VA-ROW-002",
+        "node_kind": "widget",
+        "role": "Alexa icon asset",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Alexa Example Row",
+          "Alexa Icon"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-COPY-002",
+        "parent_node_id": "VA-ROW-002",
+        "node_kind": "wrapper",
+        "role": "Alexa copy stack",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Alexa Example Row",
+          "Alexa Copy"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-PRM-002",
+          "VA-DSC-002"
+        ],
+        "wrapper_justification": {
+          "reason": "accessibility/semantic grouping",
+          "evidence_refs": [
+            "EV-BT-001"
+          ],
+          "can_remove_if_implementation_simplifies": false
+        }
+      },
+      {
+        "node_id": "VA-PRM-002",
+        "parent_node_id": "VA-COPY-002",
+        "node_kind": "widget",
+        "role": "editable Alexa prompt",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Alexa Example Row",
+          "Alexa Copy",
+          "Alexa Prompt"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-DSC-002",
+        "parent_node_id": "VA-COPY-002",
+        "node_kind": "widget",
+        "role": "editable Alexa description",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Alexa Example Row",
+          "Alexa Copy",
+          "Alexa Description"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-ROW-003",
+        "parent_node_id": "VA-CNT-001",
+        "node_kind": "content_group",
+        "role": "Google example row",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Google Example Row"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-ICO-003",
+          "VA-COPY-003"
+        ]
+      },
+      {
+        "node_id": "VA-ICO-003",
+        "parent_node_id": "VA-ROW-003",
+        "node_kind": "widget",
+        "role": "Google icon asset",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Google Example Row",
+          "Google Icon"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-COPY-003",
+        "parent_node_id": "VA-ROW-003",
+        "node_kind": "wrapper",
+        "role": "Google copy stack",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Google Example Row",
+          "Google Copy"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL"
+        ],
+        "children": [
+          "VA-PRM-003",
+          "VA-DSC-003"
+        ],
+        "wrapper_justification": {
+          "reason": "accessibility/semantic grouping",
+          "evidence_refs": [
+            "EV-BT-001"
+          ],
+          "can_remove_if_implementation_simplifies": false
+        }
+      },
+      {
+        "node_id": "VA-PRM-003",
+        "parent_node_id": "VA-COPY-003",
+        "node_kind": "widget",
+        "role": "editable Google prompt",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Google Example Row",
+          "Google Copy",
+          "Google Prompt"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      },
+      {
+        "node_id": "VA-DSC-003",
+        "parent_node_id": "VA-COPY-003",
+        "node_kind": "widget",
+        "role": "editable Google description",
+        "hierarchy_path": [
+          "Voice Assistant Section",
+          "Content Region",
+          "Google Example Row",
+          "Google Copy",
+          "Google Description"
+        ],
+        "evidence_refs": [
+          "EV-BT-001",
+          "EV-IMP-004"
+        ],
+        "intent_refs": [
+          "INTENT-NORMAL",
+          "INTENT-EDITABLE"
+        ],
+        "children": []
+      }
+    ]
+  },
+  "architect_intent": {
+    "normal_flow_intent": {
+      "intent_id": "INTENT-NORMAL",
+      "state": "validated",
+      "summary": "All meaningful content remains in one normal-flow tree with independent media and content regions.",
+      "evidence_refs": [
+        "EV-BT-001",
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    "overlay_intent": {
+      "intent_id": "INTENT-OVERLAY",
+      "state": "validated",
+      "overlay_allowed": false,
+      "contained_in_named_stage_required": true,
+      "meaningful_content_in_overlay_allowed": false,
+      "evidence_refs": [
+        "EV-REC-001",
+        "EV-BT-001"
+      ]
+    },
+    "editable_content_intent": {
+      "intent_id": "INTENT-EDITABLE",
+      "state": "validated",
+      "meaningful_content_editable_when_practical": true,
+      "static_image_for_meaningful_content_allowed": false,
+      "evidence_refs": [
+        "EV-BT-001",
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    "class_intent": {
+      "approved_class_names": [
+        "voice-assistant",
+        "voice-assistant__content",
+        "voice-assistant__copy--example",
+        "voice-assistant__copy--intro",
+        "voice-assistant__description",
+        "voice-assistant__heading",
+        "voice-assistant__icon--alexa",
+        "voice-assistant__icon--google",
+        "voice-assistant__icon--intro",
+        "voice-assistant__image",
+        "voice-assistant__media",
+        "voice-assistant__prompt",
+        "voice-assistant__row--example",
+        "voice-assistant__row--intro"
+      ],
+      "class_application_map": [
+        {
+          "class_name": "voice-assistant",
+          "target_node_ids": [
+            "VA-SEC-001"
+          ],
+          "scope": "section",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__content",
+          "target_node_ids": [
+            "VA-CNT-001"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__copy--example",
+          "target_node_ids": [
+            "VA-COPY-002",
+            "VA-COPY-003"
+          ],
+          "scope": "component",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__copy--intro",
+          "target_node_ids": [
+            "VA-TXT-001"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__description",
+          "target_node_ids": [
+            "VA-DSC-002",
+            "VA-DSC-003"
+          ],
+          "scope": "component",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__heading",
+          "target_node_ids": [
+            "VA-HDG-001"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__icon--alexa",
+          "target_node_ids": [
+            "VA-ICO-002"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__icon--google",
+          "target_node_ids": [
+            "VA-ICO-003"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__icon--intro",
+          "target_node_ids": [
+            "VA-ICO-001"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__image",
+          "target_node_ids": [
+            "VA-IMG-001"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__media",
+          "target_node_ids": [
+            "VA-MED-001"
+          ],
+          "scope": "widget",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__prompt",
+          "target_node_ids": [
+            "VA-PRM-002",
+            "VA-PRM-003"
+          ],
+          "scope": "component",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__row--example",
+          "target_node_ids": [
+            "VA-ROW-002",
+            "VA-ROW-003"
+          ],
+          "scope": "component",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        },
+        {
+          "class_name": "voice-assistant__row--intro",
+          "target_node_ids": [
+            "VA-ROW-001"
+          ],
+          "scope": "component",
+          "evidence_refs": [
+            "EV-BT-001",
+            "EV-IMP-004"
+          ]
+        }
+      ]
+    },
+    "asset_intent": {
+      "asset_requirements": [
+        {
+          "asset_id": "ASSET-MARKETING-IMAGE",
+          "role": "visual_core",
+          "state": "unverified",
+          "evidence_refs": [
+            "EV-IMP-004",
+            "EV-FA-005"
+          ]
+        },
+        {
+          "asset_id": "ASSET-INTRO-ICON",
+          "role": "unknown",
+          "state": "unverified",
+          "evidence_refs": [
+            "EV-IMP-004",
+            "EV-FA-005"
+          ]
+        },
+        {
+          "asset_id": "ASSET-ALEXA-ICON",
+          "role": "unknown",
+          "state": "unverified",
+          "evidence_refs": [
+            "EV-IMP-004",
+            "EV-FA-005"
+          ]
+        },
+        {
+          "asset_id": "ASSET-GOOGLE-ICON",
+          "role": "unknown",
+          "state": "unverified",
+          "evidence_refs": [
+            "EV-IMP-004",
+            "EV-FA-005"
+          ]
+        }
+      ],
+      "missing_asset_policy": "missing_assets_remain_explicit_evidence_gaps"
+    },
+    "scoped_css_intent": {
+      "css_allowed": false,
+      "allowed_selector_scopes": [
+        "selected_class",
+        "child_of_selected_class"
+      ],
+      "global_css_allowed": false,
+      "meaningful_content_created_by_css_allowed": false,
+      "css_need_map": []
+    },
+    "responsive_risk_seeds": [
+      {
+        "risk_id": "RISK-TABLET-UNPROVEN",
+        "risk_type": "tablet_behavior_not_proven",
+        "state": "insufficient_evidence",
+        "description": "Tablet behavior is deferred by user scope and remains unvalidated.",
+        "downstream_owner": "responsive",
+        "evidence_refs": [
+          "EV-TABLET-SCOPE",
+          "EV-FA-005"
+        ]
+      },
+      {
+        "risk_id": "RISK-BREAKPOINTS-UNPROVIDED",
+        "risk_type": "breakpoints_not_provided",
+        "state": "insufficient_evidence",
+        "description": "Exact target breakpoints and site responsive settings are unavailable.",
+        "downstream_owner": "builder",
+        "evidence_refs": [
+          "EV-IMP-004",
+          "EV-FA-005"
+        ]
+      },
+      {
+        "risk_id": "RISK-MOBILE-RUNTIME-UNPROVEN",
+        "risk_type": "mobile_behavior_not_proven",
+        "state": "insufficient_evidence",
+        "description": "Mobile visual intent is observed, but live Elementor and frontend behavior are not validated.",
+        "downstream_owner": "responsive",
+        "evidence_refs": [
+          "EV-MOBILE-OBS",
+          "EV-FA-005"
+        ]
+      }
+    ],
+    "dynamic_loop_intent": {
+      "status": "none",
+      "evidence_refs": [
+        "EV-REC-001",
+        "EV-IMP-004"
+      ],
+      "reason": "The section is static and no Dynamic Loop or data-source requirement was authorized."
+    }
+  },
+  "kernel_decision_records": [
+    {
+      "decision_family": "layout_structure",
+      "decision_card_ref": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=layout_structure",
+      "selected_option": "A01 Native Flow Flexbox with independent media and content regions",
+      "rejected_options": [
+        "Grid substitution",
+        "duplicate device sections",
+        "absolute meaningful-content composition"
+      ],
+      "evidence_refs": [
+        "EV-REC-001",
+        "EV-BT-001",
+        "EV-FA-005"
+      ],
+      "evidence_state": "validated"
+    },
+    {
+      "decision_family": "media_choice",
+      "decision_card_ref": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=media_choice",
+      "selected_option": "Independent replaceable Image assets; final files and crop remain unverified",
+      "rejected_options": [
+        "background-media substitution",
+        "whole-section static image",
+        "invented final asset variants"
+      ],
+      "evidence_refs": [
+        "EV-BT-001",
+        "EV-IMP-004",
+        "EV-FA-005"
+      ],
+      "evidence_state": "unverified"
+    },
+    {
+      "decision_family": "styling_mechanism",
+      "decision_card_ref": "kernel/decision-governance/p0-decision-matrices.v0.json#decision_family_id=styling_mechanism",
+      "selected_option": "Native Elementor controls with no currently authorized custom CSS",
+      "rejected_options": [
+        "global CSS",
+        "CSS-created meaningful content",
+        "unscoped selectors"
+      ],
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ],
+      "evidence_state": "validated"
+    }
+  ],
+  "evidence_register": [
+    {
+      "evidence_id": "EV-REC-001",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "stage_payload",
+        "reference": "RPR-REC-001 / Recommendation_Payload"
+      },
+      "claim": "ARC-A-FLEX-IMAGE-NORMAL-FLOW was selected and locked as A01 Native Flow Flexbox.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-LOCK-001",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "stage_payload",
+        "reference": "RPR-REC-001 selected-candidate lock"
+      },
+      "claim": "The selected architecture identity, approved structure intent and forbidden reintroductions are locked.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-BT-001",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "stage_payload",
+        "reference": "RPR-BT-001 / Build_Tree_Payload"
+      },
+      "claim": "The approved structure contains 18 named nodes rooted at VA-SEC-001.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-IMP-004",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "stage_payload",
+        "reference": "RPR-IMP-004 / Implementation_Payload"
+      },
+      "claim": "The locked tree maps to native normal-flow Elementor elements without custom CSS or dynamic dependencies.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-FA-005",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "stage_payload",
+        "reference": "RPR-FA-005 / Final_Audit_Payload"
+      },
+      "claim": "Final audit passed with five medium findings and one low finding; no blocker or high finding remains.",
+      "fact_class": "audit_finding"
+    },
+    {
+      "evidence_id": "EV-HE-002",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "stage_payload",
+        "reference": "RPR-HE-002 / Handoff_Export_Payload"
+      },
+      "claim": "The Architect handoff package preserves the full tree, findings, unknowns and downstream boundaries.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-DESKTOP-OBS",
+      "state": "observed",
+      "source_ref": {
+        "source_type": "manual_observation",
+        "reference": "Desktop screenshot supplied in the active run"
+      },
+      "claim": "Desktop visibly shows independent media and content regions side by side.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-MOBILE-OBS",
+      "state": "observed",
+      "source_ref": {
+        "source_type": "manual_observation",
+        "reference": "/mnt/data/sshot-2323.jpg"
+      },
+      "claim": "Mobile visibly shows media above a vertically stacked content panel.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-TABLET-SCOPE",
+      "state": "observed",
+      "source_ref": {
+        "source_type": "manual_observation",
+        "reference": "User confirmation in active run"
+      },
+      "claim": "Tablet behavior is deferred from the current handoff scope and remains unvalidated.",
+      "fact_class": "project_specific_behavior"
+    },
+    {
+      "evidence_id": "EV-PG-CONTRACT",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "contract",
+        "reference": "contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md"
+      },
+      "claim": "The Architect Project Gate payload must preserve locked decisions, unknowns and negative downstream-readiness assertions.",
+      "fact_class": "contract_rule"
+    },
+    {
+      "evidence_id": "EV-PG-SCHEMA",
+      "state": "validated",
+      "source_ref": {
+        "source_type": "schema",
+        "reference": "schemas/ev4-architect-stage-payload.v1.schema.json"
+      },
+      "claim": "The payload targets ev4-architect-stage-payload@1.0.0.",
+      "fact_class": "contract_rule"
+    }
+  ],
+  "unresolved_evidence": [
+    {
+      "unresolved_id": "UNK-01",
+      "state": "insufficient_evidence",
+      "owner": "responsive",
+      "reason": "Tablet behavior is deferred and no Tablet evidence or breakpoint transition is available.",
+      "blocks": [
+        "responsive_validation",
+        "production_readiness"
+      ],
+      "required_before": "responsive_validation",
+      "evidence_refs": [
+        "EV-TABLET-SCOPE",
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-03",
+      "state": "insufficient_evidence",
+      "owner": "builder",
+      "reason": "Final media crop, focal point, sizing and asset variants are unavailable.",
+      "blocks": [
+        "builder_execution",
+        "responsive_validation",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-04",
+      "state": "insufficient_evidence",
+      "owner": "builder",
+      "reason": "The final icon representation and source file types are unavailable.",
+      "blocks": [
+        "builder_execution",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-05",
+      "state": "insufficient_evidence",
+      "owner": "ce",
+      "reason": "Icon accessibility semantics remain conditional on the actual assets and adjacent text.",
+      "blocks": [
+        "builder_execution",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-06",
+      "state": "insufficient_evidence",
+      "owner": "ce",
+      "reason": "Actual saved DOM, source order, Elementor export and frontend behavior are not observed.",
+      "blocks": [
+        "builder_execution",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-FA-005",
+        "EV-HE-002"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-07",
+      "state": "insufficient_evidence",
+      "owner": "builder",
+      "reason": "The complete page heading hierarchy is unavailable; H2 remains provisional.",
+      "blocks": [
+        "builder_execution",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-08",
+      "state": "insufficient_evidence",
+      "owner": "responsive",
+      "reason": "LTR/RTL and localization behavior are unavailable.",
+      "blocks": [
+        "responsive_validation",
+        "production_readiness"
+      ],
+      "required_before": "responsive_validation",
+      "evidence_refs": [
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-09",
+      "state": "insufficient_evidence",
+      "owner": "builder",
+      "reason": "Exact breakpoint, spacing and design-system values are unavailable.",
+      "blocks": [
+        "builder_execution",
+        "responsive_validation",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-10",
+      "state": "insufficient_evidence",
+      "owner": "ce",
+      "reason": "Target Elementor Core/Pro runtime compatibility and control availability are unverified.",
+      "blocks": [
+        "builder_execution",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-11",
+      "state": "insufficient_evidence",
+      "owner": "builder",
+      "reason": "Final row-count and add/remove maintenance behavior are not specified.",
+      "blocks": [
+        "builder_execution",
+        "production_readiness"
+      ],
+      "required_before": "builder_execution",
+      "evidence_refs": [
+        "EV-IMP-004"
+      ]
+    },
+    {
+      "unresolved_id": "UNK-13",
+      "state": "insufficient_evidence",
+      "owner": "responsive",
+      "reason": "Final text length and localization expansion behavior are unavailable.",
+      "blocks": [
+        "responsive_validation",
+        "production_readiness"
+      ],
+      "required_before": "responsive_validation",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-FA-005"
+      ]
+    }
+  ],
+  "forbidden_work": [
+    "no_invent_geometry",
+    "no_invent_assets",
+    "no_invent_breakpoints",
+    "no_infer_dynamic_data",
+    "no_claim_builder_ready",
+    "no_claim_production_ready",
+    "no_claim_constructability_proven",
+    "no_claim_responsive_complete",
+    "no_create_builder_runtime_intake"
+  ],
+  "boundary_assertions": {
+    "constructability_proven": false,
+    "ce_approved": false,
+    "ce_review_required": true,
+    "builder_ready": false,
+    "builder_executable": false,
+    "builder_runtime_intake_authorized": false,
+    "responsive_complete": false,
+    "production_ready": false,
+    "live_elementor_validated": false,
+    "real_export_json_validated": false,
+    "exact_pixel_match_validated": false,
+    "project_gate_may_invent_architect_facts": false
+  },
+  "validation_contract": {
+    "schema_validation_required": true,
+    "semantic_validation_required": true,
+    "additional_properties_allowed_in_core": false,
+    "rules": [
+      "A-R01",
+      "A-R02",
+      "A-R03",
+      "A-R04",
+      "A-R05",
+      "A-R06",
+      "A-R07",
+      "A-R08",
+      "A-R09",
+      "A-R10",
+      "A-R11",
+      "A-R12"
+    ]
+  },
+  "extension_records": [
+    {
+      "extension_id": "EXT-AUDIT-HANDOFF",
+      "owner": "ev4_architect",
+      "evidence_state": "validated",
+      "evidence_refs": [
+        "EV-FA-005",
+        "EV-HE-002"
+      ],
+      "allowed_consumer": "project_gate",
+      "cannot_override_core_fields": true,
+      "downstream_readiness_claims_allowed": false,
+      "data": {
+        "run_id": "EV4-RUN-VOICE-ASSISTANT-SECTION-001",
+        "final_audit_status": "pass_with_minor_flags",
+        "handoff_status": "ready_with_minor_flags",
+        "medium_findings": [
+          "FA-RSP-001",
+          "FA-MED-001",
+          "FA-A11Y-001",
+          "FA-CAP-001",
+          "FA-RUN-001"
+        ],
+        "low_findings": [
+          "FA-DS-001"
+        ],
+        "tablet_scope": "deferred_by_user",
+        "builder_executable_allowed": false,
+        "production_ready": false
+      }
+    },
+    {
+      "extension_id": "EXT-ELEMENTOR-MAPPING",
+      "owner": "ev4_architect",
+      "evidence_state": "validated",
+      "evidence_refs": [
+        "EV-IMP-004",
+        "EV-HE-002"
+      ],
+      "allowed_consumer": "ce",
+      "cannot_override_core_fields": true,
+      "downstream_readiness_claims_allowed": false,
+      "data": {
+        "node_count": 18,
+        "root_node_id": "VA-SEC-001",
+        "element_mappings": [
+          {
+            "node_id": "VA-SEC-001",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant"
+            ]
+          },
+          {
+            "node_id": "VA-MED-001",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__media"
+            ]
+          },
+          {
+            "node_id": "VA-IMG-001",
+            "elementor_element_type": "Image",
+            "class_hooks": [
+              "voice-assistant__image"
+            ]
+          },
+          {
+            "node_id": "VA-CNT-001",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__content"
+            ]
+          },
+          {
+            "node_id": "VA-HDG-001",
+            "elementor_element_type": "Heading",
+            "class_hooks": [
+              "voice-assistant__heading"
+            ]
+          },
+          {
+            "node_id": "VA-ROW-001",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__row--intro"
+            ]
+          },
+          {
+            "node_id": "VA-ICO-001",
+            "elementor_element_type": "Image",
+            "class_hooks": [
+              "voice-assistant__icon--intro"
+            ]
+          },
+          {
+            "node_id": "VA-TXT-001",
+            "elementor_element_type": "Paragraph",
+            "class_hooks": [
+              "voice-assistant__copy--intro"
+            ]
+          },
+          {
+            "node_id": "VA-ROW-002",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__row--example"
+            ]
+          },
+          {
+            "node_id": "VA-ICO-002",
+            "elementor_element_type": "Image",
+            "class_hooks": [
+              "voice-assistant__icon--alexa"
+            ]
+          },
+          {
+            "node_id": "VA-COPY-002",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__copy--example"
+            ]
+          },
+          {
+            "node_id": "VA-PRM-002",
+            "elementor_element_type": "Paragraph",
+            "class_hooks": [
+              "voice-assistant__prompt"
+            ]
+          },
+          {
+            "node_id": "VA-DSC-002",
+            "elementor_element_type": "Paragraph",
+            "class_hooks": [
+              "voice-assistant__description"
+            ]
+          },
+          {
+            "node_id": "VA-ROW-003",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__row--example"
+            ]
+          },
+          {
+            "node_id": "VA-ICO-003",
+            "elementor_element_type": "Image",
+            "class_hooks": [
+              "voice-assistant__icon--google"
+            ]
+          },
+          {
+            "node_id": "VA-COPY-003",
+            "elementor_element_type": "Flexbox",
+            "class_hooks": [
+              "voice-assistant__copy--example"
+            ]
+          },
+          {
+            "node_id": "VA-PRM-003",
+            "elementor_element_type": "Paragraph",
+            "class_hooks": [
+              "voice-assistant__prompt"
+            ]
+          },
+          {
+            "node_id": "VA-DSC-003",
+            "elementor_element_type": "Paragraph",
+            "class_hooks": [
+              "voice-assistant__description"
+            ]
+          }
+        ],
+        "custom_css_need_map": [],
+        "dynamic_data": "none",
+        "interactions": "none"
+      }
+    }
+  ]
+}

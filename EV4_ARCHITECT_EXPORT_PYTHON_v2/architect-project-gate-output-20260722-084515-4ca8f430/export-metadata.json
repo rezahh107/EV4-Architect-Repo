@@ -1,0 +1,16 @@
+{
+  "accepted_commit": "be9bdea9ae246b1587043f2582c1a950ea2a6ec5",
+  "actual_head": "be9bdea9ae246b1587043f2582c1a950ea2a6ec5",
+  "artifact_sha256": "472897b96d9aa9a74c10c8e000216ac6cf573cc287adc9b4898bdb600ec6dd90",
+  "generated_at_utc": "2026-07-22T08:45:32.081845+00:00",
+  "jsonschema_version": "4.26.0",
+  "named_branch": "export/official-20260722084525-542",
+  "pin_source": "embedded_current_project_gate_lock",
+  "python_version": "Python 3.12.3",
+  "receipt_sha256": "d348b7a06c0f9d78d11ddf73887006cb049357f03b6a99cefcec8277b85fa554",
+  "repository": "rezahh107/EV4-Architect-Repo",
+  "run_id": "EV4-RUN-VOICE-ASSISTANT-SECTION-001",
+  "schema_version": "ev4-python-wrapper-export-metadata.v1",
+  "source_origin": "https://github.com/rezahh107/EV4-Architect-Repo.git",
+  "source_payload_sha256": "bf7cc226dd6038e65f103d1698ac69630555c6aa518becd4ee3b597526f2277d"
+}

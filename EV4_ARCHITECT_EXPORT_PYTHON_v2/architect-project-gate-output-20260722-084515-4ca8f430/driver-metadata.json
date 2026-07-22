@@ -1,0 +1,16 @@
+{
+  "accepted_commit": "be9bdea9ae246b1587043f2582c1a950ea2a6ec5",
+  "accepted_commit_source": "live_project_gate_lock_checked_2026-07-22",
+  "artifact_sha256": "472897b96d9aa9a74c10c8e000216ac6cf573cc287adc9b4898bdb600ec6dd90",
+  "bytecode_write_policy": "disabled_in_linux_export_process",
+  "completed_at_utc": "2026-07-22T08:45:30.817928+00:00",
+  "exit_code": 0,
+  "local_repo": "E:\\GitHub\\EV4-Architect-Repo",
+  "payload_path": "E:\\GitHub\\EV4-Architect-Repo\\EV4_ARCHITECT_EXPORT_PYTHON_v2\\RPR-PG-001_architect_stage_payload.json",
+  "run_id": "EV4-RUN-VOICE-ASSISTANT-SECTION-001",
+  "schema_version": "ev4-python-wrapper-driver-metadata.v1",
+  "script_version": "2.0.0",
+  "started_at_utc": "2026-07-22T08:45:15.198273+00:00",
+  "status": "verified_success",
+  "wsl_distro": null
+}

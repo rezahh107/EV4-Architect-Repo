@@ -1,0 +1,9 @@
+{
+  "accepted_commit": "be9bdea9ae246b1587043f2582c1a950ea2a6ec5",
+  "artifact_sha256": "472897b96d9aa9a74c10c8e000216ac6cf573cc287adc9b4898bdb600ec6dd90",
+  "receipt_sha256": "d348b7a06c0f9d78d11ddf73887006cb049357f03b6a99cefcec8277b85fa554",
+  "run_id": "EV4-RUN-VOICE-ASSISTANT-SECTION-001",
+  "schema_version": "ev4-python-wrapper-windows-verification.v1",
+  "status": "pass",
+  "verified_at_utc": "2026-07-22T08:45:30.814329+00:00"
+}
