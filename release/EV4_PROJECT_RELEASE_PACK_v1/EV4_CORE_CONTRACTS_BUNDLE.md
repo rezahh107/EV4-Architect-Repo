@@ -7,13 +7,13 @@ Version: 1.0.0
 
 ## 1. Stage Anchor Contract
 
-Schema:
+Historical schema reference (non-authorizing):
 
 ```text
 ev4-stage-anchor@1.1.0
 ```
 
-Purpose: keep critical facts, unknowns, flags, gates, and repair routes at the front of each stage to reduce context drift.
+Purpose: keep critical facts, unknowns, flags, gates, and repair routes at the front of each stage to reduce context drift. Current continuation authorization is profile-driven and requires independently regenerated Bundle evidence when the source profile is executable; an Anchor never authorizes alone.
 
 Required fields:
 

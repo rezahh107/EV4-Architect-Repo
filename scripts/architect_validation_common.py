@@ -50,12 +50,12 @@ ALL_ORDER = [stage["stage_id"] for stage in PIPELINE_MANIFEST["project_execution
 EXECUTABLE_STAGES = tuple(
     stage for stage in ALL_ORDER if VALIDATION_PROFILES[stage]["validation"]["executable"]
 )
-PREFIX = {
-    "/decompose": "decompose",
-    "/architectures": "architectures",
-    "/score-evidence": "score-evidence",
-    "/score-audit": "score-audit",
-}
+
+def stage_filename(stage_id: str) -> str:
+    """The manifest stage identifier is the filename authority, not a mapping."""
+    if stage_id not in ALL_ORDER:
+        raise ValueError(f"unknown manifest stage: {stage_id}")
+    return stage_id.removeprefix("/")
 def _manifest_stage(stage_id: str) -> dict[str, Any]:
     return next(stage for stage in PIPELINE_MANIFEST["project_execution_stages"] if stage["stage_id"] == stage_id)
 

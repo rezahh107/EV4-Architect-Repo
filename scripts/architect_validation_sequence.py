@@ -35,7 +35,7 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                 )
             )
             continue
-        expected_name = f"{PREFIX[stage]}.json"
+        expected_name = f"{stage_filename(stage)}.json"
         if path.name != expected_name:
             diagnostics.append(
                 diagnostic(

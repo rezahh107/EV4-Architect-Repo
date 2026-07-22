@@ -126,7 +126,7 @@ def _render_transaction(
     for item in result["processed"]:
         artifact = item["artifact"]
         stage = artifact["stage_id"]
-        prefix = PREFIX[stage]
+        prefix = stage_filename(stage)
         artifact_path = output / "artifacts" / f"{prefix}.json"
         artifact_path.write_bytes(item["path"].read_bytes())
         artifact_entries.append(
@@ -155,7 +155,7 @@ def _render_transaction(
         for item in result["processed"]:
             artifact = item["artifact"]
             stage = artifact["stage_id"]
-            prefix = PREFIX[stage]
+            prefix = stage_filename(stage)
             boundary = success_boundary_for(
                 artifact, item["digest"], item["receipt"], receipt_digests[stage]
             )

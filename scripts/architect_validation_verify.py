@@ -89,7 +89,7 @@ def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
     failing_artifact_path = None
     if manifest.get("overall_status") == "invalid" and manifest.get("failure_event_path"):
         event = load_json(bundle / manifest["failure_event_path"])
-        failing_prefix = PREFIX[event["failing_artifact"]["stage_id"]]
+        failing_prefix = stage_filename(event["failing_artifact"]["stage_id"])
         failing_artifact_path = f"artifacts/{failing_prefix}.json"
     for collection, kind in kind_map.items():
         for entry in manifest[collection]:

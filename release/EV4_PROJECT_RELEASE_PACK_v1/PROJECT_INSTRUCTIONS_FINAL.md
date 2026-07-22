@@ -83,13 +83,7 @@ For quick work, the assistant may run a compressed mode, but it must still prese
 
 ## Stage Anchor Rule
 
-Before each stage after `/intake`, require a `STAGE ANCHOR` compatible with:
-
-```text
-ev4-stage-anchor@1.1.0
-```
-
-If the anchor is missing, outdated, schema-mismatched, or contradicted by the previous payload, stop and request/produce a repair anchor.
+Use the source Stage's profile in `manifests/architect-stage-validation-profiles.v1.json`. The registry records capability only; it is not continuation authority. `full_transaction_implemented` stages require an independently regenerated valid Bundle, while blocked or unimplemented stages authorize no continuation. `/research` remains mandatory; `/intake → /decompose` is forbidden. Historical Anchor versions, including `ev4-stage-anchor@1.1.0`, are non-authorizing evidence only.
 
 Anchor must include:
 

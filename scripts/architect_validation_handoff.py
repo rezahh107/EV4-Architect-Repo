@@ -131,7 +131,7 @@ def success_anchor_for(
     stage = artifact["stage_id"]
     return {
         "anchor_schema": ANCHOR_SCHEMA,
-        "anchor_id": f"asb-anchor-{artifact['run_id']}-{PREFIX[stage]}-{boundary_digest[:12]}",
+        "anchor_id": f"asb-anchor-{artifact['run_id']}-{stage_filename(stage)}-{boundary_digest[:12]}",
         "run_id": artifact["run_id"],
         "anchor_type": "NEXT_STAGE_ANCHOR",
         "source_stage": stage,
@@ -159,7 +159,7 @@ def repair_anchor_for(
     repair = result["repair_target_stage"]
     return {
         "anchor_schema": ANCHOR_SCHEMA,
-        "anchor_id": f"asb-repair-anchor-{artifact['run_id']}-{PREFIX[stage]}-{boundary_digest[:12]}",
+        "anchor_id": f"asb-repair-anchor-{artifact['run_id']}-{stage_filename(stage)}-{boundary_digest[:12]}",
         "run_id": artifact["run_id"],
         "anchor_type": "REPAIR_ANCHOR",
         "source_stage": stage,

@@ -29,7 +29,7 @@ def failure_event_for(result: dict[str, Any], receipt_digest: str) -> dict[str, 
         "receipt_sha256": receipt_digest,
         "diagnostics": receipt["diagnostics"],
     }
-    event_id = f"asb-failure-{artifact['run_id']}-{PREFIX[failed_stage]}-{sha_bytes(canonical_bytes(identity_seed))[:12]}"
+    event_id = f"asb-failure-{artifact['run_id']}-{stage_filename(failed_stage)}-{sha_bytes(canonical_bytes(identity_seed))[:12]}"
     return {
         "failure_event_schema": FAILURE_EVENT_SCHEMA,
         "failure_event_id": event_id,
@@ -75,7 +75,7 @@ def success_boundary_for(
     seed = f"{artifact_digest}:{receipt_digest}:{successor_stage(stage)}".encode()
     return {
         "boundary_schema": BOUNDARY_SCHEMA,
-        "boundary_id": f"asb-boundary-{artifact['run_id']}-{PREFIX[stage]}-{sha_bytes(seed)[:12]}",
+        "boundary_id": f"asb-boundary-{artifact['run_id']}-{stage_filename(stage)}-{sha_bytes(seed)[:12]}",
         "run_id": artifact["run_id"],
         "transition": "next_stage",
         "source_stage": stage,
@@ -106,7 +106,7 @@ def repair_boundary_for(
     seed = f"{failing['digest']}:{receipt_digest}:{failure_event_digest}:{repair}".encode()
     return {
         "boundary_schema": BOUNDARY_SCHEMA,
-        "boundary_id": f"asb-repair-{artifact['run_id']}-{PREFIX[stage]}-{sha_bytes(seed)[:12]}",
+        "boundary_id": f"asb-repair-{artifact['run_id']}-{stage_filename(stage)}-{sha_bytes(seed)[:12]}",
         "run_id": artifact["run_id"],
         "transition": "repair",
         "source_stage": stage,

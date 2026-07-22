@@ -16,6 +16,11 @@ on:
       - 'stages/04_SCORE_EVIDENCE.md'
       - 'stages/05_SCORE_AUDIT.md'
       - 'manifests/architect-pipeline-manifest.v1.json'
+      - 'manifests/architect-stage-validation-profiles.v1.json'
+      - 'scripts/check-architect-validation-profiles.py'
+      - 'tests/test_architect_validation_profiles.py'
+      - '02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md'
+      - 'release/EV4_PROJECT_RELEASE_PACK_v1/**'
       - 'planning/DECISION_ESCAPE_ROUTES.yml'
       - '.github/workflows/validate-architect-pipeline-stage-boundary.yml'
 
@@ -63,7 +68,7 @@ jobs:
           python - <<'PY'
           import py_compile
           from pathlib import Path
-          paths = [Path('scripts/check-architect-pipeline-stage-boundary.py')]
+          paths = [Path('scripts/check-architect-pipeline-stage-boundary.py'), Path('scripts/check-architect-validation-profiles.py')]
           paths.extend(sorted(Path('scripts').glob('architect_validation_*.py')))
           for path in paths:
               py_compile.compile(
@@ -148,7 +153,9 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/check-architect-pipeline-stage-boundary.py --fixtures
+          python scripts/check-architect-validation-profiles.py
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
+            tests/test_architect_validation_profiles.py \
             tests/test_architect_pipeline_stage_boundary_validator.py \
             tests/test_architect_validation_transaction_mutations.py
           echo 'repository_status_checkpoint=after_pytest'
