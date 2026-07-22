@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import subprocess
 from pathlib import Path
 
 from architect_quality_runtime import ROOT, evaluate_run
@@ -17,6 +18,22 @@ BUILD_TREE = {
         {"id": "node-wrapper", "role": "normal_flow_group", "children": []},
     ],
 }
+
+
+def trusted_context(root: Path) -> dict:
+    sha = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return {
+        "producer_provenance": {
+            "repository": "rezahh107/EV4-Architect-Repo",
+            "ref": "exact-head-validation",
+            "commit_sha": sha,
+        }
+    }
 
 
 def load_outputs(path: Path, root: Path) -> list[dict]:
@@ -144,7 +161,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", type=Path, default=ROOT / "fixtures/architect-quality-runtime/valid/full-pipeline.json")
     args = parser.parse_args()
-    result = evaluate_run(load_outputs(args.run, ROOT), root=ROOT)
+    result = evaluate_run(
+        load_outputs(args.run, ROOT),
+        root=ROOT,
+        trusted_context=trusted_context(ROOT),
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "valid" else 1
 
