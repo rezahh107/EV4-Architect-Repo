@@ -47,27 +47,20 @@ def write_json(root: Path, relative: str, value: dict) -> None:
     (root / relative).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def wrong_contract_version(root: Path) -> None:
-    value = load_json(root, "manifests/architect-conversation-bootstrap.v1.json")
-    value["contract_version"] = "1.1.0"
-    write_json(root, "manifests/architect-conversation-bootstrap.v1.json", value)
-
-
-def missing_stage_result_precondition(root: Path) -> None:
-    value = load_json(root, "manifests/architect-conversation-bootstrap.v1.json")
-    value["activation"]["preconditions"].pop(2)
-    write_json(root, "manifests/architect-conversation-bootstrap.v1.json", value)
-
-
-def restart_instead_of_continue(root: Path) -> None:
-    value = load_json(root, "manifests/architect-conversation-bootstrap.v1.json")
-    value["routing_rules"]["resumable_stage_result_present"]["action_id"] = "restart_from_intake"
-    write_json(root, "manifests/architect-conversation-bootstrap.v1.json", value)
+def append(root: Path, relative: str, text: str) -> None:
+    path = root / relative
+    path.write_text(path.read_text(encoding="utf-8") + text, encoding="utf-8")
 
 
 def manifest_requires_anchor(root: Path) -> None:
     value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
     value["normal_run_continuation"]["internal_anchor_required"] = True
+    write_json(root, "manifests/architect-pipeline-manifest.v1.json", value)
+
+
+def serialized_result_authorizes(root: Path) -> None:
+    value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
+    value["normal_run_continuation"]["serialized_stage_result_authorizes"] = True
     write_json(root, "manifests/architect-pipeline-manifest.v1.json", value)
 
 
@@ -77,36 +70,26 @@ def remove_research(root: Path) -> None:
     write_json(root, "manifests/architect-pipeline-manifest.v1.json", value)
 
 
-def remove_alignment_boundary(root: Path) -> None:
-    path = root / "contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md"
-    path.write_text(path.read_text(encoding="utf-8").replace("authorization_role: none", "authorization_role: required", 1), encoding="utf-8")
+def active_intake_shortcut(root: Path) -> None:
+    append(root, "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md", "\n## Active shortcut\nUse /intake → /decompose.\n")
 
 
-def reintroduce_profile_block(root: Path) -> None:
-    path = root / "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md"
-    path.write_text(path.read_text(encoding="utf-8") + "\nBLOCKED_VALIDATION_PROFILE\n", encoding="utf-8")
+def active_research_skip(root: Path) -> None:
+    append(root, "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md", "\n## Active shortcut\nSkip /research.\n")
 
 
-def skip_research_in_first_run(root: Path) -> None:
-    path = root / "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md"
-    path.write_text(path.read_text(encoding="utf-8").replace("/intake → /research → /decompose", "/intake → /decompose", 1), encoding="utf-8")
-
-
-def drop_pr35_reconciliation(root: Path) -> None:
+def remove_arch02_audit_status(root: Path) -> None:
     path = root / "STATUS.md"
-    path.write_text(path.read_text(encoding="utf-8").replace("pull_request: 35", "pull_request: 999", 1), encoding="utf-8")
+    path.write_text(path.read_text(encoding="utf-8").replace("  audit_status: merged_observed_not_independently_accepted\n", "", 1), encoding="utf-8")
 
 
-MUTATIONS: list[tuple[str, Callable[[Path], None]]] = [
-    ("wrong_contract_version", wrong_contract_version),
-    ("missing_stage_result_precondition", missing_stage_result_precondition),
-    ("restart_instead_of_continue", restart_instead_of_continue),
+FAILING_MUTATIONS: list[tuple[str, Callable[[Path], None]]] = [
     ("manifest_requires_anchor", manifest_requires_anchor),
+    ("serialized_result_authorizes", serialized_result_authorizes),
     ("remove_research", remove_research),
-    ("remove_alignment_boundary", remove_alignment_boundary),
-    ("reintroduce_profile_block", reintroduce_profile_block),
-    ("skip_research_in_first_run", skip_research_in_first_run),
-    ("drop_pr35_reconciliation", drop_pr35_reconciliation),
+    ("active_intake_shortcut", active_intake_shortcut),
+    ("active_research_skip", active_research_skip),
+    ("remove_arch02_audit_status", remove_arch02_audit_status),
 ]
 
 
@@ -118,9 +101,29 @@ def test_canonical_repository_passes() -> None:
     assert result["controlled_runtime_docs"] == 7
 
 
-@pytest.mark.parametrize(("name", "mutate"), MUTATIONS, ids=[name for name, _ in MUTATIONS])
-def test_semantic_mutations_fail_closed(tmp_path: Path, name: str, mutate: Callable[[Path], None]) -> None:
+@pytest.mark.parametrize(("name", "mutate"), FAILING_MUTATIONS, ids=[name for name, _ in FAILING_MUTATIONS])
+def test_active_semantic_mutations_fail_closed(tmp_path: Path, name: str, mutate: Callable[[Path], None]) -> None:
     fixture_root = copy_fixture(tmp_path)
     mutate(fixture_root)
     with pytest.raises(validator.ValidationError):
         validator.validate_repository(fixture_root)
+
+
+def test_explicit_shortcut_prohibition_is_accepted(tmp_path: Path) -> None:
+    fixture_root = copy_fixture(tmp_path)
+    append(
+        fixture_root,
+        "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
+        "\n## Active protection\nDo not use /intake → /decompose.\nSkipping /research is forbidden.\n",
+    )
+    validator.validate_repository(fixture_root)
+
+
+def test_historical_quotation_does_not_become_active_authority(tmp_path: Path) -> None:
+    fixture_root = copy_fixture(tmp_path)
+    append(
+        fixture_root,
+        "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
+        "\n## Historical evidence\n> A retired draft said: Use /intake → /decompose.\n> A retired draft also said: Skip /research.\n",
+    )
+    validator.validate_repository(fixture_root)
