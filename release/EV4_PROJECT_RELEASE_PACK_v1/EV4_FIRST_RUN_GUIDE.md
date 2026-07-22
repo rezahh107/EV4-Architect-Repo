@@ -1,209 +1,166 @@
 # EV4 First Run Guide
 
-Status: release_candidate_for_controlled_use
-Version: 1.2.0
+Status: release_candidate_for_controlled_use  
+Version: 1.4.1
 
----
-
-<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_START -->
 ## Fast Start
 
-In a new user-facing Architect chat with the project or repository instructions loaded, send only:
+In a new user-facing Architect chat with the Project Instructions loaded, send only:
 
 ```text
 شروع
 ```
 
-When no screenshot, section description, active run, or valid Stage Anchor is present, the expected response is exactly:
-
-<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_START -->
-```text
-EV4 Architect آماده است.
-
-برای شروع یک سکشن جدید:
-1. تصویر سکشن را ارسال کن.
-2. اگر معلوم است، مشخص کن تصویر مربوط به Desktop، Tablet یا Mobile است.
-3. محدودیت‌ها، Assetها یا رفتارهای مورد انتظار را فقط در صورت وجود اضافه کن.
-
-پس از دریافت ورودی، مسیر رسمی از اینجا شروع می‌شود:
-/intake → /research → /decompose
-
-تا پیش از دریافت ورودی، هیچ معماری، Elementor tree، مقدار دقیق یا توصیه‌ای تولید نمی‌شود.
-```
-<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_END -->
-
-The canonical machine-readable source for this response is:
+When no screenshot, section description, active run, or resumable runtime material is present, return the exact response from:
 
 ```text
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
 If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
-<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_END -->
 
----
+The controlled opening sequence is:
+
+```text
+/intake → /research → /decompose
+```
+
+Do not skip `/research`.
 
 ## Recommended First Input
 
-Upload one Elementor V4 section screenshot and optionally include:
+Upload one section screenshot and optionally include:
 
 ```text
-- Device context: Desktop, Tablet, Mobile, or unknown
-- Available assets
-- Known interaction or content requirements
-- Explicit constraints or exceptions
+Device context: Desktop, Tablet, Mobile, or unknown
+Available assets
+Known interaction or content requirements
+Explicit constraints or exceptions
 ```
 
-Do not provide details that are already obvious from the screenshot unless they are important constraints.
+Do not repeat details already visible in the screenshot unless they are important constraints.
 
-The model must run `/intake` first. It must not recommend architecture, produce an Elementor tree, or invent exact values during intake.
+## Evaluator-Derived Stage Result
 
----
-
-## After /intake
+Every Stage supplies its Stage Output to:
 
 ```text
-Current status: BLOCKED_VALIDATION_PROFILE.
-The Manifest requires /intake → /research, but /intake is not full_transaction_implemented.
-Do not continue from an Anchor or from conversation memory. Preserve the intake output and stop.
+scripts/architect_quality_runtime.py#evaluate_stage
 ```
 
----
+The evaluator derives:
 
-## After /research
+```yaml
+stage_status: pass | needs_input | blocked
+blocking_issues: []
+carried_unknowns: []
+quality_checks: {}
+next_stage: exact Manifest successor or null
+evaluation_mode:
+evaluated_stage_output_digest:
+```
+
+A producer-authored or serialized Stage Result is readable but does not authorize continuation. Resume uses the smallest available Stage Output and Run State; do not create a persistent store, immutable receipt, or Artifact registry solely for resume.
+
+Internal Anchors, Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not ordinary Stage-continuation requirements.
+
+## /intake
+
+If intake quality criteria pass and no architecture-changing question remains, continue to `/research`.
+
+If one minimum architecture-changing question remains, return `needs_input` and ask only that question.
+
+Do not recommend, score, build a tree, or invent exact values during intake.
+
+## /research
+
+Record exactly one disposition:
 
 ```text
-Current status: BLOCKED_VALIDATION_PROFILE.
-/research remains mandatory, but its executable Validation Transaction is not implemented.
-Do not authorize /research → /decompose and never bypass with /intake → /decompose.
+active_lookup_completed
+existing_evidence_sufficient
+no_platform_question
+blocked_by_missing_required_source
 ```
 
----
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. Do not require external citations, URLs, retrieval metadata, or source receipts when no platform-capability claim requires active lookup.
 
-## After /decompose
+`blocked_by_missing_required_source` blocks only when a downstream decision genuinely depends on unavailable evidence.
 
-If the decomposition looks correct, continue:
+## /decompose
 
-```text
-Continue to /architectures using the Stage Anchor.
-Generate candidate architecture families with coverage matrix, unknown propagation ledger, and no recommendation.
-```
+Continue to `/architectures` only after observed, inferred, unknown, and `not_allowed_yet` facts are separated. Do not infer the actual Elementor DOM or recommend architecture.
 
----
+## /architectures
 
-## After /architectures
+Continue to `/score-evidence` only after viable architecture families and coverage evidence exist. Do not choose a winner.
 
-```text
-Continue to /score-evidence.
-Use the rubric only.
-Use ? for missing evidence.
-Use N/A only when criterion is truly non-applicable.
-Do not convert unknowns into numbers.
-```
+## /score-evidence
 
----
+Use the approved rubric. Use `?` for missing evidence and `N/A` only when genuinely non-applicable. Do not convert unknowns into numbers or hide a recommendation.
 
-## After /score-evidence
+## /score-audit
 
-```text
-Run /score-audit.
-Check arithmetic, gate overrides, unknown handling, hidden recommendation, N/A denominator, and consistency.
-```
+Only an accepted audit state equivalent to `pass` or `pass_with_minor_flags`, with no material defect, permits `/recommend`.
 
----
+## /recommend
 
-## After /score-audit
+Select only from the audited eligible set and lock `selected_candidate_id`. User preference does not replace technical evidence.
 
-```text
-If audit passes or pass_with_minor_flags, run /recommend.
-If tie remains unresolved, ask one minimal user question.
-```
+## Unknown Lifecycle
 
----
+Active unknowns persist in Run State and cannot disappear through omission.
 
-## After /recommend
+Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
 
-```text
-Run /build-tree.
-Use naming convention:
-[section-role]__[content-group]--[variant]
-Keep meaningful content editable.
-Keep decorative overlays isolated.
-Carry unknowns forward.
-```
+## /build-tree and /implementation
 
----
+Preserve the selected candidate and approved tree. The canonical content is the existing structured Stage Output; do not create wrapper Artifacts merely to compute digests.
 
-## After /build-tree
+The evaluator computes digests from actual content. Reject missing content, fabricated SHA-like strings, `null == null`, candidate drift, and approved-tree mismatch.
 
-```text
-Run /implementation.
-Map tree to Elementor widgets, classes, variables, assets, responsive settings, and scoped CSS needs.
-Do not invent exact values.
-```
+Do not invent exact values, assets, breakpoints, interactions, or Elementor paths.
 
----
+## /final-audit
 
-## After /implementation
+Block handoff when blocker/high findings, candidate drift, unsupported exact values, missing required content, invalid responsive strategy, unresolved downstream-critical unknowns, or implementation/tree mismatch remain.
 
-```text
-Run /final-audit.
-Audit but do not repair.
-Route all defects.
-```
+## /handoff-export and /project-gate-export
 
----
+Package only accepted upstream outputs.
 
-## After /final-audit
+The terminal `/project-gate-export` pass result must come from the actual canonical Architect Stage Payload, existing Schema and semantic validation, selected-candidate consistency, existing Producer Gate exporter, actual canonical export, and contract/digest verification.
 
-```text
-Run /handoff-export.
-Produce either FINAL BUILDER HANDOFF or HANDOFF BLOCKED REPORT.
-```
+Caller-authored success Booleans cannot replace actual validation. Do not substitute `/builder-feed-export`.
 
----
+## Partial Rerun
 
-<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_START -->
-## Final Project Gate Step
+Start at the earliest Stage whose owned information changed. Invalidate dependent downstream results, preserve unaffected Run State, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
 
-`/project-gate-export` is the terminal Manifest Stage. The legal `/handoff-export → /project-gate-export` edge does not authorize continuation while `/handoff-export` remains `blocked_missing_semantics`. Run the following only after an active Registry profile and independently regenerated Bundle authorize that exact edge:
-
-```text
-Run /project-gate-export.
-Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.
-Do not substitute the legacy /builder-feed-export.
-```
-<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_END -->
-
----
+Do not require Anchor, Bundle, independent rerun authorization, or cryptographic rerun receipts.
 
 ## Quick Stop Rules
 
-Stop and repair if:
+Stop or request minimum input only for genuine quality reasons:
 
 ```text
-- Stage Anchor is missing or stale.
-- A mandatory stage in the manifest is skipped.
-- Screenshot evidence does not support a visual claim.
-- Unknown is converted into a number.
-- Recommendation appears before /recommend.
-- Meaningful content is flattened into static image/SVG.
-- Connector/mobile behavior is assumed without evidence.
-- Final audit finds blocker/high issues.
+usable project input is missing
+architecture-changing question is unanswered
+required platform evidence cannot be obtained
+mandatory Stage order is violated
+required Stage check fails or remains unknown
+observation and inference are mixed
+architecture coverage is incomplete
+score audit fails
+selected candidate changes after lock
+active unknown disappears or a critical unknown closes without resolvable evidence
+canonical Build Tree or Implementation content is missing or mismatched
+final audit has blocker/high findings
+actual canonical Project Gate payload or export is invalid
 ```
 
----
+Do not stop only because optional repository-audit carriers or repository workflow evidence are unavailable.
 
-## Current Beta Boundary
+## Current Boundary
 
-This release pack is valid for controlled real screenshot use.
-
-It is not yet validated for:
-
-```text
-live Elementor rendering
-real Elementor export JSON
-EDIS
-browser/device QA
-exact pixel matching
-```
+This release pack supports controlled architecture analysis and fail-closed final handoff generation. It does not establish live model-host enforcement, live Elementor rendering, real Elementor export JSON validity, browser/device QA, exact pixel matching, downstream acceptance, or production readiness.

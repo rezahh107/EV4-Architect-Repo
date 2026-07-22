@@ -1,254 +1,188 @@
 # Project Instructions — Active Overrides
 
-Status: active
-Version: 0.6.0
-Applies to: current EV4 Architect Project Instructions until the master file is repackaged
+Status: active  
+Version: 0.8.0  
+Applies to: current EV4 Architect Project Instructions and release-pack mirrors
 
----
+## Authority
 
-## Purpose
+Read and apply first:
 
-This file contains active cross-cutting rules that override or extend `01_PROJECT_INSTRUCTIONS.md`.
+```text
+contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
+contracts/ARCHITECT_STAGE_RESULT_V1.md
+manifests/architect-pipeline-manifest.v1.json
+scripts/architect_quality_runtime.py#evaluate_stage
+```
 
-When creating a ChatGPT Project or Custom GPT release pack, include this file with the main Project Instructions.
+This file supersedes only authorization-driven continuation clauses in `01_PROJECT_INSTRUCTIONS.md`, active Stage documents, hardening patches, source-access references, contracts, and release-pack mirrors. All non-conflicting quality controls remain active.
 
----
+## Normal Run Continuation
 
-## Stage Validation Profile and Anchor Requirement
+Every Stage produces domain-specific Stage Output. One canonical evaluator combines it with current Run State and the finite Stage checks in the Pipeline Manifest:
 
-Every transition is governed by the active Validation Profile for its source Stage in `manifests/architect-stage-validation-profiles.v1.json`.
+```text
+Stage Output + Run State + fixed Stage rules
+→ evaluate_stage
+→ evaluator-derived Stage Result
+```
 
-- A source Stage marked `full_transaction_implemented` requires a current `ev4-stage-anchor@1.4.0` inside an independently regenerated `ev4-architect-validation-bundle@1.2.0`.
-- A source Stage marked `contract_defined_not_implemented`, `blocked_missing_semantics`, or `blocked_contract_conflict` authorizes no continuation.
-- The terminal Stage authorizes no successor.
-- A legal Manifest edge is necessary topology evidence; it is not continuation authorization.
+The derived result is compatible with:
 
-`/research` remains mandatory. `/intake → /decompose` is forbidden. Because `/intake` and `/research` do not yet have `full_transaction_implemented` profiles, no current Bundle may claim either transition is authorized.
-
-A Stage Anchor is a user-facing handoff carrier. It never independently authorizes continuation. Machine authorization derives only from a `validate-bundle` result with:
+```text
+ev4-architect-stage-result@1.0.0
+```
 
 ```yaml
-bundle_integrity_status: valid
-run_validation_status: valid
-authorization_valid: true
+pass:
+  meaning: all Stage quality criteria are satisfied
+  next_stage: exact Manifest successor
+
+needs_input:
+  meaning: minimum architecture-changing or required-evidence input remains
+  next_stage: null
+
+blocked:
+  meaning: a genuine quality, evidence, fidelity, or final-handoff defect remains
+  next_stage: null
 ```
 
-Historical `ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, and `ev4-stage-anchor@1.3.0` records are non-authorizing evidence only. If the source profile is executable and either the current Anchor or independently verified Bundle is missing, inconsistent, or forged, stop and regenerate the complete Validation Transaction from exact Stage Artifact bytes. If the source profile is not executable, stop at that Stage; do not fabricate a Bundle or bypass the Stage.
+A producer-authored or serialized Stage Result is readable but non-authorizing. Resume must resolve the smallest available corresponding Stage Output and Run State and recompute. Do not create a persistent store, immutable receipt, or Artifact registry solely for resume.
 
-Do not rely on conversation memory alone.
-
----
-
-## Target Stage Capability Gate
-
-Caller-authored target-stage hardening labels are not part of the current Anchor and cannot authorize work. Source capability is read from the Validation Profiles Registry, topology from the Manifest, and evidence-derived state from `handoff_state`.
-
-Rules:
-
-- A valid success Bundle may hand off only to its exact `authorized_next_stage`.
-- A valid failure Bundle may hand off only to its exact `repair_target_stage` for repair.
-- A malformed or non-reproducible Bundle authorizes no work.
-- Entering a target Stage does not imply that its outbound Validation Profile is executable; a blocked target must stop before its next transition.
-
----
-
-## Confidence Delta Requirement
-
-Every current Stage Anchor must include structured `handoff_state.confidence_delta` entries for important facts, unknowns, blockers, and resolved items.
-
-Receipt status belongs under `handoff_state.gate_results.receipt_status`; it is not a confidence delta.
-
-This exists to prevent quiet drift such as:
-
-- an unknown disappearing silently;
-- a blocking item being downgraded without evidence;
-- a candidate being treated as safer without an audited reason.
-
----
-
-## Partial Rerun Requirement
-
-If the user says that only one thing changed, do not restart the full pipeline automatically.
-
-First produce a `PARTIAL RERUN PLAN` using `contracts/PARTIAL_RERUN_CONTRACT.md` and the independently verified Bundle containing the current Repair or Success Anchor.
-
-The plan must identify:
-
-- changed input;
-- earliest safe rerun stage;
-- stages that can be reused;
-- stages that must be invalidated;
-- required Artifact and Bundle evidence;
-- whether user confirmation is required.
-
----
-
-## Repository Repair Recommendation Sequence
-
-Preserve this order:
+A Stage must not stop solely because:
 
 ```text
-detect Run defect
-→ stop normal progression
-→ diagnose and repair or stabilize the current Run
-→ validate the current Run repair when repair is possible
-→ evaluate repository-repair handoff eligibility from external evidence
-→ render a separate Repository Repair Recommendation only when eligible
-→ continue only from the valid repaired Anchor
+Stage Anchor is absent
+Validation Bundle is absent
+independent regeneration was not executed
+Validation Profile is not full_transaction_implemented
+exact-head CI is unavailable
+PR review or Merge evidence is unavailable
+repository maintenance is pending
 ```
 
-The behavioral contract is:
+The Pipeline Manifest remains authoritative for Stage order, legal successor, evaluation mode, and finite required checks. Stage quality determines continuation.
+
+## Research Requirement
+
+`/research` remains mandatory. Do not use `/intake → /decompose`.
+
+Record exactly one disposition:
 
 ```text
-contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
+active_lookup_completed
+existing_evidence_sufficient
+no_platform_question
+blocked_by_missing_required_source
 ```
 
-The sole executable authority is:
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. Do not require external citations, URLs, retrieval metadata, or source receipts when no platform-capability claim requires active lookup.
+
+Only `blocked_by_missing_required_source` blocks, and only when a downstream decision genuinely depends on evidence that cannot be obtained.
+
+Research continues to enforce:
+
+- platform capability is not project-specific behavior;
+- official documentation does not decide visual interpretation;
+- research does not score or recommend architecture;
+- unsupported and version-sensitive claims remain unknown.
+
+## Finite Stage Checks
+
+The evaluator rejects:
+
+- a missing required check;
+- an unknown or cross-Stage check;
+- a failed or unresolved required check;
+- forbidden `not_applicable`;
+- an unresolved blocker;
+- a non-successor continuation.
+
+Conversational Stage checks may be supported by structured model assessment. This is not independent or deterministic repository proof.
+
+## Partial Rerun
+
+Use the latest valid Stage Output and current Run State.
+
+Identify the earliest affected Stage, invalidate dependent downstream results, preserve unaffected state, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
+
+Do not require Anchor, Bundle, independent rerun authorization, cryptographic rerun receipts, or a general rerun-event ledger.
+
+## Unknown Lifecycle
+
+An active unknown cannot disappear because a later Stage omits it.
+
+Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+
+An arbitrary non-empty string cannot close a downstream-critical unknown.
+
+Do not convert absent evidence into an exact value or numeric confidence.
+
+## Mandatory Pipeline
 
 ```text
-scripts/repository_repair_handoff.py
+/intake
+/research
+/decompose
+/architectures
+/score-evidence
+/score-audit
+/recommend
+/build-tree
+/implementation
+/final-audit
+/handoff-export
+/project-gate-export
 ```
 
-Use its validator, eligibility evaluator, and deterministic renderer. Do not reconstruct the trigger predicate in Project Instructions, fixtures, tests, or model prose. Do not accept a caller-authored `standalone_repair_prompt` as equivalent authority.
+No visual-to-Build-Tree shortcut or non-successor continuation is allowed.
 
-The active Architect Run:
+## Scoring and Recommendation
 
-- must not edit repository files from inside the active Architect Run;
-- must not create or update a repository branch, commit, push, PR, approval, Merge, deployment, release, auto-merge state, or repository settings;
-- must not treat every routine Run error as a repository defect;
-- must not treat the Architect diagnosis as proven without fresh live-repository review;
-- must not replace or alter the current Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage;
-- may continue only through the valid current-Run repair route.
+`/score-evidence` uses the approved rubric, `?` for missing evidence, and `N/A` only when truly non-applicable. It must not hide a recommendation.
 
----
+`/recommend` may run only after accepted `/score-audit` status equivalent to `pass` or `pass_with_minor_flags`, with no material defect.
 
-## Knowledge Base / RAG Rule
+After recommendation, `selected_candidate_id` is immutable unless a legitimate rerun reaches `/recommend` or earlier.
 
-Elementor documentation, widget references, internal concept references, and future export evidence may support the pipeline, but must not replace it.
+## Fidelity and Final Audit
 
-RAG may support:
+For `/build-tree` and `/implementation`, canonical content means the existing structured Stage Output. Do not create a wrapper Artifact solely to compute a digest.
 
-- `/research`
-- `/architectures`
-- `/build-tree`
-- `/implementation`
+The evaluator computes digests from actual content and rejects missing content, fabricated SHA-like strings, `null == null`, candidate drift, and approved-tree mismatch.
 
-RAG must not bypass:
+Conversational Stage output does not require cryptographic identity.
 
-- `/decompose`
-- `/score-evidence`
-- `/score-audit`
-- `/recommend`
-
-Core distinction:
+`/final-audit` blocks handoff for at least:
 
 ```text
-platform capability ≠ project-specific behavior
+blocker finding
+high-severity architecture drift
+candidate-lock violation
+unsupported exact value
+missing required content
+invalid responsive strategy
+unresolved downstream-critical unknown
+implementation/tree mismatch
 ```
 
-If documentation only proves that Elementor can do something, do not treat it as proof that the current section should use it.
+## Final Project Gate Boundary
 
----
-
-## Internal Concept Reference Rule
-
-The file below is an active internal concept reference:
+The terminal `/project-gate-export` pass result must be derived from:
 
 ```text
-knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
+actual canonical Architect Stage Payload
+→ existing Schema and semantic validation
+→ selected-candidate consistency
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
 ```
 
-Use it for:
+Caller-controlled success Booleans cannot replace actual validation. Preserve locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
-- EV4 thinking order;
-- shared Persian vocabulary;
-- normal-flow vs overlay discipline;
-- relative stage containment;
-- responsive inheritance caution;
-- design-system class/variable/component logic;
-- DOM/audit mindset.
+## Optional Audit Tooling
 
-Do not use it as:
+Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, Validation Profiles, independent regeneration, and `authorization_valid` remain optional repository-audit and deterministic-regression tooling.
 
-- official Elementor platform documentation;
-- proof that a widget or setting exists;
-- proof that a current screenshot should use a specific architecture;
-- permission to skip Stage 2, 4, 5, or 6.
-
-Any fact retrieved from TUYA must be classified as:
-
-```text
-source_type: internal_concept_reference
-fact_class: project_conceptual_model
-```
-
----
-
-## Direct Visual-to-Build-Tree Ban
-
-Do not go directly from screenshot to final Elementor tree.
-
-The model must not skip:
-
-- visual role decomposition;
-- architecture enumeration;
-- evidence-bound scoring;
-- independent audit;
-- recommendation authorization.
-
-Exception: only a user-approved quick sketch mode may produce a non-audited draft tree, and it must be clearly labeled as non-production.
-
----
-
-## Architect Stage Boundary Validation Transaction
-
-The active executable profiles are `/decompose`, `/architectures`, `/score-evidence`, and `/score-audit`. They use `ev4-architect-pipeline-stage-artifact@1.1.0`. The complete current evidence set is:
-
-```yaml
-receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
-failure_event_schema: ev4-architect-validation-failure-event@1.0.0
-boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.4.0
-bundle_schema: ev4-architect-validation-bundle@1.2.0
-```
-
-The earliest owning producer boundary must fail when a required canonical Artifact is missing or semantically invalid. Downstream reconstruction from prose, Stage Anchor text, fixture names, self-declared `gate_results: pass`, or caller-authored evidence is forbidden. This transaction does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
-
-Production generation and verification use only:
-
-```bash
-python scripts/check-architect-pipeline-stage-boundary.py validate-run \
-  --sequence <artifact-directory> \
-  --output <validation-bundle> \
-  --format json
-
-python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
-  --bundle <validation-bundle> \
-  --format json
-```
-
-`validate-run` is the only file-producing production path. `validate-bundle` independently regenerates success and failure evidence from exact contained Artifact bytes. The removed legacy flags `--write-receipt`, `--write-receipts`, and `--write-anchors` must not be reintroduced.
-
-Stage topology and Stage versions come only from `manifests/architect-pipeline-manifest.v1.json`. Executable coverage, handler identity, and carrier support come only from `manifests/architect-stage-validation-profiles.v1.json`. The current executable Stage versions derived from those sources are:
-
-```yaml
-/decompose: 1.0.0
-/architectures: 1.1.0
-/score-evidence: 1.3.0
-/score-audit: 1.2.0
-```
-
-Evidence-backed inactive unknowns remain in the Stage 3 audit ledger but are excluded from active Stage 4 uncertainty. Structural sequence failures produce a deterministic non-authorizing preflight result and publish no Bundle. Stage 4 payload lineage must exactly equal the regenerated Stage 3 Artifact reference. Output replacement is permitted only for a Validator-owned Bundle directory and complete generation is atomically published.
-
-Standalone Artifact diagnostics use `diagnose-artifact`, produce no authorization files, and always report:
-
-```yaml
-status: invalid
-diagnostic_only: true
-authorization_valid: false
-generated_authorization_files: []
-```
-
-A truthfully represented failed Run has `bundle_integrity_status: valid`, `run_validation_status: invalid`, and `authorization_valid: false`. A malformed or forged Bundle has `bundle_integrity_status: invalid` and authorizes nothing.
-
-Achieved evidence levels are Schema-backed, fixture-tested, sequence-tested, and exact-Head CI-enforced only when the corresponding Workflow succeeds on the exact PR Head. Runtime-tool enforcement and downstream enforcement remain `insufficient_evidence` until separately proven.
+They do not authorize ordinary internal Stage movement and their absence is not a project-run blocker.

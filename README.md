@@ -1,12 +1,12 @@
 # EV4 Architect Repo
 
-Status: Architect system active; Architect Stage Payload v1 implemented; Architect Producer Gate Export adoption merged; operator-facing Architect Project Gate exporter implemented pending independent review; Project Gate Architect-to-CE transition implemented at a pinned, fixture-verified scope; real non-synthetic handoff and current-live-head compatibility remain `insufficient_evidence`.
+Status: minimal evaluator-derived quality-first runtime implemented on PR #36; exact-Head CI and fresh rereview remain required before technical acceptance. Real non-synthetic downstream acceptance and production readiness remain `insufficient_evidence`.
 
 Role: `architecture_decision_system`
 
 ## Purpose
 
-EV4 Architect decides what should be built and preserves the selected candidate, approved structure, class intent, forbidden work, and architecture handoff.
+EV4 Architect decides what should be built and preserves the selected candidate, approved structure, class intent, forbidden work, unknowns, and architecture handoff.
 
 ```text
 Architect says what should be built.
@@ -17,22 +17,21 @@ Responsive validates post-build responsive behavior.
 
 Approved architecture is not automatically approved implementation strategy.
 
-<!-- EV4_ARCHITECT_README_QUICK_START_START -->
 ## Quick Start
 
-In a new user-facing Architect session with the repository instructions loaded, send:
+In a new user-facing Architect session with repository instructions loaded, send:
 
 ```text
 شروع
 ```
 
-If no screenshot, section description, active run, or valid Stage Anchor is present, the assistant must return the fixed intake message defined in:
+If no screenshot, section description, active run, or resumable runtime material is present, the assistant returns the fixed intake message from:
 
 ```text
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+If usable project input is supplied with the trigger, run `/intake` directly.
 
 The controlled opening sequence is:
 
@@ -40,8 +39,119 @@ The controlled opening sequence is:
 /intake → /research → /decompose
 ```
 
-See `release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md` for the operator prompts used after each stage.
-<!-- EV4_ARCHITECT_README_QUICK_START_END -->
+Do not skip `/research`.
+
+## Canonical Pipeline
+
+```text
+/intake → /research → /decompose → /architectures
+→ /score-evidence → /score-audit → /recommend
+→ /build-tree → /implementation → /final-audit
+→ /handoff-export → /project-gate-export
+```
+
+Canonical machine-readable authority:
+
+```text
+manifests/architect-pipeline-manifest.v1.json
+```
+
+`/builder-feed-export` remains a legacy compatibility output, not canonical Project Gate Producer Export.
+
+## Minimal Quality-First Continuation
+
+Active runtime authority:
+
+```text
+contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
+contracts/ARCHITECT_STAGE_RESULT_V1.md
+schemas/ev4-architect-stage-result.v1.schema.json
+scripts/architect_quality_runtime.py#evaluate_stage
+```
+
+```text
+Stage Output
++ current Run State
++ finite Manifest-owned Stage rules
+→ evaluate_stage
+→ evaluator-derived Stage Result
+```
+
+The evaluator derives:
+
+```yaml
+stage_status: pass | needs_input | blocked
+blocking_issues: []
+carried_unknowns: []
+quality_checks: {}
+next_stage: exact Manifest successor or null
+evaluation_mode:
+evaluated_stage_output_digest:
+```
+
+A producer-authored or serialized Stage Result is readable but non-authorizing. Resume recomputes from the smallest available Stage Output and Run State; it does not require a new persistent store, immutable receipt, or Artifact registry.
+
+The normal Run does not require internal Stage Anchors, Validation Bundles, independent Bundle regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, or repository maintenance.
+
+Those controls remain optional repository-development, audit, compatibility, or deterministic-regression tooling.
+
+## Quality Boundaries Preserved
+
+The runtime rejects:
+
+- mandatory Stage skipping or non-successor continuation;
+- missing, unknown, cross-Stage, failed, or unresolved required checks;
+- screenshot-to-Build-Tree shortcuts;
+- recommendation before accepted `/score-audit`;
+- hidden recommendation during scoring;
+- conversion of unknown evidence into exact values;
+- `selected_candidate_id` drift after lock;
+- silent unknown disappearance;
+- arbitrary closure of a downstream-critical unknown;
+- missing canonical Build Tree or Implementation content;
+- caller-fabricated digest authority and `null == null` fidelity;
+- implementation/approved-tree mismatch;
+- blocker/high Final Audit findings at handoff;
+- invalid canonical Project Gate payload or export;
+- legacy Builder Feed substitution.
+
+All detailed evidence, RAG/TUYA source-access, scoring, accessibility, responsive, performance, and Stage hardening controls remain active unless they conflict only on continuation authorization.
+
+## Research Stage
+
+`/research` remains mandatory and records exactly one disposition:
+
+```text
+active_lookup_completed
+existing_evidence_sufficient
+no_platform_question
+blocked_by_missing_required_source
+```
+
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. No citations, URLs, retrieval metadata, or source receipts are required when no platform-capability claim needs active lookup.
+
+Only genuinely required unavailable evidence blocks. Research establishes platform capability, not screenshot interpretation or architecture recommendation.
+
+## Unknown Lifecycle
+
+Active unknowns persist in the small Run State. Omission from later output is not resolution.
+
+Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+
+## Candidate and Content Fidelity
+
+After `/recommend`, `selected_candidate_id` is locked unless a legitimate rerun reaches `/recommend` or earlier.
+
+For `/build-tree` and `/implementation`, canonical content means the existing structured Stage Output. Do not create wrapper Artifacts solely to compute digests.
+
+```text
+no real canonical content
+→ no claimed digest
+```
+
+The evaluator computes content identities from actual canonical content and verifies Implementation against the approved Build Tree representation.
+
+Conversational Stage output does not require cryptographic identity.
 
 ## EV4 Project Gate Workflow
 
@@ -52,17 +162,20 @@ Architect output
 → needs repair: Architect Repair Package
 ```
 
-The complete planned line is:
+The terminal `/project-gate-export` boundary remains strongly fail-closed.
+
+A pass result is derived only from:
 
 ```text
-Architect → Gate → CE → Gate → Builder → Gate → Responsive → Gate
+actual canonical Architect Stage Payload
+→ existing JSON Schema and semantic validation
+→ selected-candidate consistency
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
 ```
 
-The user may submit Architect output to Project Gate. At the currently verified scope, Project Gate can validate the pinned Architect/CE contracts and produce a CE intake package or a fail-closed result with diagnostics. This fixture-tested, pinned-scope path is not evidence of a real-project handoff, compatibility with the current live heads, Builder authorization, or production readiness.
-
-The Project Gate Python verifier, Architect-to-CE CLI transition, and initial local operator UI are implemented at their documented scopes. The transition remains fixture-tested against pinned owner revisions; real non-synthetic handoff and compatibility with the current live heads are not established.
-
-## Architect Stage Payload v1
+Caller-controlled success Booleans cannot substitute for actual validation.
 
 Canonical Architect payload identity:
 
@@ -70,53 +183,7 @@ Canonical Architect payload identity:
 ev4-architect-stage-payload@1.0.0
 ```
 
-This payload is Architect-owned evidence for the common Project Gate Stage Evidence Bundle envelope. It contains selected architecture identity, selected-candidate lock evidence, approved structure model, Architect intent maps, evidence register, unresolved evidence, forbidden work, and downstream-boundary assertions.
-
-Implemented now:
-
-```text
-Architect Stage Payload v1 schema and semantic validation
-Architect Producer Gate Export adoption merged in PR #14
-Architect-owned operator exporter for architect-project-gate.json
-Project Gate Architect-to-CE orchestration and CE intake validation at a pinned, synthetic-fixture-tested scope
-```
-
-Not implemented yet:
-
-```text
-real non-synthetic Architect-to-CE handoff
-current-live-head compatibility for the Project Gate transition pins
-Builder execution authorization
-real Elementor export validation
-legacy contract retirement
-```
-
-Legacy handoff and builder-feed contracts remain available during migration and are not retired.
-
-## Architect Producer Gate Export
-
-The canonical project execution manifest is:
-
-```text
-manifests/architect-pipeline-manifest.v1.json
-```
-
-Current project execution sequence:
-
-```text
-/intake → /research → /decompose → /architectures
-→ /score-evidence → /score-audit → /recommend
-→ /build-tree → /implementation → /final-audit
-→ /handoff-export → /project-gate-export
-```
-
-`/builder-feed-export` remains a legacy compatibility output, not the canonical Producer Gate Export.
-
-`/e2e-test` and `/e2e-screenshot-validation` are validation tracks, not mandatory per-run project execution stages for Producer Gate Export emission.
-
 ## Official Project Gate Export Command
-
-The exporter accepts the real active Architect machine payload and produces one operator-facing Gate-ready file without manual JSON editing:
 
 ```bash
 python scripts/export-architect-project-gate.py \
@@ -125,43 +192,30 @@ python scripts/export-architect-project-gate.py \
   --output architect-project-gate.json
 ```
 
-It derives repository identity, branch, exact commit, schema identities, handoff target, and canonical hashes from active repository and run evidence. Invalid payloads produce no export. Synthetic, blocked, or insufficient-evidence inputs cannot produce an allowed handoff.
+Invalid, synthetic, blocked, or insufficient-evidence inputs cannot produce an allowed handoff.
 
-See `docs/ARCHITECT_PROJECT_GATE_EXPORTER.md` for deterministic identity, Git provenance, atomic writing, blocked-state, and evidence rules.
+## Optional Audit Tooling
 
-## Architect Handoff
+The Stage Anchor/Bundle contracts, Validation Profiles Registry, and `architect_validation_*` modules remain preserved for repository audit, exact-byte deterministic regression, compatibility evidence, and historical readability.
 
-Architect output should retain, when applicable:
+They are not active user-facing transition tickets.
 
-```text
-selected_candidate_id
-selected_candidate_locked
-approved_structure_tree
-approved class names and scopes
-forbidden_work
-architecture and visual intent
-known unknowns and missing evidence
-production_ready_allowed: false
+## Validation
+
+```bash
+python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0' 'PyYAML>=6.0.0'
+python scripts/check-architect-quality-runtime.py
+python scripts/check-architect-bootstrap.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
+  tests/test_architect_quality_runtime.py \
+  tests/test_architect_bootstrap_semantics.py
 ```
 
-Unproven geometry, assets, overlays, responsive behavior, interaction, Dynamic Loop, accessibility, and version-sensitive UI paths remain explicit for CE review. Silence is not proof of executability.
-
-## Authority
-
-This repository remains authoritative for its own schemas, validators, fixtures, architecture rules, stage contracts, and output semantics.
-
-EV4 Project Gate verifies the handoff. It may run official Architect validation and package existing evidence, but it does not create missing facts, change locked identity, replace Architect contracts, or silently repair the output.
-
-When evidence cannot establish responsibility:
-
-```yaml
-status: insufficient_evidence
-repair_owner: unresolved
-```
+Existing payload, governance, release-pack, and optional transaction suites remain applicable.
 
 ## Boundaries
 
-This repository does not perform interactive Elementor execution, prove constructability, complete responsive QA, or claim production readiness without downstream evidence.
+This repository does not perform interactive Elementor execution, prove constructability, complete responsive QA, establish live model-host enforcement, or claim production readiness without downstream evidence.
 
 ## Companion Repositories
 
@@ -174,59 +228,4 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 
 ## Status Authority
 
-Mutable project and stage status is maintained only in `STATUS.md`. The summary at the top of this README is derived for orientation and must not override `STATUS.md`, exact repository evidence, or the live default branch.
-
-## Architect Stage Validation Authority
-
-The canonical authority split is:
-
-```text
-Pipeline topology and Stage versions
-→ manifests/architect-pipeline-manifest.v1.json
-
-Executable Validation capability and grounding status
-→ manifests/architect-stage-validation-profiles.v1.json
-
-Semantic behavior
-→ Registry-selected handlers in scripts/architect_validation_semantics.py
-```
-
-The Registry contains every Manifest Stage exactly once and is capability metadata only; it never authorizes continuation. The currently implemented executable profiles are `/decompose` through `/score-audit`. Every other non-terminal Stage remains fail-closed with its missing semantic decisions recorded in the Registry. `/project-gate-export` is terminal.
-
-The current carrier identities are:
-
-```yaml
-artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
-receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
-failure_event_schema: ev4-architect-validation-failure-event@1.0.0
-boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.4.0
-bundle_schema: ev4-architect-validation-bundle@1.2.0
-```
-
-The only production generator is:
-
-```bash
-python scripts/check-architect-pipeline-stage-boundary.py validate-run \
-  --sequence <artifact-directory> \
-  --output <validation-bundle> \
-  --format json
-```
-
-Every Bundle must then be independently verified:
-
-```bash
-python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
-  --bundle <validation-bundle> \
-  --format json
-```
-
-`validate-bundle` regenerates both success and failure transactions from exact contained Artifact bytes and compares every deterministic file byte-for-byte. A truthfully represented failed Run has valid Bundle integrity but no authorization. A malformed, incomplete, substituted, or forged Bundle has invalid integrity.
-
-The legacy file-producing flags `--write-receipt`, `--write-receipts`, and `--write-anchors` are removed. Standalone Artifact diagnostics use `diagnose-artifact`, generate no authority files, and report `authorization_valid: false`.
-
-The executable Stage versions are derived directly from the Manifest: `/decompose@1.0.0`, `/architectures@1.1.0`, `/score-evidence@1.3.0`, and `/score-audit@1.2.0`. A Stage not marked `full_transaction_implemented` in the Registry cannot produce an authorization Bundle. Evidence-backed inactive unknowns remain audit evidence but do not propagate as active Stage 4 uncertainty. Structural sequence defects return deterministic non-authorizing preflight results without publishing a Bundle. Stage 4 payload lineage is exactly bound to the regenerated Stage 3 Artifact. Bundle replacement is allowed only for Validator-owned output and is published atomically.
-
-A user-facing Anchor never independently authorizes continuation. Historical `ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, and `ev4-stage-anchor@1.3.0` records remain historical evidence only. The current `ev4-stage-anchor@1.4.0` binds a `boundary_ref`, an optional failure-only `failure_event_ref`, and an evidence-derived `handoff_state` with structured `confidence_delta`; legal edges are checked against the Manifest and executable source capability against the Registry.
-
-Exact-Head CI establishes repository CI evidence only for the tested Head. Runtime-tool enforcement, chat-runtime enforcement, downstream rejection, real non-synthetic handoff, and production readiness remain `insufficient_evidence` unless separately proven.
+Mutable project status is maintained only in `STATUS.md`. This README is orientation and does not override live repository evidence.

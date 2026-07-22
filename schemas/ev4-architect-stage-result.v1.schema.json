@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ev4-architect-stage-result@1.0.0",
+  "title": "EV4 Architect Stage Result v1",
+  "description": "Evaluator-derived normal-run result. Historical v1 records remain readable, but no serialized Stage Result authorizes continuation until recomputed from Stage Output and Run State.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage_result_schema",
+    "run_id",
+    "stage_id",
+    "stage_version",
+    "stage_status",
+    "blocking_issues",
+    "carried_unknowns",
+    "quality_checks",
+    "next_stage",
+    "research_disposition",
+    "decision_state",
+    "runtime_context",
+    "final_audit_findings",
+    "project_gate_export"
+  ],
+  "properties": {
+    "stage_result_schema": {"const": "ev4-architect-stage-result@1.0.0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "stage_id": {"enum": ["/intake","/research","/decompose","/architectures","/score-evidence","/score-audit","/recommend","/build-tree","/implementation","/final-audit","/handoff-export","/project-gate-export"]},
+    "stage_version": {"type": "string", "minLength": 1},
+    "stage_status": {"enum": ["pass", "needs_input", "blocked"]},
+    "blocking_issues": {"type": "array", "items": {"$ref": "#/$defs/blocking_issue"}},
+    "carried_unknowns": {"type": "array", "items": {"$ref": "#/$defs/unknown"}},
+    "quality_checks": {"type": "object", "minProperties": 1, "additionalProperties": {"enum": ["pass", "fail", "not_applicable", "unknown"]}},
+    "next_stage": {"anyOf": [{"enum": ["/intake","/research","/decompose","/architectures","/score-evidence","/score-audit","/recommend","/build-tree","/implementation","/final-audit","/handoff-export","/project-gate-export"]},{"type": "null"}]},
+    "research_disposition": {"anyOf": [{"enum": ["active_lookup_required","active_lookup_completed","existing_evidence_sufficient","no_platform_question","blocked_by_missing_required_source"]},{"type": "null"}]},
+    "decision_state": {"$ref": "#/$defs/decision_state"},
+    "runtime_context": {"$ref": "#/$defs/runtime_context"},
+    "final_audit_findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "project_gate_export": {"anyOf": [{"$ref": "#/$defs/project_gate_export"},{"type": "null"}]},
+    "evaluation_mode": {"enum": ["model_assessed","validator_backed","external_boundary_verified"]},
+    "evaluated_stage_output_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "blocking_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issue_id","reason","repair_stage"],
+      "properties": {
+        "issue_id": {"type": "string","minLength": 1},
+        "reason": {"type": "string","minLength": 1},
+        "repair_stage": {"anyOf": [{"type": "string","pattern": "^/[a-z0-9-]+$"},{"type": "null"}]}
+      }
+    },
+    "unknown_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolution_type","note","resolved_at_stage","evidence_ref"],
+      "properties": {
+        "resolution_type": {"enum": ["user_confirmation","authoritative_source","validated_artifact","not_applicable"]},
+        "note": {"type": "string","minLength": 1},
+        "resolved_at_stage": {"type": "string","pattern": "^/[a-z0-9-]+$"},
+        "evidence_ref": {"anyOf": [{"type": "string","minLength": 1},{"type": "null"}]}
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unknown_id","statement","status","evidence_refs"],
+      "properties": {
+        "unknown_id": {"type": "string","minLength": 1},
+        "statement": {"type": "string","minLength": 1},
+        "status": {"enum": ["active","resolved_with_evidence","not_applicable","stale"]},
+        "evidence_refs": {"type": "array","uniqueItems": true,"items": {"type": "string","minLength": 1}},
+        "downstream_critical": {"type": "boolean"},
+        "resolution": {"anyOf": [{"$ref": "#/$defs/unknown_resolution"},{"type": "null"}]}
+      }
+    },
+    "decision_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recommendation_made","hidden_recommendation","unknown_converted_to_exact","selected_candidate_id","selected_candidate_locked","build_tree_digest","implementation_tree_digest","architecture_drift"],
+      "properties": {
+        "recommendation_made": {"type": "boolean"},
+        "hidden_recommendation": {"type": "boolean"},
+        "unknown_converted_to_exact": {"type": "boolean"},
+        "selected_candidate_id": {"anyOf": [{"type": "string","minLength": 1},{"type": "null"}]},
+        "selected_candidate_locked": {"type": "boolean"},
+        "build_tree_digest": {"anyOf": [{"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},{"type": "null"}]},
+        "approved_build_tree_digest": {"anyOf": [{"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},{"type": "null"}]},
+        "implementation_tree_digest": {"anyOf": [{"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},{"type": "null"}]},
+        "architecture_drift": {"type": "boolean"}
+      }
+    },
+    "runtime_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor_present","validation_bundle_present","independent_regeneration_executed","validation_profile_status","exact_head_ci_available","pr_review_available","repository_maintenance_required"],
+      "properties": {
+        "anchor_present": {"type": "boolean"},
+        "validation_bundle_present": {"type": "boolean"},
+        "independent_regeneration_executed": {"type": "boolean"},
+        "validation_profile_status": {"type": "string","minLength": 1},
+        "exact_head_ci_available": {"type": "boolean"},
+        "pr_review_available": {"type": "boolean"},
+        "repository_maintenance_required": {"const": false}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["finding_id","severity","reason"],
+      "properties": {
+        "finding_id": {"type": "string","minLength": 1},
+        "severity": {"enum": ["blocker","high","medium","low"]},
+        "reason": {"type": "string","minLength": 1}
+      }
+    },
+    "project_gate_export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_payload_valid","legacy_export_substituted"],
+      "properties": {
+        "canonical_payload_valid": {"type": "boolean"},
+        "legacy_export_substituted": {"type": "boolean"},
+        "source_payload_digest": {"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},
+        "export_digest": {"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},
+        "validator_identity": {"type": "string","minLength": 1},
+        "validation_result": {"enum": ["valid","insufficient_evidence"]},
+        "export_id": {"type": "string","minLength": 1}
+      }
+    }
+  }
+}

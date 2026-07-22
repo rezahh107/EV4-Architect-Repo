@@ -1,297 +1,198 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.19.0
-Status: stage_validation_authority_convergence_implemented_in_draft_pr_35_pending_exact_head_ci_and_independent_review
-Last confirmed stage: PR #33 merged into `main` at `f6f1912d06c4b6c2e0013c26bb14915a55000c80`; this repair started from exact `main` SHA `ca154ff96c793e7d8987a823e62620912fc9d2ed`, and PR #35 is Draft on `agent/repair-stage-validation-authority`
-Current next step: run all applicable Workflows on the final exact PR #35 Head, then obtain a fresh independent exact-Head review; owner-only Merge remains required
-Language: Persian reports, English technical labels allowed
-Last automation update: 2026-07-22
-
----
+Version: 0.21.2  
+Status: quality_first_runtime_root_repair_pending_exact_head_ci_and_fresh_rereview  
+Last confirmed `main`: `b433966e44bb89c7949a709728b201ce1d37ac45`  
+Current branch: `simplify/quality-first-architect-runtime`  
+Current pull request: `#36`  
+Last update: 2026-07-22
 
 ## Current Authority
 
-This file is the sole mutable authority for current project, validation-track,
-and next-step status. It does not authorize merge or replace independent review.
+This file is the sole mutable authority for current project and validation status. It does not authorize Merge or replace live GitHub evidence.
 
-The complete pre-ARCH-02 status history remains preserved byte-for-byte at:
-
-```text
-status-history/STATUS.pre-ARCH02.md
+```yaml
+repository: rezahh107/EV4-Architect-Repo
+base_branch: main
+verified_starting_main_sha: b433966e44bb89c7949a709728b201ce1d37ac45
+working_branch: simplify/quality-first-architect-runtime
+pull_request: 36
+pull_request_url: https://github.com/rezahh107/EV4-Architect-Repo/pull/36
+exact_head_authority: live GitHub PR metadata and exact-head CI
+implementation_status: root_complete_repair_implemented_pending_exact_head_ci_and_fresh_rereview
+merge_performed: false
+approval_performed: false
+deployment_performed: false
+release_performed: false
+auto_merge_enabled: false
 ```
 
-Preserved source blob:
+## PR #35 Reconciliation
 
-```text
-50cef4887bc298d7e09ded6d169bd9ba300d3c00
+```yaml
+pull_request: 35
+state: merged
+base_branch: main
+verified_base_sha: ca154ff96c793e7d8987a823e62620912fc9d2ed
+merge_commit: b433966e44bb89c7949a709728b201ce1d37ac45
+merge_status: merged
+merged_at: 2026-07-22T12:14:35Z
 ```
+
+PR #35 established the Manifest/Validation Profile authority split and deterministic Stage transaction tooling. Any previous draft or pending-Merge statement is historical.
+
+## Quality-First Runtime Root Repair
+
+```yaml
+increment_id: ARCH-QUALITY-FIRST-RUNTIME-002
+architecture: minimal_quality_driven_single_runtime
+canonical_alignment: contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
+canonical_pipeline_manifest: manifests/architect-pipeline-manifest.v1.json
+canonical_stage_result_contract: contracts/ARCHITECT_STAGE_RESULT_V1.md
+canonical_stage_result_schema: schemas/ev4-architect-stage-result.v1.schema.json
+canonical_continuation_evaluator: scripts/architect_quality_runtime.py#evaluate_stage
+full_pipeline_fixture: fixtures/architect-quality-runtime/valid/full-pipeline.json
+focused_tests: tests/test_architect_quality_runtime.py
+serialized_stage_result_authorizes: false
+```
+
+### Root defects addressed
+
+```yaml
+ARCH36_F01_project_gate_self_asserted_success: implemented_pending_rereview
+ARCH36_F02_arbitrary_unknown_closure: implemented_pending_rereview
+ARCH36_F03_fail_open_quality_checks: implemented_pending_rereview
+ARCH36_F04_null_or_fabricated_fidelity_digests: implemented_pending_rereview
+ARCH36_F05_arch02_history_removed: implemented_pending_rereview
+ARCH36_F06_context_insensitive_bootstrap_detection: implemented_pending_rereview
+```
+
+### Normal-run dependencies removed
+
+```yaml
+internal_anchor_required: false
+internal_validation_bundle_required: false
+independent_regeneration_required: false
+validation_profile_required: false
+exact_head_ci_required: false
+pr_review_required: false
+repository_maintenance_required: false
+```
+
+### Quality controls retained
+
+```yaml
+manifest_stage_order: retained
+research_stage: mandatory_with_valid_no_lookup_dispositions
+observation_inference_separation: retained
+architecture_coverage: retained
+evidence_backed_scoring: retained
+score_audit_before_recommendation: retained
+selected_candidate_lock: evaluator_enforced
+unknown_lifecycle: run_state_persistent
+build_tree_fidelity: canonical_content_digest
+implementation_fidelity: approved_tree_content_comparison
+final_audit: retained
+project_gate_export_fail_closed: actual_payload_and_export_validation
+legacy_export_substitution: forbidden
+```
+
+## Minimal Runtime Boundary
+
+The runtime contains one continuation evaluator, one finite per-Stage check authority in the Pipeline Manifest, one small Run State, and one lightweight unknown ledger.
+
+It does not add a general evidence framework, capability system, approval model, receipt chain, immutable runtime ledger, policy-version receipt, governance graph, or cryptographic identity for conversational Stages.
+
+Build Tree and Implementation digests are computed only from real canonical structured content. The terminal Project Gate result is derived from the actual Architect Stage Payload, existing canonical validators, existing Producer Gate exporter, and verified export hashes.
+
+## Optional Audit Tooling
+
+The Validation Profiles Registry, Stage Artifact/Receipt/Boundary/Failure Event/Anchor/Bundle contracts, and `architect_validation_*` modules remain preserved for repository audit, deterministic regression, compatibility evidence, and historical readability.
+
+They are not normal project-run continuation authority.
+
+## Compatibility
+
+```yaml
+pipeline_stage_inventory: unchanged
+pipeline_stage_order: unchanged
+pipeline_stage_versions: unchanged
+selected_candidate_id_semantics: preserved
+final_architect_stage_payload_contract: unchanged
+project_gate_export_contract: unchanged
+historical_stage_results: readable_but_non_authorizing
+historical_anchor_readability: preserved
+optional_bundle_tooling: preserved
+downstream_repositories_modified: false
+```
+
+## Validation State
+
+```yaml
+focused_quality_runtime_tests: pending_exact_head_ci
+bootstrap_alignment_tests: pending_exact_head_ci
+project_gate_exporter_tests: pending_exact_head_ci
+repository_exact_head_ci: pending
+full_repository_suite: pending_pull_request_ci
+independent_review: stale_after_head_change_fresh_rereview_required
+real_chat_runtime_enforcement: insufficient_evidence
+downstream_runtime_enforcement: insufficient_evidence
+production_readiness: not_claimed
+```
+
+## Historical Evidence Preserved
 
 ```yaml
 ARCH_01:
-  task_id: ARCH-01
-  implementation_status: merged
   pull_request: 28
-  final_pr_head: c8be4334a407eb86a23af9c893da44319c5f27da
   merge_commit: 5aed1358c8df98eb262986ef7bcddb3acaeaddcf
-  exporter: scripts/export-architect-project-gate.py
-  output: architect-project-gate.json
+  implementation_status: merged
 
 ARCH_02:
-  audit_status: merged_observed_not_independently_accepted
   pull_request: 29
   final_pr_head: 05f9ba12d5d64d49280ca7e596fdeed6c0f37073
-  merge_status: merged
   merge_commit: be9bdea9ae246b1587043f2582c1a950ea2a6ec5
-  merged_at: 2026-07-17T22:05:48Z
+  merge_status: merged
   github_state_evidence: observed
-  pr30_base_matches_merge_commit: true
-  confirmed_repairs:
+  audit_status: merged_observed_not_independently_accepted
+  findings_preserved:
     - ARCH02-F01
     - ARCH02-F03
     - ARCH02-F05
-  identity_decision:
-    ARCH02-F02: PATH_IS_INTENTIONAL_IDENTITY_INPUT
-  findings:
-    PRF-001: implemented_pending_rereview
-    PRF-002: implemented_pending_rereview
-    PRF-003: implemented_pending_rereview
-  independent_acceptance: not_established
+  identity_rule: PATH_IS_INTENTIONAL_IDENTITY_INPUT
   real_run_evidence: pending
   exact_merged_main_validation: insufficient_evidence
-
-ARCH_BOOTSTRAP_PR_30:
-  canonical_action_kind: repair_and_verify
-  protocol_version: v1.11.1
-  pull_request: 30
-  base_branch: main
-  base_sha: be9bdea9ae246b1587043f2582c1a950ea2a6ec5
-  working_branch: agent/architect-start-bootstrap
-  reviewed_head_sha: 51e21a2d57adc8086a0d320038aaa80993b2318a
-  review_validity_at_start: CURRENT
-  findings:
-    ARCHBOOT-F01: implemented_pending_rereview
-    ARCHBOOT-F02: implemented_pending_rereview
-  scope_gate: insufficient_evidence
-  repository_authorization_record: not_found
-  owner_authorization: not_established
-  approved_increment: not_established
   independent_acceptance: not_established
-  merge_authorized: false
-  merge_status: unmerged
-  approval_status: not_performed
-  deployment_status: not_performed
-  fresh_pr_inspector_rereview_required: true
+
+ARCH_BOOTSTRAP:
+  pull_request: 30
+  reviewed_head_sha: 51e21a2d57adc8086a0d320038aaa80993b2318a
+  scope_gate: insufficient_evidence
+
+ARCH_REPOSITORY_REPAIR_HANDOFF:
+  pull_request: 33
+  merge_commit: f6f1912d06c4b6c2e0013c26bb14915a55000c80
+
+ARCH_STAGE_VALIDATION_AUTHORITY:
+  pull_request: 35
+  merge_commit: b433966e44bb89c7949a709728b201ce1d37ac45
+  merge_status: merged
 ```
 
-## Bootstrap Repair Interpretation
-
-```text
-The bootstrap manifest is a decision-bearing contract and is validated fail-closed.
-Contract identity, version, owner, activation, trigger policy, preconditions, input behavior,
-routing actions, stable forbidden-operation identities, documentation bindings, and the final
-Project Gate instruction must remain canonical.
-Documentation blocks are derived from or byte-bound to the machine-readable manifest.
-A positive /project-gate-export instruction is required; substring presence is insufficient.
-Negative mutation tests must demonstrate rejection of semantic drift and contradictory guidance.
-
-PR #29 is merged according to authoritative GitHub state. That merge does not establish
-independent acceptance of its findings, and it does not authorize PR #30 or later increments.
-```
+The ARCH-02 block is historical evidence only. It does not reintroduce runtime authorization, exact-head, independent-review, or repository-maintenance prerequisites into normal Architect Runs.
 
 ## Evidence Boundaries
 
-The current state does not claim:
+The current PR does not claim:
 
-- final closure of ARCHBOOT-F01 or ARCHBOOT-F02;
-- independent technical acceptance of PR #30, PR #32, PR #33, or PR #35;
-- repository-backed owner authorization or an approved bootstrap increment;
-- Merge authorization, approval, release, or deployment for PR #35;
-- external model-host loading of AGENTS.md or repository instructions;
-- real conversational runtime enforcement of Repository Repair Recommendation or Stage Validation behavior;
-- automatic root-cause diagnosis or automatic repository repair;
-- repository-wide enforcement or self-healing;
-- real non-synthetic Architect-to-CE handoff;
-- current-live-head compatibility for downstream Project Gate transition pins;
-- CE acceptance;
-- Builder or Golden Path execution;
-- Windows authoritative publication;
-- browser/runtime validity;
-- release readiness;
-- production readiness.
+- real ChatGPT/model-host enforcement;
+- live Elementor rendering or export validity;
+- exact pixel matching;
+- downstream Project Gate/CE acceptance of a real non-synthetic Run;
+- Builder or Responsive completion;
+- release or production readiness;
+- Merge, approval, deployment, release, or auto-merge.
 
-Final PR-head CI and independent review evidence belongs in the PR review record because
-writing a final tested Head SHA into this file would itself create a new, unvalidated Head.
+## Next Step
 
-## ARCH-GOV-STAGE-BOUNDARY-001
-
-Status: authority_convergence_implemented_in_draft_pr_35_pending_exact_head_ci
-Scope gate: authorized for Manifest-wide topology/capability reconciliation while executable validation remains bounded to `/decompose` through `/score-audit`.
-Live baseline evidence: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`; PR #35 is the unmerged convergence repair.
-Evidence state: local Schema, Registry, deterministic Bundle, independent regeneration, topology, blocked-Stage, historical-carrier, fixture, mutation, and compatibility tests pass; final exact-Head CI and independent technical acceptance remain pending.
-Runtime enforcement: `insufficient_evidence`. Downstream enforcement: `insufficient_evidence`.
-Final Architect Stage Payload v1 authority remains unchanged.
-
-## Stage Validation Authority Convergence
-
-```yaml
-increment_id: ARCH-GOV-STAGE-VALIDATION-AUTHORITY-CONVERGENCE-001
-pull_request: 35
-draft: true
-base_branch: main
-base_sha: ca154ff96c793e7d8987a823e62620912fc9d2ed
-working_branch: agent/repair-stage-validation-authority
-final_pr_head: recorded_externally_after_final_metadata_commit
-exact_head_ci: pending_final_head
-canonical_topology_authority: manifests/architect-pipeline-manifest.v1.json
-canonical_validation_capability_authority: manifests/architect-stage-validation-profiles.v1.json
-registry_authorization_role: validation_capability_only
-implemented_transactions:
-  - /decompose
-  - /architectures
-  - /score-evidence
-  - /score-audit
-blocked_missing_semantics:
-  - /intake
-  - /research
-  - /recommend
-  - /build-tree
-  - /implementation
-  - /final-audit
-  - /handoff-export
-terminal_stage: /project-gate-export
-anchor_schema: ev4-stage-anchor@1.4.0
-bundle_schema: ev4-architect-validation-bundle@1.2.0
-historical_anchor_schema_preserved: ev4-stage-anchor@1.3.0
-historical_bundle_schema_preserved: ev4-architect-validation-bundle@1.1.0
-research_mandatory: true
-intake_to_decompose_bypass_forbidden: true
-anchor_alone_authorizes: false
-architect_run_executed: false
-selected_candidate_id_semantics_changed: false
-final_project_gate_payload_semantics_changed: false
-main_modified_directly: false
-merge_status: unmerged
-merge_authorized: false
-approval_performed: false
-auto_merge_enabled: false
-deployment_performed: false
-runtime_enforcement: insufficient_evidence
-downstream_enforcement: insufficient_evidence
-```
-
-Every non-terminal profile without a complete canonical Artifact Schema, deterministic
-semantic validator, Receipt generation, repair ownership, and independent Bundle
-regeneration remains fail-closed. A legal Manifest edge is necessary topology evidence;
-it is not continuation authorization. Final exact-Head CI belongs in the PR record because
-writing that final SHA here would itself create a new Head.
-
-## PR32 Validation Transaction Repair
-
-```yaml
-pull_request: 32
-base_branch: main
-original_reviewed_head_sha: 266f8ad0266b18a5020b9f1f4641237680c477b4
-required_integrated_main_sha: a4b6a8c57d906c69b6f5b4bc79969ffcfbac701a
-final_pr_head: c438d25a95e6c35db0700bac12ca5c255acc8ea6
-merge_commit: 8f3cc638f0b7a34b90935efcce68a3928c94309f
-merge_status: merged
-production_generate_command: validate-run
-production_verify_command: validate-bundle
-artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
-receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
-failure_event_schema: ev4-architect-validation-failure-event@1.0.0
-boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.3.0
-bundle_schema: ev4-architect-validation-bundle@1.1.0
-stage_version_map:
-  /decompose: 1.0.0
-  /architectures: 1.1.0
-  /score-evidence: 1.3.0
-  /score-audit: 1.2.0
-legacy_file_producing_paths_removed: true
-inactive_unknown_lifecycle: evidence_backed_and_not_propagated_as_active
-structural_failure_contract: deterministic_non_authorizing_preflight_no_bundle
-stage4_payload_lineage: exact_regenerated_stage3_artifact_ref
-output_replacement: validator_owned_and_atomic
-failed_stage_and_repair_target_stage_separated: true
-success_bundle_regeneration: implemented
-failure_bundle_regeneration: implemented
-focused_test_count: 92
-final_pr_head_exact_ci: recorded_success_in_pr32
-fresh_independent_pr_inspector_review: not_established
-owner_merge_required: true
-merge_authorized: false
-runtime_tool_enforced: insufficient_evidence
-downstream_enforced: insufficient_evidence
-```
-
-A valid failure Bundle truthfully represents an invalid Run with:
-
-```yaml
-bundle_integrity_status: valid
-run_validation_status: invalid
-authorization_valid: false
-```
-
-A structural preflight failure publishes no Bundle and returns:
-
-```yaml
-bundle_integrity_status: not_produced
-run_validation_status: invalid
-authorization_valid: false
-output_published: false
-```
-
-A malformed, forged, incomplete, or non-reproducible Bundle has `bundle_integrity_status: invalid` and authorizes no work. Success carriers are forbidden in failure Bundles. User-facing Anchors do not independently authorize continuation.
-
-## ARCH-GOV-REPOSITORY-REPAIR-HANDOFF-001
-
-```yaml
-increment_id: ARCH-GOV-REPOSITORY-REPAIR-HANDOFF-001
-pull_request: 33
-working_branch: feat/repository-repair-recommendation-handoff
-starting_reviewed_head: 21cab91e6bc2dfae63d5cc2e9ac25ea54b731676
-final_pr_head: 8a7757cf4b9e25ac3bb705753f0c223325da909c
-merge_commit: f6f1912d06c4b6c2e0013c26bb14915a55000c80
-merge_status: merged_observed
-github_state_evidence: observed
-change_kind: bounded_behavioral_contract_root_cause_repair
-scope_gate: authorized
-compatibility: additive_nonbreaking
-owning_contract: contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
-contract_identity: ev4-repository-repair-recommendation-handoff@1.0.0
-canonical_authorities:
-  implementation_module: scripts/repository_repair_handoff.py
-  record_validator: validate_repository_repair_handoff_record
-  eligibility_evaluator: evaluate_repository_repair_handoff_eligibility
-  prompt_renderer: render_repository_maintenance_prompt
-  rendered_prompt_validator: validate_rendered_repository_maintenance_prompt
-findings:
-  PRF-001:
-    title: incomplete_trigger_enforcement
-    implementation_state: implemented_pending_rereview
-  PRF-002:
-    title: standalone_prompt_drift_from_canonical_contract
-    implementation_state: implemented_pending_rereview
-fixture_model: data_first
-fixtures:
-  positive: 4
-  negative: 5
-  boundary: 5
-  manual_full_prompt_copies: removed_except_one_renderer_generated_golden_snapshot
-tests: tests/test_repository_repair_recommendation_handoff.py
-local_validation_state: historical_locally_validated
-exact_head_ci: not_revalidated_by_current_maintenance
-independent_review: not_established
-merge_authorization_evidence: not_established
-runtime_enforcement: insufficient_evidence
-automatic_root_cause_detection: not_implemented
-automatic_repository_repair: not_implemented
-repository_self_healing: not_implemented
-repository_wide_enforcement: not_claimed
-merge_authorized: not_established
-approval_performed: not_established
-deployment_performed: not_established
-```
-
-This increment centralizes repository-side eligibility, record validation, and deterministic prompt rendering. It does not create a new Stage, Stage Artifact, Stage Anchor authority, repair mode, runtime service, orchestration framework, automatic diagnosis, automatic repository modification path, or downstream contract change.
+Run all applicable checks on the exact live Head of PR #36. Repair relevant failures in the same PR, then obtain a fresh independent review bound to the resulting exact Head before technical acceptance or Merge.

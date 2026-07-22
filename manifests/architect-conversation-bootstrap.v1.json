@@ -1,70 +1,41 @@
 {
   "$schema": "../schemas/architect-conversation-bootstrap.v1.schema.json",
   "contract_id": "ev4-architect-conversation-bootstrap",
-  "contract_version": "1.1.0",
+  "contract_version": "1.3.0",
   "owner_repository": "rezahh107/EV4-Architect-Repo",
   "activation": {
     "mode": "new_architect_run",
     "trigger_policy_id": "ev4-architect-bootstrap-trigger-policy",
     "trigger_policy_version": "1.0.0",
-    "accepted_triggers": [
-      "شروع",
-      "شروع کن",
-      "شروع سکشن جدید",
-      "start",
-      "begin",
-      "start a new section"
-    ],
+    "accepted_triggers": ["شروع", "شروع کن", "شروع سکشن جدید", "start", "begin", "start a new section"],
     "preconditions": [
-      {
-        "precondition_id": "repository_instructions_loaded",
-        "statement": "repository instructions are loaded"
-      },
-      {
-        "precondition_id": "no_active_architect_run",
-        "statement": "no active Architect run is being continued"
-      },
-      {
-        "precondition_id": "no_valid_stage_anchor",
-        "statement": "no valid Stage Anchor has been supplied"
-      },
-      {
-        "precondition_id": "no_project_input",
-        "statement": "no screenshot or section description has been supplied"
-      }
+      {"precondition_id": "repository_instructions_loaded", "statement": "repository instructions are loaded"},
+      {"precondition_id": "no_active_architect_run", "statement": "no active Architect run is being continued"},
+      {"precondition_id": "no_resumable_runtime_material", "statement": "no resolvable prior Stage Output and Run State have been supplied"},
+      {"precondition_id": "no_project_input", "statement": "no screenshot or section description has been supplied"}
     ]
   },
   "bootstrap_response": "EV4 Architect آماده است.\n\nبرای شروع یک سکشن جدید:\n1. تصویر سکشن را ارسال کن.\n2. اگر معلوم است، مشخص کن تصویر مربوط به Desktop، Tablet یا Mobile است.\n3. محدودیت‌ها، Assetها یا رفتارهای مورد انتظار را فقط در صورت وجود اضافه کن.\n\nپس از دریافت ورودی، مسیر رسمی از اینجا شروع می‌شود:\n/intake → /research → /decompose\n\nتا پیش از دریافت ورودی، هیچ معماری، Elementor tree، مقدار دقیق یا توصیه‌ای تولید نمی‌شود.",
   "first_stage": "/intake",
-  "initial_sequence": [
-    "/intake",
-    "/research",
-    "/decompose"
-  ],
+  "initial_sequence": ["/intake", "/research", "/decompose"],
   "input_present_behavior": {
     "trigger_with_screenshot_or_section_description": {
       "action_id": "run_intake_without_repeating_bootstrap_questions",
       "statement": "If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input."
     },
     "do_not_ask_again_for": [
-      {
-        "constraint_id": "visible_screenshot_information",
-        "statement": "information already visible in the supplied screenshot"
-      },
-      {
-        "constraint_id": "user_supplied_constraints",
-        "statement": "constraints already supplied by the user"
-      }
+      {"constraint_id": "visible_screenshot_information", "statement": "information already visible in the supplied screenshot"},
+      {"constraint_id": "user_supplied_constraints", "statement": "constraints already supplied by the user"}
     ]
   },
   "routing_rules": {
-    "valid_stage_anchor_present": {
-      "action_id": "continue_from_anchor_without_restarting",
-      "statement": "If a valid Stage Anchor is present, do not restart the run. Continue only from the anchor's authorized target stage."
+    "resumable_stage_result_present": {
+      "action_id": "recompute_from_stage_output_and_run_state",
+      "statement": "If a serialized Stage Result is supplied, treat it as a resume hint only. Resolve the smallest available corresponding Stage Output and Run State, recompute through `evaluate_stage`, and continue only from the newly derived result. Do not require persistent storage, an Anchor, or a Bundle."
     },
-    "latest_stage_output_without_valid_anchor": {
-      "action_id": "request_or_regenerate_required_anchor",
-      "statement": "If a prior stage output exists but its required Stage Anchor is missing or stale, request or regenerate the required anchor instead of guessing from conversation memory."
+    "latest_stage_output_without_stage_result": {
+      "action_id": "evaluate_stage_output_with_run_state",
+      "statement": "If a prior Stage Output exists without a Stage Result, evaluate it with the current Run State through `evaluate_stage`; do not require an Anchor, Bundle, receipt, or repository-maintenance evidence."
     },
     "explicit_repository_maintenance_request": {
       "action_id": "repository_maintenance_mode_not_project_run",
@@ -72,37 +43,19 @@
     }
   },
   "before_input_forbidden": [
-    {
-      "operation_id": "run_any_pipeline_stage",
-      "statement": "Do not run any pipeline stage before usable project input exists."
-    },
-    {
-      "operation_id": "recommend_architecture",
-      "statement": "Do not recommend architecture before usable project input exists."
-    },
-    {
-      "operation_id": "produce_elementor_tree",
-      "statement": "Do not produce an Elementor tree before usable project input exists."
-    },
-    {
-      "operation_id": "invent_exact_values",
-      "statement": "Do not invent exact values before usable project input exists."
-    },
-    {
-      "operation_id": "claim_stage_anchor",
-      "statement": "Do not emit or claim a Stage Anchor before a pipeline stage has produced one."
-    },
-    {
-      "operation_id": "claim_builder_or_production_readiness",
-      "statement": "Do not claim Builder readiness, responsive completion, or production readiness from bootstrap state."
-    }
+    {"operation_id": "run_any_pipeline_stage", "statement": "Do not run any pipeline stage before usable project input exists."},
+    {"operation_id": "recommend_architecture", "statement": "Do not recommend architecture before usable project input exists."},
+    {"operation_id": "produce_elementor_tree", "statement": "Do not produce an Elementor tree before usable project input exists."},
+    {"operation_id": "invent_exact_values", "statement": "Do not invent exact values before usable project input exists."},
+    {"operation_id": "trust_serialized_stage_result", "statement": "Do not treat a serialized or caller-authored Stage Result as continuation authority."},
+    {"operation_id": "claim_builder_or_production_readiness", "statement": "Do not claim Builder readiness, responsive completion, or production readiness from bootstrap state."}
   ],
   "final_project_gate_instruction": {
     "stage_id": "/project-gate-export",
     "statement_lines": [
       "Run /project-gate-export.",
-      "Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.",
-      "Do not substitute the legacy /builder-feed-export."
+      "Validate the actual canonical Architect Stage Payload and actual Producer Gate export through the existing fail-closed chain.",
+      "Do not substitute the legacy /builder-feed-export or caller-authored success Booleans."
     ]
   }
 }

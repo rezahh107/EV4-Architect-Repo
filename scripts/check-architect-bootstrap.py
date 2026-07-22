@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed validation for the EV4 Architect conversation bootstrap contract."""
-
+"""Fail-closed validation for EV4 Architect bootstrap and runtime authority."""
 from __future__ import annotations
 
 import argparse
@@ -8,47 +7,31 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
 BOOTSTRAP_REL = Path("manifests/architect-conversation-bootstrap.v1.json")
 SCHEMA_REL = Path("schemas/architect-conversation-bootstrap.v1.schema.json")
 PIPELINE_REL = Path("manifests/architect-pipeline-manifest.v1.json")
+ALIGNMENT_REL = Path("contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md")
 AGENTS_REL = Path("AGENTS.md")
 README_REL = Path("README.md")
 STATUS_REL = Path("STATUS.md")
+OVERRIDES_REL = Path("02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md")
 FIRST_RUN_REL = Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md")
-
-RESPONSE_START = "<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_START -->"
-RESPONSE_END = "<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_END -->"
-ROUTING_START = "<!-- EV4_ARCHITECT_BOOTSTRAP_ROUTING_START -->"
-ROUTING_END = "<!-- EV4_ARCHITECT_BOOTSTRAP_ROUTING_END -->"
-README_START = "<!-- EV4_ARCHITECT_README_QUICK_START_START -->"
-README_END = "<!-- EV4_ARCHITECT_README_QUICK_START_END -->"
-FIRST_RUN_FAST_START = "<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_START -->"
-FIRST_RUN_FAST_END = "<!-- EV4_ARCHITECT_FIRST_RUN_FAST_START_END -->"
-FINAL_GATE_START = "<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_START -->"
-FINAL_GATE_END = "<!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_END -->"
+PROJECT_INSTRUCTIONS_REL = Path("release/EV4_PROJECT_RELEASE_PACK_v1/PROJECT_INSTRUCTIONS_FINAL.md")
+CORE_BUNDLE_REL = Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CORE_CONTRACTS_BUNDLE.md")
+PROTOCOLS_REL = Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_STAGE_PROTOCOLS_BUNDLE.md")
 
 EXPECTED_CONTRACT_ID = "ev4-architect-conversation-bootstrap"
-EXPECTED_CONTRACT_VERSION = "1.1.0"
+EXPECTED_CONTRACT_VERSION = "1.3.0"
 EXPECTED_OWNER = "rezahh107/EV4-Architect-Repo"
-EXPECTED_ACTIVATION_MODE = "new_architect_run"
-EXPECTED_TRIGGER_POLICY_ID = "ev4-architect-bootstrap-trigger-policy"
-EXPECTED_TRIGGER_POLICY_VERSION = "1.0.0"
-EXPECTED_TRIGGERS = [
-    "شروع",
-    "شروع کن",
-    "شروع سکشن جدید",
-    "start",
-    "begin",
-    "start a new section",
-]
+EXPECTED_TRIGGERS = ["شروع", "شروع کن", "شروع سکشن جدید", "start", "begin", "start a new section"]
 EXPECTED_PRECONDITION_IDS = [
     "repository_instructions_loaded",
     "no_active_architect_run",
-    "no_valid_stage_anchor",
+    "no_resumable_runtime_material",
     "no_project_input",
 ]
 EXPECTED_FORBIDDEN_IDS = [
@@ -56,26 +39,64 @@ EXPECTED_FORBIDDEN_IDS = [
     "recommend_architecture",
     "produce_elementor_tree",
     "invent_exact_values",
-    "claim_stage_anchor",
+    "trust_serialized_stage_result",
     "claim_builder_or_production_readiness",
 ]
 EXPECTED_ROUTING_ACTIONS = {
-    "valid_stage_anchor_present": "continue_from_anchor_without_restarting",
-    "latest_stage_output_without_valid_anchor": "request_or_regenerate_required_anchor",
+    "resumable_stage_result_present": "recompute_from_stage_output_and_run_state",
+    "latest_stage_output_without_stage_result": "evaluate_stage_output_with_run_state",
     "explicit_repository_maintenance_request": "repository_maintenance_mode_not_project_run",
 }
 EXPECTED_INPUT_ACTION = "run_intake_without_repeating_bootstrap_questions"
-
-STALE_OR_CONTRADICTORY_PATTERNS = (
-    re.compile(r"Start with /intake and /decompose only\.", re.IGNORECASE),
-    re.compile(r"/intake\s*→\s*/decompose"),
-    re.compile(r"Do not run\s+`?/project-gate-export`?", re.IGNORECASE),
-    re.compile(r"skip\s+`?/research`?", re.IGNORECASE),
+REQUIRED_FALSE_CONTINUATION_FIELDS = (
+    "internal_anchor_required",
+    "internal_validation_bundle_required",
+    "independent_regeneration_required",
+    "validation_profile_required",
+    "exact_head_ci_required",
+    "pr_review_required",
+    "repository_maintenance_required",
+)
+CONTROLLED_RUNTIME_DOCS = (
+    AGENTS_REL,
+    README_REL,
+    OVERRIDES_REL,
+    FIRST_RUN_REL,
+    PROJECT_INSTRUCTIONS_REL,
+    CORE_BUNDLE_REL,
+    PROTOCOLS_REL,
+)
+FORBIDDEN_ACTIVE_AUTHORIZATION_PATTERNS = (
+    re.compile(r"continue only from the anchor's authorized target stage", re.IGNORECASE),
+    re.compile(r"request or regenerate the required anchor", re.IGNORECASE),
+    re.compile(r"A legal Manifest edge is not authorization", re.IGNORECASE),
+    re.compile(r"BLOCKED_VALIDATION_PROFILE"),
+    re.compile(r"no current Bundle may claim", re.IGNORECASE),
+)
+REQUIRED_ALIGNMENT_TERMS = (
+    "active_runtime_role: optional_resume_checkpoint",
+    "authorization_role: none",
+    "full_transaction_implemented",
+    "Stage quality determines progression",
+    "final Project Gate boundary remains fail-closed",
+    "evaluate_stage",
+    "serialized Stage Result",
+)
+NEGATION_MARKERS = (
+    "do not",
+    "don't",
+    "must not",
+    "never",
+    "forbidden",
+    "prohibited",
+    "not allowed",
+    "نباید",
+    "ممنوع",
 )
 
 
 class ValidationError(RuntimeError):
-    """Raised when bootstrap validation fails closed."""
+    pass
 
 
 def require(condition: bool, message: str) -> None:
@@ -84,18 +105,14 @@ def require(condition: bool, message: str) -> None:
 
 
 def load_json(root: Path, relative: Path) -> dict[str, Any]:
-    path = root / relative
     try:
-        with path.open(encoding="utf-8") as handle:
-            data = json.load(handle)
+        value = json.loads((root / relative).read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ValidationError(f"missing required file: {relative.as_posix()}") from exc
     except json.JSONDecodeError as exc:
-        raise ValidationError(
-            f"invalid JSON in {relative.as_posix()}: line {exc.lineno}, column {exc.colno}"
-        ) from exc
-    require(isinstance(data, dict), f"{relative.as_posix()} must contain a JSON object")
-    return data
+        raise ValidationError(f"invalid JSON in {relative.as_posix()}: line {exc.lineno}, column {exc.colno}") from exc
+    require(isinstance(value, dict), f"{relative.as_posix()} must contain a JSON object")
+    return value
 
 
 def read_text(root: Path, relative: Path) -> str:
@@ -105,109 +122,51 @@ def read_text(root: Path, relative: Path) -> str:
         raise ValidationError(f"missing required file: {relative.as_posix()}") from exc
 
 
-def normalize_text(value: str) -> str:
-    return value.replace("\r\n", "\n").strip()
-
-
-def extract_marked_region(
-    document: str,
-    *,
-    start_marker: str,
-    end_marker: str,
-    source: Path,
-) -> str:
-    require(
-        document.count(start_marker) == 1 and document.count(end_marker) == 1,
-        f"{source.as_posix()} must contain exactly one {start_marker} / {end_marker} pair",
-    )
-    start = document.index(start_marker) + len(start_marker)
-    end = document.index(end_marker, start)
-    require(start < end, f"{source.as_posix()} has reversed controlled-section markers")
-    return normalize_text(document[start:end])
-
-
-def extract_marked_fenced_text(
-    document: str,
-    *,
-    start_marker: str,
-    end_marker: str,
-    source: Path,
-) -> str:
-    region = extract_marked_region(
-        document,
-        start_marker=start_marker,
-        end_marker=end_marker,
-        source=source,
-    )
-    lines = region.splitlines()
-    require(
-        len(lines) >= 3 and lines[0].strip() == "```text" and lines[-1].strip() == "```",
-        f"{source.as_posix()} controlled text must use exactly one outer ```text fence",
-    )
-    return normalize_text("\n".join(lines[1:-1]))
-
-
-def schema_error_message(error: Any) -> str:
-    path = ".".join(str(part) for part in error.absolute_path) or "<root>"
-    return f"bootstrap schema violation at {path}: {error.message}"
-
-
-def validate_schema(bootstrap: dict[str, Any], schema: dict[str, Any]) -> None:
-    validator = Draft202012Validator(schema)
-    errors = sorted(validator.iter_errors(bootstrap), key=lambda item: list(item.absolute_path))
-    require(not errors, schema_error_message(errors[0]) if errors else "bootstrap schema validation failed")
-
-
 def ordered_ids(items: Any, *, id_key: str, field_name: str) -> list[str]:
     require(isinstance(items, list), f"{field_name} must be an array")
     result: list[str] = []
     for index, item in enumerate(items):
         require(isinstance(item, dict), f"{field_name}[{index}] must be an object")
         value = item.get(id_key)
-        require(isinstance(value, str) and value, f"{field_name}[{index}].{id_key} must be a non-empty string")
+        require(isinstance(value, str) and value, f"{field_name}[{index}].{id_key} must be non-empty")
         result.append(value)
-    require(len(result) == len(set(result)), f"{field_name} contains duplicate stable identities")
+    require(len(result) == len(set(result)), f"{field_name} contains duplicate identities")
     return result
 
 
-def render_agents_routing(bootstrap: dict[str, Any]) -> str:
-    input_rule = bootstrap["input_present_behavior"]["trigger_with_screenshot_or_section_description"]
-    routing = bootstrap["routing_rules"]
-    lines = [
-        "trigger_with_screenshot_or_section_description:",
-        input_rule["statement"],
-        "",
-        "valid_stage_anchor_present:",
-        routing["valid_stage_anchor_present"]["statement"],
-        "",
-        "latest_stage_output_without_valid_anchor:",
-        routing["latest_stage_output_without_valid_anchor"]["statement"],
-        "",
-        "explicit_repository_maintenance_request:",
-        routing["explicit_repository_maintenance_request"]["statement"],
-        "",
-        "before_input_forbidden:",
-    ]
-    for item in bootstrap["before_input_forbidden"]:
-        lines.append(f"- {item['operation_id']}: {item['statement']}")
-    return "\n".join(lines)
+def _historical_section(section: str) -> bool:
+    lowered = section.lower()
+    return any(term in lowered for term in ("historical", "history", "archive", "legacy evidence"))
 
 
-def render_final_gate(bootstrap: dict[str, Any]) -> str:
-    return "\n".join(bootstrap["final_project_gate_instruction"]["statement_lines"])
+def _negated(line: str) -> bool:
+    lowered = line.lower()
+    return any(marker in lowered for marker in NEGATION_MARKERS)
 
 
-def reject_contradictions(sections: Iterable[tuple[str, str]]) -> None:
-    for label, text in sections:
-        for pattern in STALE_OR_CONTRADICTORY_PATTERNS:
-            match = pattern.search(text)
-            if match:
-                phrase = match.group(0)
-                if phrase.lower().startswith("skip") and "Do not skip" in text:
-                    continue
-                raise ValidationError(
-                    f"contradictory instruction in controlled section {label}: {phrase!r}"
-                )
+def reject_active_shortcuts(label: str, text: str) -> None:
+    """Reject active shortcuts while accepting prohibitions and historical quotations."""
+    section = ""
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("#"):
+            section = stripped.lstrip("#").strip()
+        if not stripped or stripped.startswith(">") or _historical_section(section):
+            continue
+        normalized = stripped.replace("`", "")
+        if re.search(r"/intake\s*→\s*/decompose", normalized, re.IGNORECASE) and not _negated(normalized):
+            raise ValidationError(f"contradictory active instruction in {label}: {stripped!r}")
+        if re.search(r"\bskip(?:ping)?\s+/research\b", normalized, re.IGNORECASE) and not _negated(normalized):
+            raise ValidationError(f"contradictory active instruction in {label}: {stripped!r}")
+        if re.search(r"do not run\s+/project-gate-export", normalized, re.IGNORECASE):
+            raise ValidationError(f"contradictory active instruction in {label}: {stripped!r}")
+
+
+def reject_authorization_patterns(label: str, text: str) -> None:
+    for pattern in FORBIDDEN_ACTIVE_AUTHORIZATION_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            raise ValidationError(f"contradictory active instruction in {label}: {match.group(0)!r}")
 
 
 def validate_repository(root: Path) -> dict[str, Any]:
@@ -215,187 +174,99 @@ def validate_repository(root: Path) -> dict[str, Any]:
     bootstrap = load_json(root, BOOTSTRAP_REL)
     schema = load_json(root, SCHEMA_REL)
     pipeline = load_json(root, PIPELINE_REL)
-    agents = read_text(root, AGENTS_REL)
-    readme = read_text(root, README_REL)
+    alignment = read_text(root, ALIGNMENT_REL)
+    docs = {path: read_text(root, path) for path in CONTROLLED_RUNTIME_DOCS}
     status = read_text(root, STATUS_REL)
-    first_run = read_text(root, FIRST_RUN_REL)
 
-    validate_schema(bootstrap, schema)
-
+    schema_errors = sorted(Draft202012Validator(schema).iter_errors(bootstrap), key=lambda item: list(item.absolute_path))
+    require(not schema_errors, f"bootstrap schema violation: {schema_errors[0].message if schema_errors else 'unknown'}")
     require(bootstrap["contract_id"] == EXPECTED_CONTRACT_ID, "wrong bootstrap contract_id")
     require(bootstrap["contract_version"] == EXPECTED_CONTRACT_VERSION, "wrong bootstrap contract_version")
     require(bootstrap["owner_repository"] == EXPECTED_OWNER, "wrong bootstrap owner_repository")
 
     activation = bootstrap["activation"]
-    require(activation["mode"] == EXPECTED_ACTIVATION_MODE, "wrong bootstrap activation.mode")
-    require(activation["trigger_policy_id"] == EXPECTED_TRIGGER_POLICY_ID, "wrong trigger policy identity")
-    require(
-        activation["trigger_policy_version"] == EXPECTED_TRIGGER_POLICY_VERSION,
-        "wrong trigger policy version",
-    )
-    triggers = activation["accepted_triggers"]
-    require(all(isinstance(item, str) and item for item in triggers), "all canonical triggers must be non-empty strings")
-    require(triggers == EXPECTED_TRIGGERS, "accepted_triggers must exactly match the canonical trigger policy")
-    require(len(triggers) == len(set(triggers)), "accepted_triggers contains duplicates")
-    require(
-        ordered_ids(activation["preconditions"], id_key="precondition_id", field_name="activation.preconditions")
-        == EXPECTED_PRECONDITION_IDS,
-        "activation.preconditions must preserve every canonical precondition identity and order",
-    )
-
+    require(activation["mode"] == "new_architect_run", "wrong activation mode")
+    require(activation["accepted_triggers"] == EXPECTED_TRIGGERS, "canonical trigger policy drift")
+    require(ordered_ids(activation["preconditions"], id_key="precondition_id", field_name="activation.preconditions") == EXPECTED_PRECONDITION_IDS, "bootstrap precondition identity/order drift")
     input_rule = bootstrap["input_present_behavior"]["trigger_with_screenshot_or_section_description"]
-    require(input_rule["action_id"] == EXPECTED_INPUT_ACTION, "wrong screenshot-present bootstrap action")
+    require(input_rule["action_id"] == EXPECTED_INPUT_ACTION, "wrong screenshot-present action")
     routing = bootstrap["routing_rules"]
-    require(set(routing) == set(EXPECTED_ROUTING_ACTIONS), "routing_rules keys differ from the canonical set")
+    require(set(routing) == set(EXPECTED_ROUTING_ACTIONS), "routing rule identity drift")
     for key, action_id in EXPECTED_ROUTING_ACTIONS.items():
         require(routing[key]["action_id"] == action_id, f"wrong routing action for {key}")
+    require(ordered_ids(bootstrap["before_input_forbidden"], id_key="operation_id", field_name="before_input_forbidden") == EXPECTED_FORBIDDEN_IDS, "forbidden operation identity/order drift")
 
-    require(
-        ordered_ids(bootstrap["before_input_forbidden"], id_key="operation_id", field_name="before_input_forbidden")
-        == EXPECTED_FORBIDDEN_IDS,
-        "before_input_forbidden must preserve every canonical operation identity and order",
-    )
+    continuation = pipeline.get("normal_run_continuation")
+    require(isinstance(continuation, dict), "Manifest missing normal_run_continuation")
+    require(continuation.get("model") == "quality_driven", "pipeline continuation model drift")
+    require(continuation.get("continuation_authority") == "scripts/architect_quality_runtime.py#evaluate_stage", "canonical evaluator authority drift")
+    require(continuation.get("serialized_stage_result_authorizes") is False, "serialized Stage Result must not authorize")
+    for field in REQUIRED_FALSE_CONTINUATION_FIELDS:
+        require(continuation.get(field) is False, f"normal_run_continuation.{field} must be false")
 
     stages = pipeline.get("project_execution_stages")
-    require(isinstance(stages, list) and len(stages) >= 4, "pipeline manifest must define project stages")
-    bootstrap_initial = bootstrap.get("initial_sequence")
-    require(
-        isinstance(bootstrap_initial, list) and bootstrap_initial,
-        "bootstrap initial_sequence must be a non-empty derived Manifest prefix",
-    )
-    initial_stages = stages[: len(bootstrap_initial)]
-    initial_ids = [stage.get("stage_id") if isinstance(stage, dict) else None for stage in initial_stages]
-    require(
-        bootstrap_initial == initial_ids,
-        "bootstrap initial_sequence differs from the Pipeline Manifest prefix",
-    )
-    for stage in initial_stages:
-        require(stage.get("mandatory") is True, f"initial stage {stage.get('stage_id')} must remain mandatory")
-    require(bootstrap["first_stage"] == initial_ids[0], "bootstrap first_stage differs from pipeline manifest")
-    require("/research" in initial_ids, "mandatory /research is missing from the bootstrap Manifest prefix")
+    require(isinstance(stages, list) and len(stages) == 12, "Manifest must preserve 12 mandatory Stages")
+    stage_ids = [stage.get("stage_id") for stage in stages]
+    require(len(stage_ids) == len(set(stage_ids)), "duplicate Stage identity")
+    require(all(stage.get("mandatory") is True for stage in stages), "all project Stages must remain mandatory")
+    for index, stage in enumerate(stages):
+        require(isinstance(stage.get("required_quality_checks"), list) and stage["required_quality_checks"], f"{stage.get('stage_id')} missing finite required checks")
+        require(len(stage["required_quality_checks"]) == len(set(stage["required_quality_checks"])), f"{stage.get('stage_id')} duplicate checks")
+        if index < len(stages) - 1:
+            require(stage.get("next_stage") == stages[index + 1].get("stage_id"), f"illegal successor at {stage.get('stage_id')}")
+    require(stages[-1].get("next_stage") is None, "terminal Stage must have no successor")
 
-    final_stage = stages[-1]
-    require(isinstance(final_stage, dict), "final pipeline stage must be an object")
-    final_stage_id = pipeline.get("final_project_gate_export_stage")
-    require(
-        isinstance(final_stage_id, str) and final_stage_id,
-        "pipeline final_project_gate_export_stage must be a non-empty string",
-    )
-    require(
-        final_stage.get("stage_id") == final_stage_id,
-        "pipeline final Project Gate identity differs from its terminal Manifest Stage",
-    )
-    require(final_stage.get("mandatory") is True, "final Project Gate stage must remain mandatory")
-    require(final_stage.get("next_stage") is None, "final Project Gate stage must terminate the project sequence")
-    require(
-        bootstrap["final_project_gate_instruction"]["stage_id"] == final_stage_id,
-        "bootstrap final Project Gate stage identity differs from the Pipeline Manifest",
-    )
+    initial = bootstrap["initial_sequence"]
+    require(initial == stage_ids[: len(initial)], "bootstrap initial_sequence differs from Manifest prefix")
+    require(initial == ["/intake", "/research", "/decompose"], "mandatory /research missing")
+    require(bootstrap["first_stage"] == "/intake", "bootstrap first Stage drift")
+    final_stage = pipeline["final_project_gate_export_stage"]
+    require(final_stage == stage_ids[-1] == "/project-gate-export", "terminal Project Gate identity drift")
+    require(bootstrap["final_project_gate_instruction"]["stage_id"] == final_stage, "bootstrap final Stage drift")
+    require(bootstrap["final_project_gate_instruction"]["statement_lines"][0] == "Run /project-gate-export.", "final Project Gate instruction must be positive")
 
-    response = bootstrap["bootstrap_response"]
-    response_agents = extract_marked_fenced_text(
-        agents, start_marker=RESPONSE_START, end_marker=RESPONSE_END, source=AGENTS_REL
-    )
-    response_first_run = extract_marked_fenced_text(
-        first_run, start_marker=RESPONSE_START, end_marker=RESPONSE_END, source=FIRST_RUN_REL
-    )
-    require(response_agents == normalize_text(response), "AGENTS.md bootstrap response differs byte-for-byte")
-    require(response_first_run == normalize_text(response), "First Run bootstrap response differs byte-for-byte")
-
-    expected_routing = normalize_text(render_agents_routing(bootstrap))
-    actual_routing = extract_marked_fenced_text(
-        agents, start_marker=ROUTING_START, end_marker=ROUTING_END, source=AGENTS_REL
-    )
-    require(actual_routing == expected_routing, "AGENTS.md routing block differs from the machine-readable contract")
-
-    expected_gate = normalize_text(render_final_gate(bootstrap))
-    actual_gate_region = extract_marked_region(
-        first_run, start_marker=FINAL_GATE_START, end_marker=FINAL_GATE_END, source=FIRST_RUN_REL
-    )
-    gate_fences = re.findall(r"```text\n(.*?)\n```", actual_gate_region, flags=re.DOTALL)
-    require(len(gate_fences) == 1, "Final Project Gate section must contain exactly one ```text instruction block")
-    require(normalize_text(gate_fences[0]) == expected_gate, "Final Project Gate instruction is not the positive canonical instruction")
-    require(expected_gate.splitlines()[0] == "Run /project-gate-export.", "canonical Project Gate instruction must positively run the stage")
-
+    for term in REQUIRED_ALIGNMENT_TERMS:
+        require(term in alignment, f"Alignment Contract missing required term: {term}")
     manifest_ref = BOOTSTRAP_REL.as_posix()
-    for label, document in (("AGENTS.md", agents), ("README.md", readme), ("EV4_FIRST_RUN_GUIDE.md", first_run)):
-        require(manifest_ref in document, f"{label} must reference the canonical bootstrap manifest")
-
-    sequence_text = " → ".join(initial_ids)
-    require(sequence_text in agents, "AGENTS.md must show the canonical initial sequence")
-    require(sequence_text in readme, "README.md must show the canonical initial sequence")
-    require(sequence_text in first_run, "First Run guide must show the canonical initial sequence")
-    require("Do not skip `/research`." in agents, "AGENTS.md must explicitly prohibit skipping /research")
-
-    readme_controlled = extract_marked_region(
-        readme, start_marker=README_START, end_marker=README_END, source=README_REL
-    )
-    first_run_fast = extract_marked_region(
-        first_run, start_marker=FIRST_RUN_FAST_START, end_marker=FIRST_RUN_FAST_END, source=FIRST_RUN_REL
-    )
+    sequence_text = " → ".join(initial)
     input_statement = input_rule["statement"]
-    require(input_statement in readme_controlled, "README Quick Start does not match screenshot-present behavior")
-    require(input_statement in first_run_fast, "First Run Fast Start does not match screenshot-present behavior")
+    for relative, document in docs.items():
+        reject_active_shortcuts(relative.as_posix(), document)
+        reject_authorization_patterns(relative.as_posix(), document)
+        require("/research" in document, f"{relative} must preserve /research")
+        require("/project-gate-export" in document, f"{relative} must preserve terminal export")
+    require(manifest_ref in docs[AGENTS_REL], "AGENTS.md must reference bootstrap Manifest")
+    require(manifest_ref in docs[README_REL], "README.md must reference bootstrap Manifest")
+    require(manifest_ref in docs[FIRST_RUN_REL], "First Run Guide must reference bootstrap Manifest")
+    require(sequence_text in docs[AGENTS_REL], "AGENTS.md initial sequence drift")
+    require(sequence_text in docs[README_REL], "README initial sequence drift")
+    require(sequence_text in docs[FIRST_RUN_REL], "First Run initial sequence drift")
+    require(input_statement in docs[FIRST_RUN_REL], "First Run screenshot routing drift")
+    require("Do not skip `/research`." in docs[AGENTS_REL], "AGENTS must explicitly prohibit /research skipping")
 
-    reject_contradictions(
-        (
-            (
-                "AGENTS bootstrap",
-                extract_marked_region(
-                    agents, start_marker=RESPONSE_START, end_marker=ROUTING_END, source=AGENTS_REL
-                ),
-            ),
-            ("README Quick Start", readme_controlled),
-            ("First Run Fast Start", first_run_fast),
-            ("First Run Final Project Gate", actual_gate_region),
-        )
-    )
-
-    ordered_sections = ["## After /intake", "## After /research", "## After /decompose"]
-    positions = [first_run.find(section) for section in ordered_sections]
-    require(all(position >= 0 for position in positions), "First Run guide is missing an initial continuation section")
-    require(positions == sorted(positions), "First Run continuation sections are out of canonical order")
-
-    require(
-        "merge_commit: be9bdea9ae246b1587043f2582c1a950ea2a6ec5" in status
-        and "pull_request: 29" in status
-        and "merge_status: merged" in status,
-        "STATUS.md does not reconcile PR #29 with authoritative merged state",
-    )
-    require(
-        "scope_gate: insufficient_evidence" in status
-        and "pull_request: 30" in status
-        and "reviewed_head_sha: 51e21a2d57adc8086a0d320038aaa80993b2318a" in status,
-        "STATUS.md does not preserve the bounded PR #30 scope-gate record",
-    )
-    require(
-        "keep it unmerged" not in status and "repair_pr_merge_status: unmerged" not in status,
-        "STATUS.md still contains stale PR #29 unmerged state",
-    )
+    require("pull_request: 29" in status and "merge_commit: be9bdea9ae246b1587043f2582c1a950ea2a6ec5" in status and "merge_status: merged" in status, "STATUS.md lost PR #29 merged evidence")
+    require("audit_status: merged_observed_not_independently_accepted" in status, "STATUS.md lost ARCH-02 audit status")
+    require("pull_request: 30" in status and "reviewed_head_sha: 51e21a2d57adc8086a0d320038aaa80993b2318a" in status, "STATUS.md lost PR #30 evidence")
+    require("pull_request: 35" in status and "merge_commit: b433966e44bb89c7949a709728b201ce1d37ac45" in status and "merge_status: merged" in status, "STATUS.md does not reconcile merged PR #35")
 
     return {
+        "continuation_model": continuation["model"],
         "initial_sequence": sequence_text,
-        "recognized_triggers": len(triggers),
+        "recognized_triggers": len(EXPECTED_TRIGGERS),
         "forbidden_operations": len(EXPECTED_FORBIDDEN_IDS),
-        "final_stage": final_stage_id,
+        "final_stage": final_stage,
+        "controlled_runtime_docs": len(CONTROLLED_RUNTIME_DOCS),
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--root",
-        type=Path,
-        default=Path(__file__).resolve().parents[1],
-        help="Repository root to validate.",
-    )
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args(argv)
     result = validate_repository(args.root)
     print("Architect bootstrap semantic validation passed.")
-    print(f"Initial sequence: {result['initial_sequence']}")
-    print(f"Recognized triggers: {result['recognized_triggers']}")
-    print(f"Stable forbidden operations: {result['forbidden_operations']}")
-    print(f"Final stage: {result['final_stage']}")
+    for key, value in result.items():
+        print(f"{key}: {value}")
     return 0
 
 
