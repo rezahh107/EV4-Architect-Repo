@@ -10,21 +10,30 @@ These instructions apply to the entire repository unless a closer nested `AGENTS
 
 It does not prove constructability, execute Elementor actions, or claim responsive or production completion.
 
-## Read First
+## Mandatory Session Startup
+
+Before modifying or validating the repository, read these active authorities in order:
 
 1. `README.md`
 2. `STATUS.md`
-3. `contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md`
+3. `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md`
 4. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
-5. `manifests/architect-conversation-bootstrap.v1.json`
-6. `manifests/architect-pipeline-manifest.v1.json`
-7. `contracts/ARCHITECT_STAGE_RESULT_V1.md`
-8. `schemas/ev4-architect-stage-result.v1.schema.json`
-9. `manifests/architect-stage-validation-profiles.v1.json`
-10. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
-11. the relevant Stage, contract, Schema, fixture, validator, and hardening-patch files
+5. `contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md`
+6. `manifests/architect-conversation-bootstrap.v1.json`
+7. `manifests/architect-pipeline-manifest.v1.json`
+8. `contracts/ARCHITECT_STAGE_RESULT_V1.md`
+9. `schemas/ev4-architect-stage-result.v1.schema.json`
+10. `manifests/architect-stage-validation-profiles.v1.json`
+11. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
+12. the relevant Stage, contract, Schema, fixture, validator, workflow, and hardening-patch files
 
-When sources conflict, the active Alignment Contract supersedes only continuation-authorization clauses. Preserve all stricter quality controls that do not conflict with quality-driven continuation.
+Identify the authorized work and check dependencies before edits. When sources conflict, the active Alignment Contract supersedes only continuation-authorization clauses. Preserve all stricter quality controls that do not conflict with quality-driven continuation.
+
+## Human Authority Boundary
+
+Human technical approval and owner acknowledgement must not be treated, accepted, or used as substitutes for repository evidence.
+
+The user may perform the administrative Merge action after a valid technical recommendation; that action is not technical approval and does not prove correctness.
 
 ## Runtime Authority
 
@@ -97,7 +106,7 @@ Do not:
 - re-architect during `/build-tree`, `/implementation`, or `/final-audit`;
 - silently remove an active unknown without evidence-backed lifecycle transition;
 - hand off with blocker/high final-audit findings;
-- substitute legacy Builder Feed for canonical Project Gate export.
+- substitute legacy Builder Feed for canonical `/project-gate-export`.
 
 All detailed Stage quality, source-access, scoring, accessibility, responsive, performance, and fidelity rules remain active from their owning documents and patches.
 
@@ -127,6 +136,8 @@ Architect output
 → accepted: CE Input Package
 → not accepted: Architect repair package
 ```
+
+The terminal Stage is `/project-gate-export`.
 
 The final boundary remains strongly fail-closed. Preserve canonical Architect Stage Payload validation, semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
