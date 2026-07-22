@@ -1,7 +1,7 @@
 # EV4 First Run Guide
 
 Status: release_candidate_for_controlled_use  
-Version: 1.3.0
+Version: 1.4.0
 
 ## Fast Start
 
@@ -11,19 +11,21 @@ In a new user-facing Architect chat with the Project Instructions loaded, send o
 شروع
 ```
 
-When no screenshot, section description, active run, or resumable passed Stage Result is present, return the exact response from:
+When no screenshot, section description, active run, or resumable runtime material is present, return the exact response from:
 
 ```text
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
+If the user supplies `شروع` together with a screenshot or usable section description, run `/intake` without repeating supplied information.
 
 The controlled opening sequence is:
 
 ```text
 /intake → /research → /decompose
 ```
+
+Do not skip `/research`.
 
 ## Recommended First Input
 
@@ -38,9 +40,15 @@ Explicit constraints or exceptions
 
 Do not repeat details already visible in the screenshot unless they are important constraints.
 
-## Stage Result
+## Evaluator-Derived Stage Result
 
-Every Stage ends with:
+Every Stage supplies its Stage Output to:
+
+```text
+scripts/architect_quality_runtime.py#evaluate_stage
+```
+
+The evaluator derives:
 
 ```yaml
 stage_status: pass | needs_input | blocked
@@ -48,40 +56,36 @@ blocking_issues: []
 carried_unknowns: []
 quality_checks: {}
 next_stage: exact Manifest successor or null
+evaluation_mode:
+evaluated_stage_output_digest:
 ```
 
-Internal Anchors, Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not required for ordinary Stage continuation.
+A producer-authored or serialized Stage Result is readable but does not authorize continuation. Resume uses the smallest available Stage Output and Run State; do not create a persistent store, immutable receipt, or Artifact registry solely for resume.
+
+Internal Anchors, Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not ordinary Stage-continuation requirements.
 
 ## /intake
 
-If intake quality criteria pass and no architecture-changing question remains:
+If intake quality criteria pass and no architecture-changing question remains, continue to `/research`.
 
-```text
-stage_status: pass
-next_stage: /research
-```
+If one minimum architecture-changing question remains, return `needs_input` and ask only that question.
 
-If one minimum architecture-changing question remains:
-
-```text
-stage_status: needs_input
-next_stage: null
-```
-
-Do not recommend, score, or build a tree during intake.
+Do not recommend, score, build a tree, or invent exact values during intake.
 
 ## /research
 
-Record one disposition:
+Record exactly one disposition:
 
 ```text
-active_lookup_required
+active_lookup_completed
 existing_evidence_sufficient
 no_platform_question
 blocked_by_missing_required_source
 ```
 
-The first three may pass to `/decompose` once their evidence obligations are satisfied. The final disposition blocks only when a required downstream decision depends on an unavailable authoritative source.
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. Do not require external citations, URLs, retrieval metadata, or source receipts when no platform-capability claim requires active lookup.
+
+`blocked_by_missing_required_source` blocks only when a downstream decision genuinely depends on unavailable evidence.
 
 ## /decompose
 
@@ -97,15 +101,25 @@ Use the approved rubric. Use `?` for missing evidence and `N/A` only when genuin
 
 ## /score-audit
 
-Only an accepted audit state equivalent to `pass` or `pass_with_minor_flags` with no material defect permits `/recommend`.
+Only an accepted audit state equivalent to `pass` or `pass_with_minor_flags`, with no material defect, permits `/recommend`.
 
 ## /recommend
 
-Lock `selected_candidate_id`. If a material tie requires preference, ask one minimum question. User preference does not replace technical evidence.
+Select only from the audited eligible set and lock `selected_candidate_id`. User preference does not replace technical evidence.
+
+## Unknown Lifecycle
+
+Active unknowns persist in Run State and cannot disappear through omission.
+
+Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
 
 ## /build-tree and /implementation
 
-Preserve the selected candidate and approved tree. Do not re-architect or invent exact values, assets, breakpoints, interactions, or Elementor paths.
+Preserve the selected candidate and approved tree. The canonical content is the existing structured Stage Output; do not create wrapper Artifacts merely to compute digests.
+
+The evaluator computes digests from actual content. Reject missing content, fabricated SHA-like strings, `null == null`, candidate drift, and approved-tree mismatch.
+
+Do not invent exact values, assets, breakpoints, interactions, or Elementor paths.
 
 ## /final-audit
 
@@ -113,25 +127,36 @@ Block handoff when blocker/high findings, candidate drift, unsupported exact val
 
 ## /handoff-export and /project-gate-export
 
-Package only accepted upstream outputs. Produce the canonical Architect Producer Gate Export or a fail-closed blocked result. Do not substitute `/builder-feed-export`.
+Package only accepted upstream outputs.
+
+The terminal `/project-gate-export` pass result must come from the actual canonical Architect Stage Payload, existing Schema and semantic validation, selected-candidate consistency, existing Producer Gate exporter, actual canonical export, and contract/digest verification.
+
+Caller-authored success Booleans cannot replace actual validation. Do not substitute `/builder-feed-export`.
+
+## Partial Rerun
+
+Start at the earliest Stage whose owned information changed. Invalidate dependent downstream results, preserve unaffected Run State, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
+
+Do not require Anchor, Bundle, independent rerun authorization, or cryptographic rerun receipts.
 
 ## Quick Stop Rules
 
-Stop or request minimum input for genuine quality reasons:
+Stop or request minimum input only for genuine quality reasons:
 
 ```text
 usable project input is missing
 architecture-changing question is unanswered
 required platform evidence cannot be obtained
 mandatory Stage order is violated
+required Stage check fails or remains unknown
 observation and inference are mixed
 architecture coverage is incomplete
 score audit fails
 selected candidate changes after lock
-active unknown disappears without evidence-backed resolution
-build tree or implementation drifts
+active unknown disappears or a critical unknown closes without resolvable evidence
+canonical Build Tree or Implementation content is missing or mismatched
 final audit has blocker/high findings
-canonical final payload is invalid
+actual canonical Project Gate payload or export is invalid
 ```
 
 Do not stop only because optional repository-audit carriers or repository workflow evidence are unavailable.
