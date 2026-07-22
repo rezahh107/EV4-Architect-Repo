@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ev4-architect-stage-result@1.0.0",
   "title": "EV4 Architect Stage Result v1",
-  "description": "Evaluator-derived normal-run result. Serialized Stage Results are informational until recomputed from Stage Output and Run State.",
+  "description": "Evaluator-derived normal-run result. Historical v1 records remain readable, but no serialized Stage Result authorizes continuation until recomputed from Stage Output and Run State.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -19,9 +19,7 @@
     "decision_state",
     "runtime_context",
     "final_audit_findings",
-    "project_gate_export",
-    "evaluation_mode",
-    "evaluated_stage_output_digest"
+    "project_gate_export"
   ],
   "properties": {
     "stage_result_schema": {"const": "ev4-architect-stage-result@1.0.0"},
@@ -33,7 +31,7 @@
     "carried_unknowns": {"type": "array", "items": {"$ref": "#/$defs/unknown"}},
     "quality_checks": {"type": "object", "minProperties": 1, "additionalProperties": {"enum": ["pass", "fail", "not_applicable", "unknown"]}},
     "next_stage": {"anyOf": [{"enum": ["/intake","/research","/decompose","/architectures","/score-evidence","/score-audit","/recommend","/build-tree","/implementation","/final-audit","/handoff-export","/project-gate-export"]},{"type": "null"}]},
-    "research_disposition": {"anyOf": [{"enum": ["active_lookup_completed","existing_evidence_sufficient","no_platform_question","blocked_by_missing_required_source"]},{"type": "null"}]},
+    "research_disposition": {"anyOf": [{"enum": ["active_lookup_required","active_lookup_completed","existing_evidence_sufficient","no_platform_question","blocked_by_missing_required_source"]},{"type": "null"}]},
     "decision_state": {"$ref": "#/$defs/decision_state"},
     "runtime_context": {"$ref": "#/$defs/runtime_context"},
     "final_audit_findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
@@ -66,11 +64,11 @@
     "unknown": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["unknown_id","statement","status","evidence_refs","downstream_critical"],
+      "required": ["unknown_id","statement","status","evidence_refs"],
       "properties": {
         "unknown_id": {"type": "string","minLength": 1},
         "statement": {"type": "string","minLength": 1},
-        "status": {"enum": ["active","resolved_with_evidence","not_applicable"]},
+        "status": {"enum": ["active","resolved_with_evidence","not_applicable","stale"]},
         "evidence_refs": {"type": "array","uniqueItems": true,"items": {"type": "string","minLength": 1}},
         "downstream_critical": {"type": "boolean"},
         "resolution": {"anyOf": [{"$ref": "#/$defs/unknown_resolution"},{"type": "null"}]}
@@ -79,7 +77,7 @@
     "decision_state": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["recommendation_made","hidden_recommendation","unknown_converted_to_exact","selected_candidate_id","selected_candidate_locked","build_tree_digest","approved_build_tree_digest","implementation_tree_digest","architecture_drift"],
+      "required": ["recommendation_made","hidden_recommendation","unknown_converted_to_exact","selected_candidate_id","selected_candidate_locked","build_tree_digest","implementation_tree_digest","architecture_drift"],
       "properties": {
         "recommendation_made": {"type": "boolean"},
         "hidden_recommendation": {"type": "boolean"},
@@ -119,10 +117,10 @@
     "project_gate_export": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["canonical_payload_valid","legacy_export_substituted","source_payload_digest","export_digest","validator_identity","validation_result","export_id"],
+      "required": ["canonical_payload_valid","legacy_export_substituted"],
       "properties": {
-        "canonical_payload_valid": {"const": true},
-        "legacy_export_substituted": {"const": false},
+        "canonical_payload_valid": {"type": "boolean"},
+        "legacy_export_substituted": {"type": "boolean"},
         "source_payload_digest": {"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},
         "export_digest": {"type": "string","pattern": "^sha256:[0-9a-f]{64}$"},
         "validator_identity": {"type": "string","minLength": 1},
