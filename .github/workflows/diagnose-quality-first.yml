@@ -1,0 +1,38 @@
+name: diagnose-quality-first
+
+on:
+  pull_request:
+    paths:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Run concise diagnostics
+        shell: bash
+        run: |
+          python -m pip install -q 'jsonschema>=4.22.0' 'PyYAML>=6.0'
+          failed=0
+          for command in \
+            "python scripts/check-architect-bootstrap.py" \
+            "python scripts/check-ai-governance.py" \
+            "python scripts/check-architect-producer-gate-adoption.py --format json"
+          do
+            echo "=== $command ==="
+            set +e
+            output=$(eval "$command" 2>&1)
+            status=$?
+            set -e
+            printf '%s\n' "$output"
+            echo "exit_code=$status"
+            if [ "$status" -ne 0 ]; then failed=1; fi
+          done
+          exit "$failed"
