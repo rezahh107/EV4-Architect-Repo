@@ -81,36 +81,39 @@ For quick work, the assistant may run a compressed mode, but it must still prese
 
 ---
 
-## Stage Anchor Rule
+## Stage Validation Profile and Anchor Rule
 
-Before each stage after `/intake`, require a `STAGE ANCHOR` compatible with:
+Every transition is governed by the source Stage entry in `manifests/architect-stage-validation-profiles.v1.json`. For a source marked `full_transaction_implemented`, require an Anchor compatible with:
 
 ```text
-ev4-stage-anchor@1.1.0
+ev4-stage-anchor@1.4.0
 ```
 
-If the anchor is missing, outdated, schema-mismatched, or contradicted by the previous payload, stop and request/produce a repair anchor.
+The Anchor must be contained in an independently regenerated `ev4-architect-validation-bundle@1.2.0`. An Anchor alone authorizes nothing. If the source profile is blocked or not implemented, stop at that Stage; do not fabricate a Bundle. A legal Manifest edge is not authorization. `/research` remains mandatory and `/intake → /decompose` is forbidden.
 
-Anchor must include:
+Historical Anchor versions 1.1.0, 1.2.0, and 1.3.0 are readable evidence only and cannot authorize current continuation.
+
+The current Anchor must include:
 
 ```text
+anchor_schema
+anchor_id
+run_id
+anchor_type
 source_stage
 target_stage
-target_stage_hardening_status
-project_status_version
-payload_schema_in
-payload_schema_out
-critical_unknowns
-confidence_delta
-blocking_items
-gate_results
-audit_flags
-required_user_confirmations
-partial_rerun_state
-allowed_work
-forbidden_work
-stop_conditions
-debug_trace_required
+repair_target_stage
+boundary_ref
+failure_event_ref
+handoff_state:
+  critical_unknowns
+  blocking_items
+  confidence_delta
+  gate_results
+  audit_flags
+  required_user_confirmations
+  partial_rerun_state
+  stage_boundary
 ```
 
 ---

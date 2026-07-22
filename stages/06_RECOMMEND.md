@@ -3,6 +3,9 @@
 Status: confirmed_v1.0.0
 Version: 1.0.0
 Payload schema: ev4-recommend-payload@1.0.0
+Active Manifest version: 1.1.0 via `stages/06_RECOMMEND_v1.1_HARDENING_PATCH.md`
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked until the active payload has a canonical JSON Schema, registered semantic handler, deterministic repair ownership, and independent Bundle regeneration.
 
 ## Purpose
 

@@ -5,6 +5,8 @@ Stage version: 1.0.0
 Payload schema: ev4-research-payload@1.0.0
 Applies after: /intake
 Feeds: /decompose, /architectures, /build-tree, /implementation, /final-audit
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked. This document does not define an executable Anchor template; no `/intake → /research` or `/research → /decompose` transition is authorized until the relevant source Stages have complete executable Validation Profiles and independently regenerated Bundles.
 
 ---
 
@@ -32,10 +34,10 @@ Required:
 
 ```yaml
 required_inputs:
-  - valid Stage Anchor: ev4-stage-anchor@1.1.0
+  - independently regenerated Validation Bundle: ev4-architect-validation-bundle@1.2.0
+  - contained current Anchor: ev4-stage-anchor@1.4.0
   - source_stage: /intake or approved repair/rerun stage
   - target_stage: /research
-  - target_stage_hardening_status: confirmed
   - user constraints or research scope
   - active project overrides
   - active RAG/source-access policy
@@ -57,14 +59,14 @@ optional_inputs:
 Fail the gate if:
 
 ```text
-- Stage Anchor is missing, outdated, schema-mismatched, or inconsistent.
+- Validation Bundle is missing, outdated, schema-mismatched, or inconsistent.
 - Research scope is absent and no platform-capability question exists.
 - The stage is being asked to infer visual hierarchy from a screenshot.
 - The stage is being asked to score or recommend a candidate.
 - The stage is being asked to produce a build tree or implementation plan.
 ```
 
-If the gate fails, emit `RESEARCH_REPAIR_ANCHOR` and stop.
+If the gate fails, emit `RESEARCH_BLOCKED_REPAIR_REPORT` and stop.
 
 ---
 
@@ -383,14 +385,14 @@ A passing `/research` stage must output these sections:
 9. RESEARCH_PAYLOAD
 10. RESEARCH SELF-AUDIT
 11. EV4_DEBUG_TRACE
-12. NEXT STAGE ANCHOR
+12. VALIDATOR-OWNED CONTINUATION TRANSACTION
 ```
 
 If the stage cannot pass, output:
 
 ```text
 RESEARCH BLOCKED REPORT
-RESEARCH_REPAIR_ANCHOR
+RESEARCH_BLOCKED_REPAIR_REPORT
 ```
 
 ---
@@ -403,10 +405,10 @@ RESEARCH_PAYLOAD:
   stage: /research
   stage_version: 1.0.0
   run_id:
-  source_anchor:
-    schema: ev4-stage-anchor@1.1.0
+  source_validation_bundle:
+    schema: ev4-architect-validation-bundle@1.2.0
+    contained_anchor_schema: ev4-stage-anchor@1.4.0
     source_stage:
-    project_status_version:
   input_gate:
     status: pass | fail
     inputs_present:
@@ -489,8 +491,9 @@ RESEARCH_PAYLOAD:
   debug_trace:
     schema: ev4-debug-trace@1.0.0
     trace_id:
-  next_anchor:
-    schema: ev4-stage-anchor@1.1.0
+  continuation_transaction:
+    schema: ev4-architect-validation-bundle@1.2.0
+    generated_by: registered_validator_only
     target_stage: /decompose
 ```
 
@@ -500,7 +503,7 @@ RESEARCH_PAYLOAD:
 
 | Failure | Required output | Earliest safe repair stage | Forbidden shortcut |
 |---|---|---|---|
-| Missing/invalid Stage Anchor | `RESEARCH_REPAIR_ANCHOR` | previous producing stage or `/intake` | Do not run from memory |
+| Missing/invalid Validation Bundle | `RESEARCH_BLOCKED_REPAIR_REPORT` | previous producing stage or `/intake` | Do not run from memory |
 | Missing research scope | `RESEARCH BLOCKED REPORT` | `/intake` or user constraints | Do not invent platform questions |
 | Official source unavailable | unknown register item | `/research` | Do not replace with low-trust source silently |
 | Unsupported platform claim | unsupported claim register | `/research` | Do not treat as confirmed capability |
@@ -508,7 +511,7 @@ RESEARCH_PAYLOAD:
 | Research leaked into Stage 2 visual grouping | source-access violation | `/research` + `/decompose` repair | Do not keep downstream decomposition |
 | Research boosted Stage 4 score | source-access violation | `/score-evidence` repair | Do not keep audited score |
 | Research broke Stage 6 tie directly | source-access violation | `/recommend` repair | Do not keep recommendation |
-| Docs/export conflict unresolved | conflict register + repair anchor | `/research` or export inspection | Do not choose convenient source silently |
+| Docs/export conflict unresolved | conflict register + blocked repair report | `/research` or export inspection | Do not choose convenient source silently |
 | Missing debug trace | local repair | `/research` | Do not mark confirmed |
 
 ---
@@ -567,7 +570,7 @@ REGRESSION_CASES:
 Before marking `/research` complete, verify:
 
 ```text
-[ ] Valid ev4-stage-anchor@1.1.0 input was checked.
+[ ] A current independently regenerated Validation Bundle and its contained Anchor were checked.
 [ ] Every source is pinned with source_id, type, URL/path, retrieval date, trust level, and limitation.
 [ ] Every fact has source_type, fact_class, confidence, support_status, allowed_use, and forbidden_use.
 [ ] Platform capability and project-specific behavior are separated.
@@ -578,10 +581,10 @@ Before marking `/research` complete, verify:
 [ ] No architecture, score, recommendation, tree, implementation, or audit work was performed.
 [ ] Repair routes exist for missing sources, unsupported claims, source conflicts, and source-access leakage.
 [ ] EV4_DEBUG_TRACE uses ev4-debug-trace@1.0.0.
-[ ] NEXT STAGE ANCHOR uses ev4-stage-anchor@1.1.0 and targets /decompose.
+[ ] The Registry profile is executable before any validator-owned transaction targets `/decompose`.
 ```
 
-If any item fails, mark the stage `partial_or_blocked` and emit a repair anchor.
+If any item fails, mark the stage `partial_or_blocked` and emit a non-authorizing blocked repair report.
 
 ---
 
@@ -597,7 +600,7 @@ A `/research` trace must include:
   "input_digest": {
     "inputs_received": [],
     "inputs_missing": [],
-    "input_payload_schemas": ["ev4-stage-anchor@1.1.0"]
+    "input_payload_schemas": ["ev4-architect-validation-bundle@1.2.0"]
   },
   "decision_log": [],
   "evidence_map": [],
@@ -613,94 +616,11 @@ Decision log entries must be limited to source classification, support classific
 
 ---
 
-## NEXT STAGE ANCHOR Template
+## Validation Transaction Boundary
 
-Use this when `/research` passes.
+This document defines detailed research semantics, but `/research` is currently `blocked_missing_semantics`. There is no canonical machine-readable Artifact Schema, complete deterministic semantic validator, or deterministic repair-ownership implementation for this Stage.
 
-```text
-NEXT STAGE ANCHOR — /decompose
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /research
-target_stage: /decompose
-target_stage_hardening_status: confirmed
-project_status_version: [STATUS.md version]
-payload_schema_in:
-  - ev4-research-payload@1.0.0
-  - user visual/input evidence
-payload_schema_out:
-  - ev4-decomposition-payload@[active schema]
-
-Carry-forward facts:
-- key_decisions:
-  - Research may ground platform capability only; it must not define visual groups.
-- selected_or_active_candidates: None
-- rejected_or_blocked_candidates: None
-- critical_unknowns:
-  - Preserve all research unknowns that affect architecture feasibility, Pro/free dependency, export behavior, or implementation exactness.
-- confidence_delta:
-  - item: platform capability facts
-    previous_confidence: unknown
-    current_confidence: confirmed | likely | unknown | blocked
-    direction: increased | unchanged | blocked
-    reason: named source pins in Research_Payload
-    downstream_impact: available to /architectures, /build-tree, /implementation, /final-audit under source matrix limits
-- blocking_items:
-  - Any unresolved source conflict marked blocker in Research_Payload
-- gate_results:
-  - research_input_gate: pass
-  - source_policy_gate: pass
-  - downstream_permission_gate: pass
-- audit_flags:
-  - /decompose must not use RAG/TUYA/docs to invent visual groups.
-- tie_or_ambiguity_flags: None unless carried from /intake
-- required_user_confirmations: carried unresolved source/user constraints
-- repair_routes: see Research_Payload
-
-Partial rerun state:
-- reusable_until: source policy, official docs, export evidence, user constraints, or research scope changes
-- invalidation_triggers:
-  - changed Elementor version/plan
-  - changed official docs/source conflict
-  - new export evidence
-  - new user constraint affecting platform capability
-  - source-access violation found downstream
-- earliest_safe_rerun_stage: /research
-- downstream_payloads_dependent_on_this_stage:
-  - /architectures
-  - /build-tree
-  - /implementation
-  - /final-audit
-  - /handoff-export
-
-Stage input package:
-- required_inputs_present:
-  - Research_Payload
-  - user visual/input evidence for /decompose
-- required_inputs_missing:
-  - None unless declared by Research_Payload
-- files_or_sections_to_reference:
-  - stages/02_RESEARCH.md
-  - Research_Payload source ledger
-  - 02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md
-  - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
-
-Stage boundary:
-- allowed_work:
-  - Decompose visible/provided content only.
-  - Preserve research constraints without inventing visual groups.
-- forbidden_work:
-  - No RAG/TUYA/docs as visual evidence.
-  - No architecture, score, recommendation, tree, implementation, or audit.
-- stop_conditions:
-  - Missing user visual/input evidence.
-  - Research source conflict marked blocker.
-  - Request asks /decompose to use docs as visual proof.
-
-Debug trace:
-- debug_trace_required: yes
-- previous_debug_trace_id: [research trace id]
-- expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
+Therefore `/research` must not emit a Validation Bundle or Validation Bundle and must not continue to `/decompose`. The legal Manifest edge remains topology only. Future enablement requires closing every unresolved decision in `manifests/architect-stage-validation-profiles.v1.json`, implementing the registered handler and regeneration path, and versioning the carriers if their semantics change.
 
 ---
 

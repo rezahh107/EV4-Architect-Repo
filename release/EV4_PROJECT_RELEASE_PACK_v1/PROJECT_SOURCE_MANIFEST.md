@@ -90,6 +90,12 @@ STATUS.md
 STATUS_0.16.1_BUILDER_FEED_EXPORT.md
 STATUS_0.16.2_BUILDER_FEED_SCHEMA_SYNC.md
 02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md
+manifests/architect-pipeline-manifest.v1.json
+manifests/architect-stage-validation-profiles.v1.json
+schemas/architect-stage-validation-profiles.v1.schema.json
+schemas/ev4-stage-anchor.v1.4.schema.json
+schemas/ev4-architect-validation-bundle.v1.2.schema.json
+contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md
 contracts/STAGE_ANCHOR_CONTRACT.md
 contracts/PARTIAL_RERUN_CONTRACT.md
 contracts/BUILD_TREE_NAMING_AND_STRUCTURE_CONTRACT.md

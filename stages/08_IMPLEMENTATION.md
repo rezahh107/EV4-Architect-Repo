@@ -3,9 +3,12 @@
 Status: confirmed_hardened_v1.0.0
 Version: 1.0.0
 Payload schema: ev4-implementation-payload@1.0.0
-Anchor required: yes
+Validation transaction required for continuation: yes; current profile blocked
 Debug trace compatible: yes
 Source policy: Stage Source Access Matrix applies
+Active Manifest version: 1.0.1 via `stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md`
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked. This document does not define an executable Anchor template; enablement requires a canonical active payload Schema, registered semantic handler, deterministic repair ownership, and independent Bundle regeneration.
 
 ## Purpose
 
@@ -39,8 +42,8 @@ Implement the approved tree. Do not redesign it.
 Every implementation decision must trace back to one of:
 
 1. `Build_Tree_Payload`;
-2. valid `STAGE ANCHOR`;
-3. prior approved pipeline payloads carried forward by the anchor;
+2. independently regenerated `VALIDATION BUNDLE` from an implemented `/build-tree` profile, currently unavailable;
+3. prior approved pipeline payloads carried forward by the verified transaction;
 4. official Elementor documentation for platform-capability claims;
 5. verified export/runtime evidence, if available;
 6. user-provided implementation constraints;
@@ -54,11 +57,11 @@ Required inputs:
 
 ```yaml
 required_inputs:
-  stage_anchor:
-    schema: ev4-stage-anchor@1.1.0
+  validation_bundle:
+    schema: ev4-architect-validation-bundle@1.2.0
+    contained_anchor_schema: ev4-stage-anchor@1.4.0
     source_stage: /build-tree
     target_stage: /implementation
-    target_stage_hardening_status: confirmed
   build_tree_payload:
     schema: ev4-build-tree-payload@1.0.0
     required_fields:
@@ -75,7 +78,7 @@ required_inputs:
       - required_user_confirmations
       - implementation_blockers
       - implementation_allowed
-      - stage_8_anchor_required
+      - stage_8_bundle_required
   prior_stage_payload_refs:
     - Recommendation_Payload
     - Score_Audit_Payload
@@ -97,9 +100,9 @@ Input authorization fails when:
 - Stage 7 responsive contract is absent;
 - Stage 7 has unapproved plugin, HTML, SVG, or overlay dependency;
 - Build_Tree_Payload schema is older than `ev4-build-tree-payload@1.0.0` with no explicit compatibility note;
-- Stage Anchor is missing, outdated, or does not include v1.1 fields.
+- Validation Bundle is missing, outdated, not independently reproducible, or comes from a non-executable source profile.
 
-If input authorization fails, Stage 8 must output a `REPAIR ANCHOR` and must not emit `Implementation_Payload`.
+If input authorization fails, Stage 8 must output a `BLOCKED REPAIR REPORT` and must not emit `Implementation_Payload`.
 
 ## Stage Source Access Matrix Binding
 
@@ -107,7 +110,7 @@ Stage 8 may use:
 
 ```text
 Stage 7 Build_Tree_Payload
-Stage Anchor
+Validation Bundle
 official Elementor docs
 widget/settings references
 TUYA internal concepts
@@ -196,7 +199,7 @@ If a document is unavailable, outdated, or ambiguous, the relevant capability mu
 When sources conflict, use this order:
 
 1. User-provided hard constraints for the current project.
-2. Valid Stage Anchor and carried-forward blockers.
+2. Valid Validation Bundle and carried-forward blockers.
 3. Stage 7 `Build_Tree_Payload`.
 4. Stage 6 `Recommendation_Payload`.
 5. Stage 5 audit restrictions.
@@ -230,7 +233,7 @@ Stage 8 must output these sections in order:
 13. `STAGE 8 SELF-AUDIT`
 14. `Implementation_Payload`
 15. `EV4_DEBUG_TRACE` if debug mode is active
-16. `NEXT STAGE ANCHOR — /final-audit` or `REPAIR ANCHOR`
+16. `VALIDATION PROFILE BLOCKED REPORT` — no Bundle while this profile remains blocked
 
 ## Elementor Settings Plan Schema
 
@@ -630,7 +633,7 @@ implementation_risks:
 
 Risk handling:
 
-- `blocker` means do not authorize `/final-audit` as a normal audit; emit repair anchor.
+- `blocker` means do not authorize `/final-audit`; record it in the non-authorizing blocked repair report.
 - `high` means `/final-audit` may run only if the risk is explicitly carried and audited.
 - `medium` and `low` must still appear in `Implementation_Payload`.
 
@@ -640,7 +643,7 @@ Before emitting `Implementation_Payload`, Stage 8 must verify:
 
 ```yaml
 stage_8_self_audit:
-  - check: valid Stage Anchor v1.1 received
+  - check: valid Validation Bundle v1.2 received
     result: pass | fail
   - check: valid Build_Tree_Payload v1.0.0 received
     result: pass | fail
@@ -668,7 +671,7 @@ stage_8_self_audit:
     result: pass | fail | n/a
   - check: Implementation_Payload emitted with schema
     result: pass | fail
-  - check: NEXT STAGE ANCHOR or REPAIR ANCHOR emitted
+  - check: blocked profile emits a non-authorizing report and no Bundle
     result: pass | fail
 ```
 
@@ -678,7 +681,7 @@ If any required self-audit check fails, Stage 8 must output:
 Status: fail_requires_implementation_repair
 ```
 
-and emit a `REPAIR ANCHOR`.
+and emit a non-authorizing `BLOCKED REPAIR REPORT`.
 
 ## Implementation_Payload Schema
 
@@ -691,7 +694,7 @@ Implementation_Payload:
   selected_candidate_id:
   selected_candidate_family:
   source_build_tree_payload_schema:
-  source_anchor_schema:
+  source_validation_bundle_schema:
   source_ledger:
   implementation_summary:
   elementor_settings_plan:
@@ -709,7 +712,7 @@ Implementation_Payload:
   required_user_confirmations:
   final_audit_blockers:
   final_audit_allowed: true | false
-  stage_9_anchor_required: true
+  stage_9_bundle_required: true
 ```
 
 `final_audit_allowed` may be `true` only if:
@@ -759,10 +762,10 @@ Minimum Stage 8 debug entries:
 
 ```yaml
 repair_routes:
-  missing_stage_anchor:
-    status: fail_requires_anchor_repair
+  missing_validation_bundle:
+    status: blocked_requires_source_profile_implementation
     repair_target_stage: /build-tree
-    instruction: regenerate NEXT STAGE ANCHOR to /implementation using ev4-stage-anchor@1.1.0
+    instruction: do not regenerate or continue until /build-tree has a full_transaction_implemented Registry profile
   missing_or_invalid_build_tree_payload:
     status: fail_requires_build_tree_repair
     repair_target_stage: /build-tree
@@ -793,129 +796,17 @@ repair_routes:
     instruction: restore editable/semantic/alt/accessibility requirements
 ```
 
-## NEXT STAGE ANCHOR — /final-audit Template
+## Validation Transaction Boundary
 
-Use this when Stage 8 passes.
+Stage 8 prose remains grounding input, but `/implementation` is `blocked_missing_semantics`. Its active payload is not published as a canonical JSON Schema, deterministic conformance against the exact build-tree Artifact is not implemented, and cross-stage repair ownership is unresolved.
 
-```text
-NEXT STAGE ANCHOR — /final-audit
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /implementation
-target_stage: /final-audit
-target_stage_hardening_status: scaffolded
-project_status_version: [STATUS.md version if known]
-payload_schema_in: ev4-implementation-payload@1.0.0
-payload_schema_out: ev4-final-audit-payload@0.1.0 or newer active schema
-
-Carry-forward facts:
-- key_decisions:
-  - Implementation mapped the approved Stage 7 tree without changing architecture.
-  - Elementor settings, widget mapping, class/variable map, CSS scope, assets, responsive plan, and risks were emitted.
-- selected_or_active_candidates:
-  - [selected_candidate_id from Build_Tree_Payload]
-- rejected_or_blocked_candidates:
-  - [from previous anchor]
-- critical_unknowns:
-  - [responsive, asset, dependency, export, accessibility unknowns still open]
-- confidence_delta:
-  - item:
-    previous_confidence:
-    current_confidence:
-    direction:
-    reason:
-    downstream_impact:
-- blocking_items:
-  - [none or list]
-- gate_results:
-  - input_authorization:
-  - css_scope_validator:
-  - stage_8_self_audit:
-  - final_audit_allowed:
-- audit_flags:
-  - [risks that Stage 9 must audit]
-- tie_or_ambiguity_flags:
-  - [from previous anchor if still relevant]
-- required_user_confirmations:
-  - [open confirmations]
-- repair_routes:
-  - [if any risk requires local repair]
-
-Partial rerun state:
-- reusable_until: /implementation remains reusable until Build_Tree_Payload, Stage Anchor, selected candidate, implementation constraints, assets, breakpoint settings, class system, widget availability, or dependency authorization changes
-- invalidation_triggers:
-  - Build tree node changed
-  - selected candidate changed
-  - Stage 6 recommendation changed
-  - required asset changed or missing asset supplied
-  - Elementor widget availability or Pro/plugin authorization changed
-  - CSS scoping rule changed
-  - responsive breakpoint/site settings changed
-  - class/variable system changed
-- earliest_safe_rerun_stage:
-  - /implementation for local settings/CSS/asset repair
-  - /build-tree if structure or responsive containment changes
-  - /recommend if selected candidate or eligibility changes
-  - /architectures if dependency family changes
-- downstream_payloads_dependent_on_this_stage:
-  - Final_Audit_Payload
-  - Handoff_Export_Package
-
-Stage input package:
-- required_inputs_present:
-- required_inputs_missing:
-- files_or_sections_to_reference:
-  - stages/08_IMPLEMENTATION.md
-  - stages/09_FINAL_AUDIT.md
-  - contracts/STAGE_ANCHOR_CONTRACT.md
-  - diagnostics/LLM_DEBUG_TRACE_CONTRACT.md
-  - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
-  - knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
-
-Stage boundary:
-- allowed_work:
-  - audit Stage 8 output against Stage 7 tree, Stage 6 recommendation, source ledger, scoped CSS validator, responsive plan, accessibility, dependencies, and carried unknowns
-- forbidden_work:
-  - no new architecture
-  - no new recommendation
-  - no new scoring
-  - no implementation redesign
-  - no hidden RAG preference signals
-- stop_conditions:
-  - Implementation_Payload missing or schema-invalid
-  - final_audit_allowed is false
-  - blocker risk unresolved
-  - Stage 9 remains scaffolded and user has not authorized test/hardening mode
-
-Debug trace:
-- debug_trace_required: yes
-- previous_debug_trace_id: optional
-- expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
-
-## REPAIR ANCHOR Template
-
-Use this when Stage 8 fails.
-
-```text
-REPAIR ANCHOR — /implementation
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /implementation
-repair_target_stage: /implementation | /build-tree | /recommend | /architectures
-failure_type:
-failure_evidence:
-minimal_repair_instruction:
-forbidden_shortcut:
-  - Do not redesign the architecture.
-  - Do not replace missing evidence with guesswork.
-  - Do not use TUYA as official platform proof.
-  - Do not hide meaningful mobile content to pass the audit.
-```
+No NEXT_STAGE or REPAIR Anchor and no Validation Bundle may be emitted from this Stage. The Manifest edge to `/final-audit` is not authorization. Future enablement must close the Registry decisions and add a registered handler plus independent Bundle regeneration.
 
 ## Pass Criteria
 
-Stage 8 passes only when:
+The prose-level Stage 8 contract is internally complete only when:
 
-- valid Stage Anchor v1.1 is present;
+- the `/implementation` Validation Profile is first upgraded to `full_transaction_implemented` and a current independently regenerated Bundle is present;
 - valid Build_Tree_Payload v1.0.0 is present;
 - input authorization passes;
 - approved tree is preserved;
@@ -929,5 +820,5 @@ Stage 8 passes only when:
 - risks are listed with severity and repair owner;
 - Stage 8 self-audit passes;
 - `Implementation_Payload` is emitted;
-- `NEXT STAGE ANCHOR — /final-audit` or `REPAIR ANCHOR` is emitted;
+- the registered validator emits the complete versioned transaction rather than a prose-authored Anchor;
 - debug trace is emitted when debug mode is active.

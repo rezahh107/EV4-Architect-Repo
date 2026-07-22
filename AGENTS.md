@@ -21,9 +21,13 @@ It does not prove constructability, execute Elementor actions, or claim responsi
 7. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
 8. `schemas/ev4-architect-stage-payload.v1.schema.json`
 9. `scripts/check-architect-stage-payload.py`
-10. the relevant stage, contract, schema, fixture, and diagnostic files for the task
+10. `manifests/architect-pipeline-manifest.v1.json`
+11. `manifests/architect-stage-validation-profiles.v1.json`
+12. the relevant stage, contract, schema, fixture, and diagnostic files for the task
 
 When sources conflict, follow the highest-authority current contract or explicit active override. Do not silently merge incompatible rules.
+
+The Pipeline Manifest is the sole machine-readable authority for Stage inventory, order, versions, legal success edges, and terminal identity. The Validation Profiles Registry is the sole machine-readable authority for executable validation capability and grounding status. The Registry is not continuation authority; only independently regenerated Bundle evidence can authorize a transition from a `full_transaction_implemented` source Stage.
 
 ## User-Facing Bootstrap
 
@@ -196,6 +200,17 @@ For Repository Repair Recommendation Handoff changes, run:
 ```bash
 python -m py_compile scripts/repository_repair_handoff.py tests/test_repository_repair_recommendation_handoff.py
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_repository_repair_recommendation_handoff.py
+```
+
+For Architect Stage Validation authority, Anchor, Bundle, or transaction changes, run:
+
+```bash
+python scripts/check-architect-validation-profiles.py
+python scripts/check-architect-pipeline-stage-boundary.py --fixtures
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q \
+  tests/test_architect_validation_profiles.py \
+  tests/test_architect_pipeline_stage_boundary_validator.py \
+  tests/test_architect_validation_transaction_mutations.py
 ```
 
 This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.

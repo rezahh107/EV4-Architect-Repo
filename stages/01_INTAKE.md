@@ -2,6 +2,8 @@
 
 Status: confirmed  
 Version: 1.0.0  
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked until a canonical Artifact Schema, semantic handler, deterministic repair ownership, and independently regenerable Bundle are implemented. The legal `/intake → /research` edge does not authorize continuation by itself.
 
 ---
 

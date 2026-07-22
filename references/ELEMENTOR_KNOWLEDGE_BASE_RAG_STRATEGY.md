@@ -123,7 +123,7 @@ Every source used by RAG or source-grounding must be classified before its facts
 Required `/research` behavior:
 
 ```text
-1. Receive a valid ev4-stage-anchor@1.1.0.
+1. Confirm that `/intake` has a `full_transaction_implemented` source profile and an independently regenerated `ev4-architect-validation-bundle@1.2.0` containing `ev4-stage-anchor@1.4.0`; currently it does not, so stop before `/research`.
 2. Classify the research scope.
 3. Produce a compact query plan.
 4. Retrieve or inspect appropriate sources.
@@ -532,8 +532,11 @@ RAG_STRATEGY_PAYLOAD:
   repair_routes_status: pass | fail
   self_audit_status: pass | fail
   known_limitations:
-  next_anchor:
-    schema: ev4-stage-anchor@1.1.0
+  continuation_authority:
+    profile_status: full_transaction_implemented | blocked_missing_semantics
+    bundle_schema: ev4-architect-validation-bundle@1.2.0 when implemented
+    anchor_schema: ev4-stage-anchor@1.4.0 when implemented
+    anchor_alone_authorizes: false
 ```
 
 ---
@@ -609,102 +612,9 @@ Debug traces must externalize what source was used, what claim was supported, wh
 
 ---
 
-## NEXT WORK ANCHOR
+## Non-Authorizing Next-Work Note
 
-```text
-NEXT WORK ANCHOR — /tuya-concept-reference hardening
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /elementor-knowledge-base-strategy
-target_stage: /tuya-concept-reference
-target_stage_hardening_status: draft
-project_status_version: 0.14.0
-payload_schema_in:
-  - ev4-rag-strategy-contract@1.0.0
-  - active TUYA concept reference v0.2.0
-payload_schema_out:
-  - ev4-tuya-concept-reference@1.0.0 or newer active schema
-
-Carry-forward facts:
-- key_decisions:
-  - RAG Strategy is active_v1.0.0.
-  - TUYA must remain internal_concept_reference/project_conceptual_model.
-  - TUYA cannot prove platform capability, raise scores directly, break ties, or replace official docs/export evidence.
-- selected_or_active_candidates: None
-- rejected_or_blocked_candidates: None
-- critical_unknowns:
-  - TUYA reference file is still v0.2.0 and should be checked against this v1.0.0 RAG strategy.
-  - Pixel-accurate screenshot validation, real export JSON / EDIS, and live rendering remain future validation tracks.
-- confidence_delta:
-  - item: RAG source-access policy
-    previous_confidence: likely
-    current_confidence: confirmed
-    direction: increased
-    reason: RAG strategy now has active v1.0.0 schema, stage matrix, source pins, fact schema, conflict lifecycle, repair routes, self-audit, debug trace, and anchor handoff.
-    downstream_impact: /research and downstream source use can treat this file as active policy input.
-- blocking_items: None for RAG strategy contract; validation tracks remain open.
-- gate_results:
-  - source_access_policy_gate: pass
-  - downstream_permission_gate: pass
-  - repair_route_gate: pass
-  - debug_trace_reference_gate: pass
-- audit_flags:
-  - Do not treat this strategy as proof that future docs are fresh.
-  - Each run must still retrieve/pin current sources for version-sensitive claims.
-- tie_or_ambiguity_flags: None
-- required_user_confirmations: None
-- repair_routes: See Repair Routes section in this file.
-
-Partial rerun state:
-- reusable_until: source policy, official docs, export evidence, TUYA concept rules, project contracts, or pipeline stage order changes
-- invalidation_triggers:
-  - changed EV4 stage order or stage IDs
-  - changed Stage Anchor schema
-  - changed Research_Payload schema
-  - new source class or new export/EDIS policy
-  - discovered RAG leakage in E2E/final audit
-  - TUYA reference contradiction with official docs/export evidence
-- earliest_safe_rerun_stage: /research for source facts; /elementor-knowledge-base-strategy for policy defects
-- downstream_payloads_dependent_on_this_stage:
-  - /research
-  - /architectures
-  - /build-tree
-  - /implementation
-  - /final-audit
-  - /handoff-export
-  - /e2e-test
-
-Stage input package:
-- required_inputs_present:
-  - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
-  - stages/02_RESEARCH.md
-  - knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
-  - active Stage Anchor / Partial Rerun / Debug Trace contracts
-- required_inputs_missing: None
-- files_or_sections_to_reference:
-  - knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
-  - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
-  - stages/02_RESEARCH.md
-
-Stage boundary:
-- allowed_work:
-  - Harden TUYA internal concept reference.
-  - Align source_type/fact_class vocabulary with RAG Strategy v1.0.0.
-  - Add TUYA-specific leakage probes, contradiction handling, repair routes, self-audit, debug trace, and anchor handoff.
-- forbidden_work:
-  - No official Elementor capability claims from TUYA alone.
-  - No scoring/recommendation changes.
-  - No architecture selection.
-  - No deletion of E2E-001 minor flags.
-- stop_conditions:
-  - TUYA cannot be aligned without contradicting active RAG or Research contracts.
-  - Missing repair routes for TUYA leakage.
-  - Missing downstream permission matrix.
-
-Debug trace:
-- debug_trace_required: yes
-- previous_debug_trace_id: RAG-STRATEGY-HARDENING-v1.0.0
-- expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
+`/elementor-knowledge-base-strategy` and `/tuya-concept-reference` are not Pipeline Manifest Stages, so this strategy cannot mint a Stage Anchor between them. The previous pseudo-Anchor is retired as authorization evidence. Future `/research` execution remains fail-closed until the Registry records a canonical Artifact Schema, deterministic semantic validation, deterministic repair ownership, and independent Bundle regeneration for `/intake` and `/research` as applicable.
 
 ---
 

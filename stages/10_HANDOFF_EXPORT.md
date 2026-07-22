@@ -3,16 +3,19 @@
 Status: confirmed_hardened_v1.0.0
 Version: 1.0.0
 Payload schema: ev4-handoff-export-payload@1.0.0
-Anchor required: yes
+Validation transaction required for continuation: yes; current profile blocked
 Debug trace compatible: yes
 Source policy: Stage Source Access Matrix applies
 Production release gate: one realistic E2E pipeline run is still required before release-level confirmation
+Active Manifest version: 1.0.1 via `stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md`
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked. This document defines no executable Anchor template; enablement requires a canonical active payload Schema, registered semantic handler, deterministic repair ownership, and independent Bundle regeneration.
 
 ## Purpose
 
 `/handoff-export` packages a completed and audited EV4 pipeline run into a compact, copy-ready handoff for a human Elementor builder, reviewer, or implementation agent.
 
-It preserves the approved architecture, selected build tree, implementation instructions, audit outcome, blocker/flag state, unresolved confirmations, debug trace references, and repair anchors without adding new decisions.
+It preserves the approved architecture, selected build tree, implementation instructions, audit outcome, blocker/flag state, unresolved confirmations, debug trace references, and repair reports without adding new decisions.
 
 ## Non-Purpose
 
@@ -46,23 +49,19 @@ Required inputs:
 
 ```yaml
 required_inputs:
-  stage_anchor:
-    schema: ev4-stage-anchor@1.1.0
+  validation_bundle:
+    schema: ev4-architect-validation-bundle@1.2.0
+    contained_anchor_schema: ev4-stage-anchor@1.4.0
     source_stage: /final-audit
     target_stage: /handoff-export
-    required_fields:
-      - target_stage_hardening_status
-      - confidence_delta
-      - critical_unknowns
-      - blocking_items
-      - gate_results
-      - audit_flags
-      - required_user_confirmations
-      - repair_routes
-      - partial_rerun_state
-      - allowed_work
-      - forbidden_work
-      - stop_conditions
+    required_bundle_fields:
+      - bundle_integrity_status
+      - run_validation_status
+      - authorization_valid
+      - bundle_content_digest
+    required_anchor_fields:
+      - boundary_ref
+      - handoff_state
   final_audit_payload:
     schema: ev4-final-audit-payload@1.0.0
     required_fields:
@@ -87,7 +86,7 @@ required_inputs:
       - final_audit_status
       - stage_9_self_audit
       - debug_trace_ref_or_payload
-      - next_stage_anchor_or_repair_anchor
+      - continuation_transaction_or_repair_report
   implementation_payload:
     schema: ev4-implementation-payload@1.0.0
     required_when: final audit status allows handoff
@@ -105,9 +104,10 @@ required_inputs:
 
 Input authorization fails when:
 
-- Stage Anchor is missing, outdated, not `ev4-stage-anchor@1.1.0`, or not targeted to `/handoff-export`;
+- Validation Bundle is missing, outdated, not `ev4-architect-validation-bundle@1.2.0`, not independently reproducible, or not targeted to `/handoff-export`;
+- `/final-audit` is not `full_transaction_implemented` in the Registry;
 - `Final_Audit_Payload` is missing, partial, or older than `ev4-final-audit-payload@1.0.0` without an explicit compatibility note;
-- Stage 9 emitted `REPAIR ANCHOR` instead of `NEXT STAGE ANCHOR — /handoff-export`;
+- Stage 9 emitted `BLOCKED REPAIR REPORT` instead of a validator-owned complete transaction;
 - `final_audit_status` is absent or not one of the allowed Stage 9 statuses;
 - blocker or high findings are present without a visible repair route;
 - the handoff attempts to omit unresolved medium findings, confirmations, unknowns, or E2E release blockers;
@@ -115,7 +115,7 @@ Input authorization fails when:
 - debug trace is referenced but not included or linked;
 - any payload identity changes across Stage 6/7/8/9.
 
-If input authorization fails, Stage 10 must emit a `REPAIR ANCHOR` or `HANDOFF BLOCKED REPORT` and must not emit a final builder handoff.
+If input authorization fails, Stage 10 must emit a `BLOCKED REPAIR REPORT` or `HANDOFF BLOCKED REPORT` and must not emit a final builder handoff.
 
 ## Stage Source Access Matrix Binding
 
@@ -127,7 +127,7 @@ Implementation_Payload
 Build_Tree_Payload
 Recommendation_Payload
 Score_Audit_Payload only as referenced by final audit
-Stage Anchor v1.1
+Validation Bundle v1.2
 EV4_DEBUG_TRACE blocks or trace references
 active project contracts
 verified export/runtime evidence if included in Final_Audit_Payload
@@ -152,7 +152,7 @@ Source classification is mandatory for handoff claims:
 ```yaml
 handoff_source_ref:
   source_id:
-  source_type: final_audit_payload | implementation_payload | build_tree_payload | recommendation_payload | score_audit_payload | stage_anchor | debug_trace | project_contract | export_evidence | user_input
+  source_type: final_audit_payload | implementation_payload | build_tree_payload | recommendation_payload | score_audit_payload | validation_bundle | debug_trace | project_contract | export_evidence | user_input
   claim_carried:
   fact_class: project_specific_behavior | implementation_observation | project_default | platform_capability | project_conceptual_model | unresolved_unknown | audit_finding
   allowed_use: summarize | quote | checklist_item | blocker_notice | repair_instruction | next_action
@@ -163,9 +163,9 @@ handoff_source_ref:
 
 When sources conflict, Stage 10 must use this order:
 
-1. active Stage Anchor blockers, stop conditions, required confirmations, and repair routes;
+1. active Validation Bundle blockers, stop conditions, required confirmations, and repair routes;
 2. Stage 9 `Final_Audit_Payload`;
-3. Stage 9 `REPAIR ANCHOR`, if present;
+3. Stage 9 `BLOCKED REPAIR REPORT`, if present;
 4. Stage 8 `Implementation_Payload`;
 5. Stage 7 `Build_Tree_Payload`;
 6. Stage 6 `Recommendation_Payload`;
@@ -175,44 +175,46 @@ When sources conflict, Stage 10 must use this order:
 
 Conflict rules:
 
-- If Stage 9 fails or emits a repair anchor, Stage 10 outputs a blocked handoff, not a builder handoff.
+- If Stage 9 fails or emits a blocked repair report, Stage 10 outputs a blocked handoff, not a builder handoff.
 - If Stage 8 conflicts with Stage 9, Stage 9 wins for handoff status and repair routing.
 - If Stage 7/8 details are missing but Stage 9 passes with minor flags, Stage 10 must include a `needs_reference` item rather than inventing the missing detail.
 - If E2E is absent, Stage 10 may package a contract-level or run-level handoff but must not claim release-ready status for the prompt pack.
 
 ## Handoff Eligibility Matrix
 
+This matrix is semantic design input for a future handler. While the Registry profile is blocked, the only current outcome is `blocked_profile_not_implemented`, `builder_handoff_allowed: no`, and no Bundle.
+
 ```yaml
 handoff_eligibility:
   pass:
     builder_handoff_allowed: yes
     residual_risks_section_required: yes_if_any_low_or_info
-    repair_anchor_required: no
+    repair_report_required: no
   pass_with_minor_flags:
     builder_handoff_allowed: yes
     residual_risks_section_required: yes
     medium_findings_must_be_visible: yes
-    repair_anchor_required: no_unless_requested
+    repair_report_required: no_unless_requested
   fail_missing_input:
     builder_handoff_allowed: no
     blocked_report_required: yes
-    repair_anchor_required: yes
+    repair_report_required: yes
   fail_requires_implementation_repair:
     builder_handoff_allowed: no
     blocked_report_required: yes
-    repair_anchor_required: yes
+    repair_report_required: yes
   fail_requires_build_tree_repair:
     builder_handoff_allowed: no
     blocked_report_required: yes
-    repair_anchor_required: yes
+    repair_report_required: yes
   fail_requires_recommendation_repair:
     builder_handoff_allowed: no
     blocked_report_required: yes
-    repair_anchor_required: yes
+    repair_report_required: yes
   fail_requires_score_audit_repair:
     builder_handoff_allowed: no
     blocked_report_required: yes
-    repair_anchor_required: yes
+    repair_report_required: yes
   fail_requires_e2e_test_before_release_confirmation:
     builder_handoff_allowed: conditional
     contract_release_ready_claim_allowed: no
@@ -246,7 +248,7 @@ Output sections in order:
 15. `HANDOFF_PAYLOAD`
 16. `NEXT ACTIONS`
 17. `EV4_DEBUG_TRACE` if debug mode is active
-18. `FINAL ANCHOR OR CLOSURE NOTE`
+18. `NON-AUTHORIZING CLOSURE NOTE`
 
 ### Format B — `HANDOFF BLOCKED REPORT`
 
@@ -262,7 +264,7 @@ Output sections in order:
 6. `INVALIDATED DOWNSTREAM OUTPUTS`
 7. `SAFE PARTIAL RERUN PLAN`
 8. `DEBUG TRACE REFERENCES`
-9. `REPAIR ANCHOR`
+9. `BLOCKED REPAIR REPORT`
 10. `EV4_DEBUG_TRACE` if debug mode is active
 
 ## Section Templates
@@ -301,7 +303,7 @@ source_payload_ledger:
 
 Required ledger entries:
 
-- Stage Anchor v1.1
+- Validation Bundle v1.2
 - Final_Audit_Payload
 - Implementation_Payload
 - Build_Tree_Payload
@@ -565,7 +567,7 @@ The machine-readable payload must be emitted after the human-readable handoff.
   "handoff_status": null,
   "release_ready_claim_allowed": false,
   "input_authorization": {
-    "stage_anchor_schema": "ev4-stage-anchor@1.1.0",
+    "validation_bundle_schema": "ev4-architect-validation-bundle@1.2.0",
     "final_audit_payload_schema": "ev4-final-audit-payload@1.0.0",
     "implementation_payload_schema": "ev4-implementation-payload@1.0.0",
     "missing_inputs": [],
@@ -593,7 +595,7 @@ The machine-readable payload must be emitted after the human-readable handoff.
     "release_confirmation_blocked": true,
     "note": "One realistic E2E pipeline run is required before repository release-level confirmation."
   },
-  "closure_or_next_anchor": null
+  "closure_or_continuation_transaction": null
 }
 ```
 
@@ -617,7 +619,7 @@ When handoff is blocked, emit this reduced payload instead of the full builder p
   "visible_blockers_and_high_findings": [],
   "repair_routes": [],
   "safe_partial_rerun_plan": null,
-  "repair_anchor": null,
+  "repair_report": null,
   "debug_trace_references": []
 }
 ```
@@ -633,7 +635,7 @@ safe_partial_rerun_plan:
   earliest_safe_start_stage:
   stages_to_reuse:
   stages_to_invalidate:
-  required_anchor:
+  required_validation_bundle:
   required_payloads:
   user_confirmation_required: yes | no
   reason:
@@ -653,52 +655,11 @@ Default repair ownership:
 | Missing E2E evidence for release-level confirmation | `/intake` for test setup, then full E2E test run |
 | Stage 10 packaging omission only | `/handoff-export` local repair |
 
-## Repair Anchor Template
+## Validation Transaction Boundary
 
-Use when handoff is blocked.
+Stage 10 prose remains grounding input, but `/handoff-export` is `blocked_missing_semantics`. Its canonical payload Schema, deterministic preservation semantics, and earliest repair-owner rules are not implemented as an executable transaction.
 
-```text
-REPAIR ANCHOR — [repair target]
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /handoff-export
-repair_target_stage: [/recommend | /build-tree | /implementation | /final-audit | /handoff-export]
-failure_type:
-failure_evidence:
-minimal_repair_instruction:
-forbidden_shortcut:
-required_payloads:
-invalidated_downstream:
-expected_return_anchor:
-```
-
-Rules:
-
-- The repair target must be the earliest stage that owns the failed information.
-- Do not route every failure to `/handoff-export` just because the failure was observed there.
-- Do not allow handoff text to become a substitute for repairing upstream payloads.
-
-## Final Closure Note
-
-Use only when the handoff passed and no repair anchor is needed.
-
-```text
-FINAL CLOSURE NOTE — /handoff-export
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /handoff-export
-target_stage: none
-handoff_payload_schema: ev4-handoff-export-payload@1.0.0
-handoff_status: ready_for_builder_handoff | ready_with_minor_flags
-release_ready_claim_allowed: yes | no
-critical_unknowns_preserved:
-remaining_audit_flags:
-required_user_confirmations:
-e2e_release_blocker:
-debug_trace_refs:
-partial_rerun_state:
-  reusable_until:
-  invalidation_triggers:
-  earliest_safe_rerun_stage:
-```
+No REPAIR or NEXT_STAGE Anchor and no Validation Bundle may be emitted from this Stage. A non-Anchor closure note may describe a blocked packaging result, but it cannot authorize `/project-gate-export`. Future enablement must close the Registry decisions and add a registered handler plus independent Bundle regeneration.
 
 ## Strict Critic Checklist
 
@@ -706,7 +667,7 @@ Before emitting Stage 10 output, run this self-check:
 
 ```yaml
 stage_10_self_audit:
-  - check: valid Stage Anchor v1.1 from /final-audit is present
+  - check: /handoff-export Validation Profile is full_transaction_implemented and a current independently regenerated Bundle is present
     result: pass | fail
   - check: Final_Audit_Payload schema is present and compatible
     result: pass | fail
@@ -730,7 +691,7 @@ stage_10_self_audit:
     result: pass | fail
   - check: HANDOFF_PAYLOAD schema is emitted
     result: pass | fail
-  - check: closure note or repair anchor is emitted
+  - check: blocked profile emits a non-authorizing blocked report and no Bundle
     result: pass | fail
 ```
 
@@ -744,7 +705,7 @@ Use these cases to test Stage 10 behavior.
 
 Input: Stage 9 status is `fail_requires_implementation_repair`, but Stage 10 produces a friendly final build checklist.
 
-Expected: fail. Stage 10 must output `HANDOFF BLOCKED REPORT` and a repair anchor to `/implementation`.
+Expected: fail. Stage 10 must output `HANDOFF BLOCKED REPORT` with `/implementation` as the proposed repair owner; it emits no Anchor or Bundle.
 
 ### Handoff Regression 002 — `medium-flag-disappears`
 
@@ -832,7 +793,7 @@ Stage 10 contract hardening is confirmed only if the stage defines:
 - unresolved unknown and confirmation preservation rules;
 - scoped CSS, responsive, accessibility, asset, dynamic data, and QA handoff checks;
 - machine-readable `Handoff_Payload` schema;
-- safe partial rerun plan and repair anchor;
+- safe partial rerun plan and non-authorizing blocked repair report;
 - strict self-audit;
 - debug trace addendum;
 - release-ready/E2E boundary.

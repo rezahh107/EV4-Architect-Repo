@@ -101,7 +101,7 @@ If `STATUS.md` later declares a newer status or schema, the newer `STATUS.md` va
 
 ### 4.1 Stage 8 to Stage 9
 
-When Stage 8 emits `NEXT STAGE ANCHOR — /final-audit`, use this policy:
+The Manifest records `/implementation → /final-audit`, but `/implementation` is `blocked_missing_semantics`. It emits no Anchor or Bundle until its Registry profile is fully implemented.
 
 ```yaml
   applies_to:
@@ -109,9 +109,9 @@ When Stage 8 emits `NEXT STAGE ANCHOR — /final-audit`, use this policy:
     - stages/09_FINAL_AUDIT.md
     - stages/10_HANDOFF_EXPORT.md
     - STATUS.md
-  payload_schema_out: ev4-final-audit-payload@1.0.0_or_newer_from_STATUS
-  status_source: latest STATUS.md active stage table
-  fallback_if_status_unknown: stop_and_inspect_STATUS
+  topology_source: manifests/architect-pipeline-manifest.v1.json
+  capability_source: manifests/architect-stage-validation-profiles.v1.json
+  current_action: stop_without_bundle
 ```
 
 Forbidden shortcut:
@@ -122,16 +122,14 @@ Do not copy an older scaffolded target-stage placeholder when STATUS.md already 
 
 ### 4.2 Stage 9 to Stage 10
 
-When Stage 9 emits `NEXT STAGE ANCHOR — /handoff-export`, use this policy:
+The Manifest records `/final-audit → /handoff-export`, but `/final-audit` is `blocked_missing_semantics`. It emits no Anchor or Bundle until its Registry profile is fully implemented.
 
 ```yaml
 stage_9_next_anchor_alignment:
   target_stage: /handoff-export
-  target_stage_hardening_status: confirmed_hardened_v1.0.0_or_newer_from_STATUS
-  payload_schema_in: ev4-final-audit-payload@1.0.0
-  payload_schema_out: ev4-handoff-export-payload@1.0.0_or_newer_from_STATUS
-  status_source: latest STATUS.md active stage table
-  fallback_if_status_unknown: stop_and_inspect_STATUS
+  topology_source: manifests/architect-pipeline-manifest.v1.json
+  capability_source: manifests/architect-stage-validation-profiles.v1.json
+  current_action: stop_without_bundle
 ```
 
 Forbidden shortcut:
@@ -154,7 +152,7 @@ e2e_validation_state:
     scope:
       - pipeline discipline
       - stage sequencing through /handoff-export
-      - Stage Anchor continuity
+      - Stage Anchor and independently regenerated Bundle continuity for implemented profiles only
       - Debug Trace compatibility
       - unknown propagation
       - scoring/audit mechanics

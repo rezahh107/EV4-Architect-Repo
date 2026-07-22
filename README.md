@@ -176,17 +176,32 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 
 Mutable project and stage status is maintained only in `STATUS.md`. The summary at the top of this README is derived for orientation and must not override `STATUS.md`, exact repository evidence, or the live default branch.
 
-## Architect Stage Boundary Validation Transaction
+## Architect Stage Validation Authority
 
-Stages `/decompose` through `/score-audit` use one deterministic Validation Transaction. The current carrier identities are:
+The canonical authority split is:
+
+```text
+Pipeline topology and Stage versions
+→ manifests/architect-pipeline-manifest.v1.json
+
+Executable Validation capability and grounding status
+→ manifests/architect-stage-validation-profiles.v1.json
+
+Semantic behavior
+→ Registry-selected handlers in scripts/architect_validation_semantics.py
+```
+
+The Registry contains every Manifest Stage exactly once and is capability metadata only; it never authorizes continuation. The currently implemented executable profiles are `/decompose` through `/score-audit`. Every other non-terminal Stage remains fail-closed with its missing semantic decisions recorded in the Registry. `/project-gate-export` is terminal.
+
+The current carrier identities are:
 
 ```yaml
 artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
 receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
 failure_event_schema: ev4-architect-validation-failure-event@1.0.0
 boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.3.0
-bundle_schema: ev4-architect-validation-bundle@1.1.0
+anchor_schema: ev4-stage-anchor@1.4.0
+bundle_schema: ev4-architect-validation-bundle@1.2.0
 ```
 
 The only production generator is:
@@ -210,8 +225,8 @@ python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
 
 The legacy file-producing flags `--write-receipt`, `--write-receipts`, and `--write-anchors` are removed. Standalone Artifact diagnostics use `diagnose-artifact`, generate no authority files, and report `authorization_valid: false`.
 
-The exact active Stage-version map is `/decompose@1.0.0`, `/architectures@1.1.0`, `/score-evidence@1.3.0`, and `/score-audit@1.2.0`; every other Stage/version pair is rejected. Evidence-backed inactive unknowns remain audit evidence but do not propagate as active Stage 4 uncertainty. Structural sequence defects return deterministic non-authorizing preflight results without publishing a Bundle. Stage 4 payload lineage is exactly bound to the regenerated Stage 3 Artifact. Bundle replacement is allowed only for Validator-owned output and is published atomically.
+The executable Stage versions are derived directly from the Manifest: `/decompose@1.0.0`, `/architectures@1.1.0`, `/score-evidence@1.3.0`, and `/score-audit@1.2.0`. A Stage not marked `full_transaction_implemented` in the Registry cannot produce an authorization Bundle. Evidence-backed inactive unknowns remain audit evidence but do not propagate as active Stage 4 uncertainty. Structural sequence defects return deterministic non-authorizing preflight results without publishing a Bundle. Stage 4 payload lineage is exactly bound to the regenerated Stage 3 Artifact. Bundle replacement is allowed only for Validator-owned output and is published atomically.
 
-A user-facing Anchor never independently authorizes continuation. Historical `ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` records remain historical evidence only. The current `ev4-stage-anchor@1.3.0` binds a `boundary_ref`, an optional failure-only `failure_event_ref`, and an evidence-derived `handoff_state` with structured `confidence_delta`.
+A user-facing Anchor never independently authorizes continuation. Historical `ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, and `ev4-stage-anchor@1.3.0` records remain historical evidence only. The current `ev4-stage-anchor@1.4.0` binds a `boundary_ref`, an optional failure-only `failure_event_ref`, and an evidence-derived `handoff_state` with structured `confidence_delta`; legal edges are checked against the Manifest and executable source capability against the Registry.
 
 Exact-Head CI establishes repository CI evidence only for the tested Head. Runtime-tool enforcement, chat-runtime enforcement, downstream rejection, real non-synthetic handoff, and production readiness remain `insufficient_evidence` unless separately proven.

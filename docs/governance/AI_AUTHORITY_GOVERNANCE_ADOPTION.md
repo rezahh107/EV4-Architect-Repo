@@ -141,18 +141,20 @@ It does not claim:
 
 Those enforcement carriers belong to later authorized increments and must be reported according to their actual evidence state.
 
-## Architect Stage Boundary Validation Transaction
+## Architect Stage Validation Authority and Transaction
 
-Stages `/decompose` through `/score-audit` use one additive deterministic transaction without replacing `ev4-architect-stage-payload@1.0.0`:
+Pipeline topology and Stage versions come only from `manifests/architect-pipeline-manifest.v1.json`. Executable Validation capability comes only from `manifests/architect-stage-validation-profiles.v1.json`; the Registry is capability metadata and never authorizes continuation. Stages `/decompose` through `/score-audit` currently use one additive deterministic transaction without replacing `ev4-architect-stage-payload@1.0.0`:
 
 ```yaml
 artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
 receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
 failure_event_schema: ev4-architect-validation-failure-event@1.0.0
 boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.3.0
-bundle_schema: ev4-architect-validation-bundle@1.1.0
+anchor_schema: ev4-stage-anchor@1.4.0
+bundle_schema: ev4-architect-validation-bundle@1.2.0
 ```
+
+Every other non-terminal Stage is `blocked_missing_semantics` and produces no Bundle. `/project-gate-export` is terminal. Historical Anchor versions 1.1.0, 1.2.0, and 1.3.0 and Bundle version 1.1.0 remain readable evidence only; they cannot authorize current continuation.
 
 The earliest owning producer boundary must fail when a required canonical Artifact is missing or semantically invalid. `failed_stage` records where validation detected failure; `repair_target_stage` records the earliest owning Stage that must change. They are not assumed equal.
 

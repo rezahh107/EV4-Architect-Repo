@@ -3,10 +3,13 @@
 Status: confirmed_hardened_v1.0.0
 Version: 1.0.0
 Payload schema: ev4-final-audit-payload@1.0.0
-Anchor required: yes
+Validation transaction required for continuation: yes; current profile blocked
 Debug trace compatible: yes
 Source policy: Stage Source Access Matrix applies
 Production release gate: one realistic E2E pipeline run is still required before release-level confirmation
+Active Manifest version: 1.0.1 via `stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md`
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked. This document does not define an executable Anchor template; enablement requires a canonical active payload Schema, registered semantic handler, deterministic repair ownership, and independent Bundle regeneration.
 
 ## Purpose
 
@@ -43,7 +46,7 @@ Every Stage 9 audit finding must trace to at least one of:
 2. `Build_Tree_Payload`;
 3. `Recommendation_Payload`;
 4. `Score_Audit_Payload` and relevant Stage 4 scoring constraints;
-5. Stage Anchor v1.1;
+5. Validation Bundle v1.2;
 6. project defaults and active contracts;
 7. verified export/runtime evidence, if available;
 8. official Elementor documentation only for platform capability claims;
@@ -57,23 +60,19 @@ Required inputs:
 
 ```yaml
 required_inputs:
-  stage_anchor:
-    schema: ev4-stage-anchor@1.1.0
+  validation_bundle:
+    schema: ev4-architect-validation-bundle@1.2.0
+    contained_anchor_schema: ev4-stage-anchor@1.4.0
     source_stage: /implementation
     target_stage: /final-audit
-    required_fields:
-      - target_stage_hardening_status
-      - confidence_delta
-      - critical_unknowns
-      - blocking_items
-      - gate_results
-      - audit_flags
-      - required_user_confirmations
-      - repair_routes
-      - partial_rerun_state
-      - allowed_work
-      - forbidden_work
-      - stop_conditions
+    required_bundle_fields:
+      - bundle_integrity_status
+      - run_validation_status
+      - authorization_valid
+      - bundle_content_digest
+    required_anchor_fields:
+      - boundary_ref
+      - handoff_state
   implementation_payload:
     schema: ev4-implementation-payload@1.0.0
     required_fields:
@@ -94,7 +93,7 @@ required_inputs:
       - carried_forward_unknowns
       - required_user_confirmations
       - debug_trace_ref_or_payload
-      - next_stage_anchor
+      - continuation_transaction
   prior_payload_refs:
     - Build_Tree_Payload
     - Recommendation_Payload
@@ -110,11 +109,12 @@ required_inputs:
 
 Input authorization fails when:
 
-- Stage Anchor is missing, outdated, or not `ev4-stage-anchor@1.1.0`;
-- Stage Anchor target is not `/final-audit`;
+- Validation Bundle is missing, outdated, not `ev4-architect-validation-bundle@1.2.0`, or not independently reproducible;
+- `/implementation` is not `full_transaction_implemented` in the Registry;
+- Validation Bundle target is not `/final-audit`;
 - `Implementation_Payload` is missing, partial, or older than `ev4-implementation-payload@1.0.0` without a compatibility note;
 - Stage 8 self-audit contains any failed required check;
-- Stage 8 emitted a `REPAIR ANCHOR` instead of a normal next-stage anchor;
+- Stage 8 emitted a `BLOCKED REPAIR REPORT` instead of a validator-owned complete transaction;
 - Stage 8 risk register contains unresolved `blocker` risk;
 - required user confirmations remain unresolved;
 - Build Tree node IDs cannot be matched to implementation targets;
@@ -124,7 +124,7 @@ Input authorization fails when:
 - unknowns from Stage 7/8 disappear without named resolution evidence;
 - required export evidence is claimed but not supplied.
 
-If input authorization fails, Stage 9 must emit `REPAIR ANCHOR` and must not emit a pass status.
+If input authorization fails, Stage 9 must emit `BLOCKED REPAIR REPORT` and must not emit a pass status.
 
 ## Stage Source Access Matrix Binding
 
@@ -137,7 +137,7 @@ Stage 6 Recommendation_Payload
 Stage 5 Score_Audit_Payload
 Stage 4 score constraints and caps
 Stage 2/3 summaries only to check preservation
-Stage Anchor
+Validation Bundle
 Rubric and active project contracts
 TUYA audit concepts as internal conceptual guidance
 official Elementor docs for platform-capability verification
@@ -162,7 +162,7 @@ Source classification is mandatory for every audit claim:
 ```yaml
 audit_source_ref:
   source_id:
-  source_type: implementation_payload | build_tree_payload | recommendation_payload | score_audit_payload | stage_anchor | project_contract | official_docs | export_evidence | internal_concept_reference | user_input | secondary_source
+  source_type: implementation_payload | build_tree_payload | recommendation_payload | score_audit_payload | validation_bundle | project_contract | official_docs | export_evidence | internal_concept_reference | user_input | secondary_source
   claim_checked:
   fact_class: platform_capability | project_default | project_conceptual_model | project_specific_behavior | implementation_observation | unsupported_claim
   allowed_use:
@@ -174,7 +174,7 @@ audit_source_ref:
 When sources conflict, Stage 9 must use this order:
 
 1. user-provided hard constraints for the current run;
-2. active Stage Anchor blockers, unknowns, confirmations, and gates;
+2. active Validation Bundle blockers, unknowns, confirmations, and gates;
 3. Stage 8 `Implementation_Payload`;
 4. Stage 7 `Build_Tree_Payload`;
 5. Stage 6 `Recommendation_Payload`;
@@ -220,7 +220,7 @@ Stage 9 must output these sections in order:
 19. `STAGE 9 SELF-AUDIT`
 20. `Final_Audit_Payload`
 21. `EV4_DEBUG_TRACE` if debug mode is active
-22. `NEXT STAGE ANCHOR — /handoff-export` or `REPAIR ANCHOR`
+22. `VALIDATION PROFILE BLOCKED REPORT` — no Bundle while this profile remains blocked
 
 ## Severity Taxonomy
 
@@ -672,7 +672,7 @@ Before emitting `Final_Audit_Payload`, Stage 9 must verify:
 
 ```yaml
 stage_9_self_audit:
-  - check: valid Stage Anchor v1.1 received
+  - check: valid Validation Bundle v1.2 received
     result: pass | fail
   - check: valid Implementation_Payload v1.0.0 received
     result: pass | fail
@@ -694,7 +694,7 @@ stage_9_self_audit:
     result: pass | fail
   - check: every blocker/high finding has repair route
     result: pass | fail
-  - check: next anchor emitted only on pass/pass_with_minor_flags
+  - check: blocked profile emits no Anchor or Bundle
     result: pass | fail
   - check: debug trace shape compatible when debug mode active
     result: pass | fail
@@ -712,9 +712,9 @@ Final_Audit_Payload:
     status: pass | fail
     missing_inputs: []
     schema_mismatches: []
-    repair_anchor_required: yes | no
+    repair_report_required: yes | no
   source_payload_ledger:
-    stage_anchor_ref:
+    validation_bundle_ref:
     implementation_payload_ref:
     build_tree_payload_ref:
     recommendation_payload_ref:
@@ -763,14 +763,14 @@ Final_Audit_Payload:
       owner:
   stage_9_self_audit: []
   debug_trace_ref:
-  next_anchor:
+  continuation_transaction: null_while_profile_blocked
 ```
 
 Payload rules:
 
 - `handoff_export_allowed: yes` only when final status is `pass` or `pass_with_minor_flags`.
-- `NEXT STAGE ANCHOR — /handoff-export` is emitted only when `handoff_export_allowed: yes`.
-- If `handoff_export_allowed: no`, emit `REPAIR ANCHOR`, not `NEXT STAGE ANCHOR`.
+- `handoff_export_allowed` is prose-level only while the profile is blocked and never authorizes continuation.
+- Emit a non-authorizing `BLOCKED REPAIR REPORT`; only a future registered validator may emit a complete transaction after Registry enablement.
 - `release_blockers` must include missing E2E evidence when the repository is being judged for release-level confirmation.
 - Medium findings must become handoff notes if handoff is allowed.
 
@@ -787,7 +787,7 @@ Required Stage 9 additions:
   "stage_version": "1.0.0",
   "input_digest": {
     "inputs_received": [
-      "STAGE_ANCHOR",
+      "VALIDATION_BUNDLE",
       "Implementation_Payload",
       "Build_Tree_Payload",
       "Recommendation_Payload",
@@ -795,7 +795,7 @@ Required Stage 9 additions:
     ],
     "inputs_missing": [],
     "input_payload_schemas": [
-      "ev4-stage-anchor@1.1.0",
+      "ev4-architect-validation-bundle@1.2.0",
       "ev4-implementation-payload@1.0.0",
       "ev4-build-tree-payload@1.0.0"
     ]
@@ -830,112 +830,11 @@ unapproved_dependency
 silent_repair_inside_audit
 ```
 
-## NEXT STAGE ANCHOR — /handoff-export
+## Validation Transaction Boundary
 
-Emit only on `pass` or `pass_with_minor_flags`.
+Stage 9 prose remains grounding input, but `/final-audit` is `blocked_missing_semantics`. Its active payload is not published as a canonical JSON Schema, deterministic severity/pass semantics are not implemented, and cross-stage earliest repair ownership is unresolved.
 
-```text
-NEXT STAGE ANCHOR — /handoff-export
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /final-audit
-target_stage: /handoff-export
-target_stage_hardening_status: scaffolded
-project_status_version: [STATUS.md version if known]
-payload_schema_in: ev4-final-audit-payload@1.0.0
-payload_schema_out: ev4-handoff-export-payload@0.1.0 or newer active schema
-
-Carry-forward facts:
-- key_decisions:
-  - Final audit status:
-  - Handoff export allowed: yes | no
-  - E2E release confirmation available: yes | no
-- selected_or_active_candidates:
-  - selected_candidate_id:
-  - selected_candidate_family:
-- rejected_or_blocked_candidates:
-- critical_unknowns:
-- confidence_delta:
-  - item:
-    previous_confidence:
-    current_confidence:
-    direction:
-    reason:
-    downstream_impact:
-- blocking_items:
-- gate_results:
-- audit_flags:
-- tie_or_ambiguity_flags:
-- required_user_confirmations:
-- repair_routes:
-
-Partial rerun state:
-- reusable_until: implementation, build-tree, recommendation, and prior payloads remain reusable only if no owner-stage repair route changes them
-- invalidation_triggers:
-  - any Stage 8 repair
-  - any Stage 7 tree repair
-  - any Stage 6 recommendation repair
-  - any new export evidence that contradicts implementation assumptions
-  - any resolved blocker/high finding
-  - any changed user constraint
-- earliest_safe_rerun_stage:
-- downstream_payloads_dependent_on_this_stage:
-  - Handoff_Export_Payload
-
-Stage input package:
-- required_inputs_present:
-  - Final_Audit_Payload
-  - repair routes or pass/minor flags
-  - debug trace ref when available
-- required_inputs_missing:
-- files_or_sections_to_reference:
-  - stages/10_HANDOFF_EXPORT.md
-  - contracts/STAGE_ANCHOR_CONTRACT.md
-  - contracts/PARTIAL_RERUN_CONTRACT.md
-  - diagnostics/LLM_DEBUG_TRACE_CONTRACT.md
-
-Stage boundary:
-- allowed_work:
-  - package final audited outputs
-  - create copy-ready handoff bundle
-  - preserve payloads, anchors, blockers, and debug trace
-- forbidden_work:
-  - new architecture
-  - new recommendation
-  - new implementation
-  - silent repair
-  - dropping medium flags or release blockers
-- stop_conditions:
-  - final audit did not pass
-  - Final_Audit_Payload missing
-  - unresolved blocker/high finding
-  - handoff export stage still scaffolded and user did not authorize hardening/test mode
-
-Debug trace:
-- debug_trace_required: yes
-- previous_debug_trace_id: optional
-- expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
-
-## REPAIR ANCHOR
-
-Emit on any failing status.
-
-```text
-REPAIR ANCHOR — [repair target]
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /final-audit
-repair_target_stage: [/implementation | /build-tree | /recommend | /score-audit | /score-evidence | /architectures | /decompose | /intake | user]
-failure_type:
-failure_evidence:
-minimal_repair_instruction:
-forbidden_shortcut:
-partial_rerun_state:
-- earliest_safe_rerun_stage:
-- invalidated_downstream:
-- reusable_payloads:
-debug_trace_required: yes
-expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
+No NEXT_STAGE or REPAIR Anchor and no Validation Bundle may be emitted from this Stage. The Manifest edge to `/handoff-export` is topology only. Future enablement must close the Registry decisions and add a registered handler plus independent Bundle regeneration.
 
 ## Strict Critic Hardening Notes Applied
 
@@ -953,7 +852,7 @@ The scaffolded Stage 9 was insufficient because it named broad audit categories 
 - `Final_Audit_Payload` schema;
 - self-audit;
 - debug trace addendum;
-- valid next-stage and repair anchor templates;
+- a future registered validator-owned next-stage and repair transaction;
 - E2E release-confirmation boundary.
 
 This version adds those controls. Stage 9 is now a hardened final-audit contract, but a real E2E run remains required before repository-level release confirmation.

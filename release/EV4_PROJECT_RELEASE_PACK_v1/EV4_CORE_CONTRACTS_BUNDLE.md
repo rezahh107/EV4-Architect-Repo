@@ -1,7 +1,7 @@
 # EV4 Core Contracts Bundle
 
-Status: release_candidate_for_controlled_use
-Version: 1.0.0
+Status: release_candidate_fail_closed_by_validation_profile
+Version: 1.1.0
 
 ---
 
@@ -10,31 +10,34 @@ Version: 1.0.0
 Schema:
 
 ```text
-ev4-stage-anchor@1.1.0
+ev4-stage-anchor@1.4.0
 ```
 
-Purpose: keep critical facts, unknowns, flags, gates, and repair routes at the front of each stage to reduce context drift.
+Purpose: carry user-facing critical facts, unknowns, flags, gates, and repair routes without becoming independent authorization. Legal topology comes only from the Pipeline Manifest. Executable capability comes only from the Validation Profiles Registry. Current continuation additionally requires an independently regenerated `ev4-architect-validation-bundle@1.2.0` from a `full_transaction_implemented` source Stage.
+
+Historical Anchor versions 1.1.0, 1.2.0, and 1.3.0 are readable but non-authorizing. A blocked Validation Profile emits no authorization Bundle.
 
 Required fields:
 
 ```text
+anchor_schema
+anchor_id
+run_id
+anchor_type
 source_stage
 target_stage
-target_stage_hardening_status
-project_status_version
-payload_schema_in
-payload_schema_out
-critical_unknowns
-confidence_delta
-blocking_items
-gate_results
-audit_flags
-required_user_confirmations
-partial_rerun_state
-allowed_work
-forbidden_work
-stop_conditions
-debug_trace_required
+repair_target_stage
+boundary_ref
+failure_event_ref
+handoff_state:
+  critical_unknowns
+  blocking_items
+  confidence_delta
+  gate_results
+  audit_flags
+  required_user_confirmations
+  partial_rerun_state
+  stage_boundary
 ```
 
 Stop if anchor is missing, stale, contradicted, or schema-mismatched.
