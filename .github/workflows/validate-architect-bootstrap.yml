@@ -6,10 +6,14 @@ on:
       - 'AGENTS.md'
       - 'README.md'
       - 'STATUS.md'
+      - '01_PROJECT_INSTRUCTIONS.md'
       - '02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md'
       - 'contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md'
       - 'contracts/ARCHITECT_STAGE_RESULT_V1.md'
+      - 'contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md'
+      - 'diagnostics/LLM_DEBUG_TRACE_CONTRACT.md'
       - 'fixtures/architect-quality-runtime/**'
+      - 'fixtures/repository-repair-recommendation-handoff/**'
       - 'manifests/architect-conversation-bootstrap.v1.json'
       - 'manifests/architect-pipeline-manifest.v1.json'
       - 'schemas/architect-conversation-bootstrap.v1.schema.json'
@@ -19,8 +23,10 @@ on:
       - 'scripts/check-architect-bootstrap.py'
       - 'scripts/check-architect-quality-runtime.py'
       - 'scripts/architect_quality_runtime.py'
+      - 'scripts/repository_repair_handoff.py'
       - 'tests/test_architect_bootstrap_semantics.py'
       - 'tests/test_architect_quality_runtime.py'
+      - 'tests/test_repository_repair_recommendation_handoff.py'
       - '.github/workflows/validate-architect-bootstrap.yml'
 
 permissions:
@@ -47,14 +53,16 @@ jobs:
       - name: Install validation dependencies
         run: python -m pip install 'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'
 
-      - name: Compile quality runtime
+      - name: Compile quality runtime and repository repair implementation
         run: |
           python -m py_compile \
             scripts/architect_quality_runtime.py \
             scripts/check-architect-quality-runtime.py \
             scripts/check-architect-bootstrap.py \
+            scripts/repository_repair_handoff.py \
             tests/test_architect_quality_runtime.py \
-            tests/test_architect_bootstrap_semantics.py
+            tests/test_architect_bootstrap_semantics.py \
+            tests/test_repository_repair_recommendation_handoff.py
 
       - name: Validate quality-first full pipeline regression
         run: python scripts/check-architect-quality-runtime.py
@@ -67,6 +75,9 @@ jobs:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
             tests/test_architect_quality_runtime.py \
             tests/test_architect_bootstrap_semantics.py
+
+      - name: Run repository repair handoff tests
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_repository_repair_recommendation_handoff.py
 
       - name: Validate AI governance
         run: python scripts/check-ai-governance.py
