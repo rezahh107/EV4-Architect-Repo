@@ -19,40 +19,23 @@ from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
 
+from architect_validation_profiles import (
+    PipelineAuthority,
+    exposed_profile,
+    load_pipeline_authority,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT_SCHEMA = "ev4-architect-pipeline-stage-artifact@1.1.0"
 RECEIPT_SCHEMA = "ev4-architect-stage-validation-receipt@1.1.0"
 FAILURE_EVENT_SCHEMA = "ev4-architect-validation-failure-event@1.0.0"
 BOUNDARY_SCHEMA = "ev4-stage-boundary-record@1.1.0"
-ANCHOR_SCHEMA = "ev4-stage-anchor@1.3.0"
-BUNDLE_SCHEMA = "ev4-architect-validation-bundle@1.1.0"
+ANCHOR_SCHEMA = "ev4-stage-anchor@1.4.0"
+BUNDLE_SCHEMA = "ev4-architect-validation-bundle@1.2.0"
 VALIDATOR_ID = "architect-pipeline-stage-boundary-validator"
 VALIDATOR_VERSION = "1.2.0"
 DETERMINISM_PROFILE = "deterministic_no_timestamps_v2"
-ORDER = ["/decompose", "/architectures", "/score-evidence", "/score-audit"]
-STAGE_VERSIONS = {
-    "/decompose": "1.0.0",
-    "/architectures": "1.1.0",
-    "/score-evidence": "1.3.0",
-    "/score-audit": "1.2.0",
-}
-PREFIX = {
-    "/decompose": "decompose",
-    "/architectures": "architectures",
-    "/score-evidence": "score-evidence",
-    "/score-audit": "score-audit",
-}
-NEXT_STAGE = {
-    "/decompose": "/architectures",
-    "/architectures": "/score-evidence",
-    "/score-evidence": "/score-audit",
-    "/score-audit": "/recommend",
-}
-PREDECESSOR = {
-    "/architectures": "/decompose",
-    "/score-evidence": "/architectures",
-    "/score-audit": "/score-evidence",
-}
+PIPELINE_AUTHORITY = load_pipeline_authority(ROOT)
 ACTIVE_UNKNOWN_STATES = {"carried", "score_capped", "blocking", "downstream_only"}
 INACTIVE_UNKNOWN_STATES = {"resolved_with_evidence", "not_applicable", "stale"}
 UNKNOWN_STATES = ACTIVE_UNKNOWN_STATES | INACTIVE_UNKNOWN_STATES
@@ -63,8 +46,8 @@ SCHEMA_PATHS = {
     "receipt": "schemas/ev4-architect-stage-validation-receipt.v1.schema.json",
     "failure_event": "schemas/ev4-architect-validation-failure-event.v1.schema.json",
     "boundary": "schemas/ev4-stage-boundary-record.v1.schema.json",
-    "anchor": "schemas/ev4-stage-anchor.v1.schema.json",
-    "bundle": "schemas/ev4-architect-validation-bundle.v1.schema.json",
+    "anchor": "schemas/ev4-stage-anchor.v1.4.schema.json",
+    "bundle": "schemas/ev4-architect-validation-bundle.v1.2.schema.json",
 }
 DIAGNOSTIC_OWNERS = {
     "ASB-STAGE-VERSION-MISMATCH": "detected_stage",
@@ -135,11 +118,49 @@ def sha_file(path: Path) -> str:
     return sha_bytes(path.read_bytes())
 
 
-def stage_index(stage: str | None) -> int:
-    try:
-        return ORDER.index(stage or "")
-    except ValueError:
-        return len(ORDER) + 1
+def pipeline_authority(root: Path = ROOT) -> PipelineAuthority:
+    if root.resolve() == ROOT.resolve():
+        return PIPELINE_AUTHORITY
+    return load_pipeline_authority(root)
+
+
+def first_implemented_stage(root: Path = ROOT) -> str:
+    authority = pipeline_authority(root)
+    if not authority.implemented_stage_order:
+        raise ValueError("Pipeline authority declares no implemented Validation Profile")
+    return authority.implemented_stage_order[0]
+
+
+def stage_index(stage: str | None, root: Path = ROOT) -> int:
+    return pipeline_authority(root).stage_index(stage)
+
+
+def implemented_stage_index(stage: str | None, root: Path = ROOT) -> int:
+    return pipeline_authority(root).implemented_index(stage)
+
+
+def stage_prefix(stage: str, root: Path = ROOT) -> str:
+    return pipeline_authority(root).prefix(stage)
+
+
+def stage_version(stage: str, root: Path = ROOT) -> str:
+    return pipeline_authority(root).stage_version(stage)
+
+
+def stage_successor(stage: str, root: Path = ROOT) -> str | None:
+    return pipeline_authority(root).successor(stage)
+
+
+def stage_predecessor(stage: str, root: Path = ROOT) -> str | None:
+    return pipeline_authority(root).predecessor(stage)
+
+
+def implemented_stage_order(root: Path = ROOT) -> tuple[str, ...]:
+    return pipeline_authority(root).implemented_stage_order
+
+
+def first_implemented_stage(root: Path = ROOT) -> str:
+    return implemented_stage_order(root)[0]
 
 
 def diagnostic(

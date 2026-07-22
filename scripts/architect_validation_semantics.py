@@ -25,7 +25,7 @@ def receipt_for(
         "artifact_id": artifact.get("artifact_id", "unknown"),
         "artifact_schema": artifact.get("artifact_schema", ARTIFACT_SCHEMA),
         "artifact_sha256": digest,
-        "stage_id": artifact.get("stage_id", "/decompose"),
+        "stage_id": artifact.get("stage_id", first_implemented_stage()),
         "status": "valid" if not ordered else "invalid",
         "diagnostics": ordered,
     }
@@ -148,7 +148,15 @@ def validate_unknown_lifecycle(row: dict[str, Any], index: int) -> list[dict[str
     return diagnostics
 
 
-def semantic_diagnostics(
+def validate_decompose(
+    artifact: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    digests: dict[str, str],
+) -> list[dict[str, Any]]:
+    return []
+
+
+def validate_architectures(
     artifact: dict[str, Any],
     artifacts: dict[str, dict[str, Any]],
     digests: dict[str, str],
@@ -156,170 +164,235 @@ def semantic_diagnostics(
     stage = artifact["stage_id"]
     payload = artifact["payload"]
     diagnostics: list[dict[str, Any]] = []
-    predecessor_stage = PREDECESSOR.get(stage)
+    families = {
+        row.get("family_id")
+        for row in payload.get("architecture_coverage_matrix", [])
+    }
+    missing = sorted({f"A{i:02d}" for i in range(1, 9)} - families)
+    if missing:
+        diagnostics.append(
+            diagnostic(
+                "ASB-COVERAGE-MATRIX-INCOMPLETE",
+                "ASB-R03",
+                stage,
+                "$/payload/architecture_coverage_matrix",
+                "A01-A08",
+                ",".join(missing),
+                stage,
+            )
+        )
+    upstream = artifacts.get("/decompose")
+    ledger = {
+        row.get("unknown_id"): row
+        for row in payload.get("unknown_propagation_ledger", [])
+    }
+    if upstream:
+        for unknown in upstream["payload"].get("unknowns", []):
+            unknown_id = unknown.get("unknown_id")
+            if unknown_id not in ledger:
+                diagnostics.append(
+                    diagnostic(
+                        "ASB-UPSTREAM-UNKNOWN-LOST",
+                        "ASB-R04",
+                        stage,
+                        "$/payload/unknown_propagation_ledger",
+                        str(unknown_id),
+                        "missing",
+                        "/decompose",
+                    )
+                )
+    for idx, row in enumerate(payload.get("unknown_propagation_ledger", [])):
+        diagnostics.extend(validate_unknown_lifecycle(row, idx))
+    return diagnostics
+
+
+def validate_score_evidence(
+    artifact: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    digests: dict[str, str],
+) -> list[dict[str, Any]]:
+    stage = artifact["stage_id"]
+    payload = artifact["payload"]
+    diagnostics: list[dict[str, Any]] = []
+    upstream = artifacts.get("/architectures")
+    if upstream:
+        expected_payload_ref = artifact_ref(upstream, digests["/architectures"])
+        payload_refs = payload.get("validated_upstream_artifact_refs", [])
+        if len(payload_refs) != 1:
+            diagnostics.append(
+                diagnostic(
+                    "ASB-STAGE3-PAYLOAD-REFERENCE-COUNT",
+                    "ASB-R05",
+                    stage,
+                    "$/payload/validated_upstream_artifact_refs",
+                    "exactly one Stage 3 artifact_ref",
+                    str(len(payload_refs)),
+                    "/architectures",
+                )
+            )
+        elif payload_refs[0] != expected_payload_ref:
+            diagnostics.append(
+                diagnostic(
+                    "ASB-STAGE3-PAYLOAD-REFERENCE-MISMATCH",
+                    "ASB-R05",
+                    stage,
+                    "$/payload/validated_upstream_artifact_refs/0",
+                    json.dumps(expected_payload_ref, sort_keys=True),
+                    json.dumps(payload_refs[0], sort_keys=True),
+                    "/architectures",
+                )
+            )
+        valid_candidates = {
+            row.get("candidate_id")
+            for row in upstream["payload"].get("active_candidates", [])
+        }
+        active_unknowns = {
+            row.get("unknown_id")
+            for row in upstream["payload"].get("unknown_propagation_ledger", [])
+            if row.get("state") in ACTIVE_UNKNOWN_STATES
+            and row.get("handling") in ACTIVE_UNKNOWN_STATES
+        }
+        recorded_unknowns = {
+            row.get("unknown_id")
+            for row in payload.get("uncertainty_register", [])
+            if isinstance(row, dict)
+        }
+        for idx, score in enumerate(payload.get("candidate_scores", [])):
+            if score.get("candidate_id") not in valid_candidates:
+                diagnostics.append(
+                    diagnostic(
+                        "ASB-CANDIDATE-NOT-IN-STAGE3",
+                        "ASB-R07",
+                        stage,
+                        f"$/payload/candidate_scores/{idx}/candidate_id",
+                        "candidate from validated /architectures Artifact",
+                        str(score.get("candidate_id")),
+                        "/architectures",
+                    )
+                )
+            if score.get("scores_audited") is True:
+                diagnostics.append(
+                    diagnostic(
+                        "ASB-SCORE-AUDITED-EARLY",
+                        "ASB-R08",
+                        stage,
+                        f"$/payload/candidate_scores/{idx}/scores_audited",
+                        "false",
+                        "true",
+                        stage,
+                    )
+                )
+            critical_unknown = any(
+                criterion.get("contract_critical") and criterion.get("value") == "?"
+                for criterion in score.get("criteria", [])
+            )
+            if critical_unknown and score.get("final_total") is not None:
+                diagnostics.append(
+                    diagnostic(
+                        "ASB-FINAL-TOTAL-WITH-UNKNOWN",
+                        "ASB-R05",
+                        stage,
+                        f"$/payload/candidate_scores/{idx}/final_total",
+                        "null",
+                        str(score.get("final_total")),
+                        stage,
+                    )
+                )
+        for unknown_id in sorted(active_unknowns - recorded_unknowns):
+            diagnostics.append(
+                diagnostic(
+                    "ASB-STAGE3-UNKNOWN-DISCARDED",
+                    "ASB-R05",
+                    stage,
+                    "$/payload/uncertainty_register",
+                    str(unknown_id),
+                    "missing",
+                    stage,
+                )
+            )
+    return diagnostics
+
+
+def validate_score_audit(
+    artifact: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    digests: dict[str, str],
+) -> list[dict[str, Any]]:
+    stage = artifact["stage_id"]
+    payload = artifact["payload"]
+    diagnostics: list[dict[str, Any]] = []
+    upstream = artifacts.get("/score-evidence")
+    if upstream:
+        expected = artifact_ref(upstream, digests["/score-evidence"])
+        observed = payload.get("validated_stage_4_artifact_ref")
+        if observed != expected:
+            diagnostics.append(
+                diagnostic(
+                    "ASB-STAGE4-REFERENCE-MISMATCH",
+                    "ASB-R08",
+                    stage,
+                    "$/payload/validated_stage_4_artifact_ref",
+                    json.dumps(expected, sort_keys=True),
+                    json.dumps(observed, sort_keys=True),
+                    "/score-evidence",
+                )
+            )
+    return diagnostics
+
+
+SEMANTIC_HANDLERS = {
+    handler.__name__: handler
+    for handler in [
+        validate_decompose,
+        validate_architectures,
+        validate_score_evidence,
+        validate_score_audit,
+    ]
+}
+
+
+def semantic_diagnostics(
+    artifact: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    digests: dict[str, str],
+    authority: PipelineAuthority,
+) -> list[dict[str, Any]]:
+    stage = artifact["stage_id"]
+    profile = authority.profiles[stage]
+    if profile["validation"]["status"] != "full_transaction_implemented":
+        return [
+            diagnostic(
+                "ASB-STAGE-VALIDATION-NOT-IMPLEMENTED",
+                "ASB-R12",
+                stage,
+                "$/stage_id",
+                "full_transaction_implemented Validation Profile",
+                profile["validation"]["status"],
+                stage,
+            )
+        ]
+    diagnostics: list[dict[str, Any]] = []
+    predecessor_stage = authority.predecessor(stage)
     if predecessor_stage and predecessor_stage in artifacts:
         diagnostics.extend(
             validate_source_reference(
                 artifact, artifacts[predecessor_stage], digests[predecessor_stage]
             )
         )
-    if stage == "/architectures":
-        families = {
-            row.get("family_id")
-            for row in payload.get("architecture_coverage_matrix", [])
-        }
-        missing = sorted({f"A{i:02d}" for i in range(1, 9)} - families)
-        if missing:
-            diagnostics.append(
-                diagnostic(
-                    "ASB-COVERAGE-MATRIX-INCOMPLETE",
-                    "ASB-R03",
-                    stage,
-                    "$/payload/architecture_coverage_matrix",
-                    "A01-A08",
-                    ",".join(missing),
-                    stage,
-                )
+    handler_id = profile["validation"]["semantic_handler"]
+    handler = SEMANTIC_HANDLERS.get(handler_id)
+    if handler is None:
+        diagnostics.append(
+            diagnostic(
+                "ASB-SEMANTIC-HANDLER-MISSING",
+                "ASB-R12",
+                stage,
+                "$/stage_id",
+                handler_id,
+                "unregistered",
+                stage,
             )
-        upstream = artifacts.get("/decompose")
-        ledger = {
-            row.get("unknown_id"): row
-            for row in payload.get("unknown_propagation_ledger", [])
-        }
-        if upstream:
-            for unknown in upstream["payload"].get("unknowns", []):
-                unknown_id = unknown.get("unknown_id")
-                if unknown_id not in ledger:
-                    diagnostics.append(
-                        diagnostic(
-                            "ASB-UPSTREAM-UNKNOWN-LOST",
-                            "ASB-R04",
-                            stage,
-                            "$/payload/unknown_propagation_ledger",
-                            str(unknown_id),
-                            "missing",
-                            "/decompose",
-                        )
-                    )
-        for idx, row in enumerate(payload.get("unknown_propagation_ledger", [])):
-            diagnostics.extend(validate_unknown_lifecycle(row, idx))
-    elif stage == "/score-evidence":
-        upstream = artifacts.get("/architectures")
-        if upstream:
-            expected_payload_ref = artifact_ref(
-                upstream, digests["/architectures"]
-            )
-            payload_refs = payload.get("validated_upstream_artifact_refs", [])
-            if len(payload_refs) != 1:
-                diagnostics.append(
-                    diagnostic(
-                        "ASB-STAGE3-PAYLOAD-REFERENCE-COUNT",
-                        "ASB-R05",
-                        stage,
-                        "$/payload/validated_upstream_artifact_refs",
-                        "exactly one Stage 3 artifact_ref",
-                        str(len(payload_refs)),
-                        "/architectures",
-                    )
-                )
-            elif payload_refs[0] != expected_payload_ref:
-                diagnostics.append(
-                    diagnostic(
-                        "ASB-STAGE3-PAYLOAD-REFERENCE-MISMATCH",
-                        "ASB-R05",
-                        stage,
-                        "$/payload/validated_upstream_artifact_refs/0",
-                        json.dumps(expected_payload_ref, sort_keys=True),
-                        json.dumps(payload_refs[0], sort_keys=True),
-                        "/architectures",
-                    )
-                )
-            valid_candidates = {
-                row.get("candidate_id")
-                for row in upstream["payload"].get("active_candidates", [])
-            }
-            active_unknowns = {
-                row.get("unknown_id")
-                for row in upstream["payload"].get(
-                    "unknown_propagation_ledger", []
-                )
-                if row.get("state") in ACTIVE_UNKNOWN_STATES
-                and row.get("handling") in ACTIVE_UNKNOWN_STATES
-            }
-            recorded_unknowns = {
-                row.get("unknown_id")
-                for row in payload.get("uncertainty_register", [])
-                if isinstance(row, dict)
-            }
-            for idx, score in enumerate(payload.get("candidate_scores", [])):
-                if score.get("candidate_id") not in valid_candidates:
-                    diagnostics.append(
-                        diagnostic(
-                            "ASB-CANDIDATE-NOT-IN-STAGE3",
-                            "ASB-R07",
-                            stage,
-                            f"$/payload/candidate_scores/{idx}/candidate_id",
-                            "candidate from validated /architectures Artifact",
-                            str(score.get("candidate_id")),
-                            "/architectures",
-                        )
-                    )
-                if score.get("scores_audited") is True:
-                    diagnostics.append(
-                        diagnostic(
-                            "ASB-SCORE-AUDITED-EARLY",
-                            "ASB-R08",
-                            stage,
-                            f"$/payload/candidate_scores/{idx}/scores_audited",
-                            "false",
-                            "true",
-                            stage,
-                        )
-                    )
-                critical_unknown = any(
-                    criterion.get("contract_critical")
-                    and criterion.get("value") == "?"
-                    for criterion in score.get("criteria", [])
-                )
-                if critical_unknown and score.get("final_total") is not None:
-                    diagnostics.append(
-                        diagnostic(
-                            "ASB-FINAL-TOTAL-WITH-UNKNOWN",
-                            "ASB-R05",
-                            stage,
-                            f"$/payload/candidate_scores/{idx}/final_total",
-                            "null",
-                            str(score.get("final_total")),
-                            stage,
-                        )
-                    )
-            for unknown_id in sorted(active_unknowns - recorded_unknowns):
-                diagnostics.append(
-                    diagnostic(
-                        "ASB-STAGE3-UNKNOWN-DISCARDED",
-                        "ASB-R05",
-                        stage,
-                        "$/payload/uncertainty_register",
-                        str(unknown_id),
-                        "missing",
-                        stage,
-                    )
-                )
-    elif stage == "/score-audit":
-        upstream = artifacts.get("/score-evidence")
-        if upstream:
-            expected = artifact_ref(upstream, digests["/score-evidence"])
-            observed = payload.get("validated_stage_4_artifact_ref")
-            if observed != expected:
-                diagnostics.append(
-                    diagnostic(
-                        "ASB-STAGE4-REFERENCE-MISMATCH",
-                        "ASB-R08",
-                        stage,
-                        "$/payload/validated_stage_4_artifact_ref",
-                        json.dumps(expected, sort_keys=True),
-                        json.dumps(observed, sort_keys=True),
-                        "/score-evidence",
-                    )
-                )
+        )
+        return diagnostics
+    diagnostics.extend(handler(artifact, artifacts, digests))
     return diagnostics

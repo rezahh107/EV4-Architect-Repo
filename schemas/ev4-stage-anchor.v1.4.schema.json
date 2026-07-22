@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ev4-stage-anchor@1.4.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "anchor_schema",
+    "anchor_id",
+    "run_id",
+    "anchor_type",
+    "source_stage",
+    "target_stage",
+    "repair_target_stage",
+    "boundary_ref",
+    "failure_event_ref",
+    "handoff_state"
+  ],
+  "properties": {
+    "anchor_schema": {"const": "ev4-stage-anchor@1.4.0"},
+    "anchor_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "anchor_type": {"enum": ["NEXT_STAGE_ANCHOR", "REPAIR_ANCHOR"]},
+    "source_stage": {"$ref": "#/$defs/stage"},
+    "target_stage": {"oneOf": [{"$ref": "#/$defs/stage"}, {"type": "null"}]},
+    "repair_target_stage": {"oneOf": [{"$ref": "#/$defs/stage"}, {"type": "null"}]},
+    "boundary_ref": {"$ref": "#/$defs/boundary_ref"},
+    "failure_event_ref": {"oneOf": [{"$ref": "#/$defs/failure_event_ref"}, {"type": "null"}]},
+    "handoff_state": {"$ref": "#/$defs/handoff_state"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"anchor_type": {"const": "NEXT_STAGE_ANCHOR"}}, "required": ["anchor_type"]},
+      "then": {
+        "properties": {
+          "target_stage": {"$ref": "#/$defs/stage"},
+          "repair_target_stage": {"type": "null"},
+          "failure_event_ref": {"type": "null"},
+          "handoff_state": {
+            "properties": {
+              "gate_results": {
+                "properties": {
+                  "receipt_status": {"const": "valid"},
+                  "boundary_transition": {"const": "next_stage"},
+                  "next_stage_authorized": {"const": true}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"anchor_type": {"const": "REPAIR_ANCHOR"}}, "required": ["anchor_type"]},
+      "then": {
+        "properties": {
+          "target_stage": {"type": "null"},
+          "repair_target_stage": {"$ref": "#/$defs/stage"},
+          "failure_event_ref": {"$ref": "#/$defs/failure_event_ref"},
+          "handoff_state": {
+            "properties": {
+              "gate_results": {
+                "properties": {
+                  "receipt_status": {"const": "invalid"},
+                  "boundary_transition": {"const": "repair"},
+                  "next_stage_authorized": {"const": false}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "stage": {"type": "string", "pattern": "^/[a-z0-9-]+$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "confidence": {"enum": ["confirmed", "likely", "unknown", "blocked", "not_applicable"]},
+    "boundary_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["boundary_id", "boundary_schema", "boundary_sha256"],
+      "properties": {
+        "boundary_id": {"type": "string", "minLength": 1},
+        "boundary_schema": {"const": "ev4-stage-boundary-record@1.1.0"},
+        "boundary_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "failure_event_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failure_event_id", "failure_event_schema", "failure_event_sha256"],
+      "properties": {
+        "failure_event_id": {"type": "string", "minLength": 1},
+        "failure_event_schema": {"const": "ev4-architect-validation-failure-event@1.0.0"},
+        "failure_event_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unknown_id", "state", "evidence_refs"],
+      "properties": {
+        "unknown_id": {"type": "string", "minLength": 1},
+        "state": {"$ref": "#/$defs/confidence"},
+        "evidence_refs": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "confidence_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_id",
+        "subject_type",
+        "previous_confidence",
+        "current_confidence",
+        "direction",
+        "reason",
+        "evidence_refs",
+        "downstream_impact"
+      ],
+      "properties": {
+        "subject_id": {"type": "string", "minLength": 1},
+        "subject_type": {"enum": ["unknown", "candidate", "gate", "evidence"]},
+        "previous_confidence": {"$ref": "#/$defs/confidence"},
+        "current_confidence": {"$ref": "#/$defs/confidence"},
+        "direction": {"enum": ["increased", "decreased", "unchanged", "resolved", "new_unknown"]},
+        "reason": {"type": "string", "minLength": 1},
+        "evidence_refs": {"type": "array", "items": {"type": "string"}},
+        "downstream_impact": {"type": "string", "minLength": 1}
+      }
+    },
+    "handoff_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "critical_unknowns",
+        "blocking_items",
+        "confidence_delta",
+        "gate_results",
+        "audit_flags",
+        "required_user_confirmations",
+        "partial_rerun_state",
+        "stage_boundary"
+      ],
+      "properties": {
+        "critical_unknowns": {"type": "array", "items": {"$ref": "#/$defs/unknown"}},
+        "blocking_items": {"type": "array", "items": {"$ref": "#/$defs/unknown"}},
+        "confidence_delta": {"type": "array", "items": {"$ref": "#/$defs/confidence_delta"}},
+        "gate_results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["receipt_status", "boundary_transition", "next_stage_authorized"],
+          "properties": {
+            "receipt_status": {"enum": ["valid", "invalid"]},
+            "boundary_transition": {"enum": ["next_stage", "repair"]},
+            "next_stage_authorized": {"type": "boolean"}
+          }
+        },
+        "audit_flags": {"type": "array", "items": {"type": "string"}},
+        "required_user_confirmations": {"type": "array", "items": {"type": "string"}},
+        "partial_rerun_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reusable_until", "invalidation_triggers", "earliest_safe_rerun_stage", "downstream_payloads_dependent_on_this_stage"],
+          "properties": {
+            "reusable_until": {"oneOf": [{"$ref": "#/$defs/stage"}, {"type": "null"}]},
+            "invalidation_triggers": {"type": "array", "items": {"type": "string"}},
+            "earliest_safe_rerun_stage": {"$ref": "#/$defs/stage"},
+            "downstream_payloads_dependent_on_this_stage": {"type": "array", "items": {"$ref": "#/$defs/stage"}}
+          }
+        },
+        "stage_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed_work", "forbidden_work", "stop_conditions"],
+          "properties": {
+            "allowed_work": {"type": "array", "items": {"type": "string"}},
+            "forbidden_work": {"type": "array", "items": {"type": "string"}},
+            "stop_conditions": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    }
+  }
+}

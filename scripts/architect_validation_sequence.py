@@ -2,7 +2,12 @@
 from architect_validation_semantics import *  # noqa: F401,F403
 
 
-def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, Any]]]:
+def discover_sequence(
+    sequence_path: Path, authority: PipelineAuthority | None = None
+) -> tuple[list[Path], list[dict[str, Any]]]:
+    authority = authority or PIPELINE_AUTHORITY
+    executable_order = authority.implemented_stage_order
+    fallback_stage = executable_order[0]
     diagnostics: list[dict[str, Any]] = []
     by_stage: dict[str, list[Path]] = {}
     for path in sorted(sequence_path.glob("*.json")):
@@ -13,29 +18,42 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                 diagnostic(
                     "ASB-SCHEMA-VALIDATION-FAILED",
                     "ASB-R01",
-                    "/decompose",
+                    fallback_stage,
                     f"$/{path.name}",
                     "valid JSON object",
                     type(exc).__name__,
-                    "/decompose",
+                    fallback_stage,
                 )
             )
             continue
         stage = value.get("stage_id") if isinstance(value, dict) else None
-        if stage not in ORDER:
+        if stage not in authority.stage_records:
             diagnostics.append(
                 diagnostic(
                     "ASB-STAGE-FILE-MISMATCH",
                     "ASB-R01",
-                    stage or "/decompose",
+                    stage or fallback_stage,
                     f"$/{path.name}",
                     "recognized stage_id",
                     str(stage),
-                    stage if stage in ORDER else "/decompose",
+                    fallback_stage,
                 )
             )
             continue
-        expected_name = f"{PREFIX[stage]}.json"
+        if not authority.is_implemented(stage):
+            diagnostics.append(
+                diagnostic(
+                    "ASB-STAGE-VALIDATION-NOT-IMPLEMENTED",
+                    "ASB-R12",
+                    stage,
+                    f"$/{path.name}",
+                    "full_transaction_implemented Validation Profile",
+                    authority.profiles[stage]["validation"]["status"],
+                    stage,
+                )
+            )
+            continue
+        expected_name = f"{authority.prefix(stage)}.json"
         if path.name != expected_name:
             diagnostics.append(
                 diagnostic(
@@ -62,12 +80,12 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
                     stage,
                 )
             )
-    present = [stage for stage in ORDER if stage in by_stage]
+    present = [stage for stage in executable_order if stage in by_stage]
     if present:
-        highest = max(stage_index(stage) for stage in present)
-        for missing in ORDER[: highest + 1]:
+        highest = max(authority.implemented_index(stage) for stage in present)
+        for missing in executable_order[: highest + 1]:
             if missing not in by_stage:
-                detected = ORDER[min(highest, len(ORDER) - 1)]
+                detected = executable_order[min(highest, len(executable_order) - 1)]
                 diagnostics.append(
                     diagnostic(
                         "ASB-STAGE-SEQUENCE-GAP",
@@ -84,19 +102,20 @@ def discover_sequence(sequence_path: Path) -> tuple[list[Path], list[dict[str, A
             diagnostic(
                 "ASB-STAGE-SEQUENCE-GAP",
                 "ASB-R01",
-                "/decompose",
+                fallback_stage,
                 "$",
-                "/decompose",
+                fallback_stage,
                 "empty sequence",
-                "/decompose",
+                fallback_stage,
             )
         )
-    return [by_stage[stage][0] for stage in ORDER if stage in by_stage], sort_diagnostics(diagnostics)
+    return [by_stage[stage][0] for stage in executable_order if stage in by_stage], sort_diagnostics(diagnostics)
 
 
 def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
+    authority = pipeline_authority(root)
     validators = schema_validators(root)
-    paths, discovery_diagnostics = discover_sequence(sequence)
+    paths, discovery_diagnostics = discover_sequence(sequence, authority)
     if discovery_diagnostics:
         return {
             "run_validation_status": "invalid",
@@ -104,7 +123,9 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
             "diagnostics": discovery_diagnostics,
             "processed": [],
             "failed_stage": discovery_diagnostics[0]["stage_id"],
-            "repair_target_stage": select_repair_target(discovery_diagnostics, "/decompose"),
+            "repair_target_stage": select_repair_target(
+                discovery_diagnostics, authority.implemented_stage_order[0]
+            ),
             "structural_failure": True,
         }
     artifacts: dict[str, dict[str, Any]] = {}
@@ -115,9 +136,9 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
         raw = path.read_bytes()
         digest = sha_bytes(raw)
         artifact = json.loads(raw.decode("utf-8"))
-        stage = artifact.get("stage_id", "/decompose")
+        stage = artifact.get("stage_id", authority.implemented_stage_order[0])
         diagnostics: list[dict[str, Any]] = []
-        expected_version = STAGE_VERSIONS.get(stage)
+        expected_version = authority.stage_version(stage)
         if artifact.get("stage_version") != expected_version:
             diagnostics.append(
                 diagnostic(
@@ -151,7 +172,9 @@ def validate_sequence(sequence: Path, root: Path = ROOT) -> dict[str, Any]:
                 )
             )
         if not diagnostics:
-            diagnostics.extend(semantic_diagnostics(artifact, artifacts, digests))
+            diagnostics.extend(
+                semantic_diagnostics(artifact, artifacts, digests, authority)
+            )
         receipt = receipt_for(artifact, digest, diagnostics)
         processed.append({"path": path, "artifact": artifact, "digest": digest, "receipt": receipt})
         if diagnostics:

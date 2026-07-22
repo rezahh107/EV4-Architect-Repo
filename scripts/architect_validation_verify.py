@@ -10,23 +10,163 @@ def listed_paths(manifest: dict[str, Any]) -> set[str]:
         result.add(manifest["failure_event_path"])
     return result
 
-def invalid_bundle_result(code: str, path: str, expected: str, observed: str) -> dict[str, Any]:
+def invalid_bundle_result(
+    code: str,
+    path: str,
+    expected: str,
+    observed: str,
+    repair_target: str | None = None,
+) -> dict[str, Any]:
+    repair_target = repair_target or first_implemented_stage()
     return {
         "bundle_integrity_status": "invalid",
         "run_validation_status": "unknown",
         "authorization_valid": False,
         "diagnostics": [
-            diagnostic(code, "ASB-R09", "bundle", path, expected, observed, "/decompose")
+            diagnostic(
+                code,
+                "ASB-R09",
+                "bundle",
+                path,
+                expected,
+                observed,
+                repair_target,
+            )
         ],
     }
 
+
+def bundle_manifest_semantic_diagnostics(
+    manifest: dict[str, Any], authority: PipelineAuthority
+) -> list[dict[str, Any]]:
+    fallback = authority.implemented_stage_order[0]
+    sequence = manifest.get("stage_sequence", [])
+    expected = list(authority.implemented_stage_order[: len(sequence)])
+    if sequence != expected:
+        return [
+            diagnostic(
+                "ASB-BUNDLE-STAGE-SEQUENCE-NOT-EXECUTABLE-PREFIX",
+                "ASB-R12",
+                "bundle",
+                "$/stage_sequence",
+                json.dumps(expected),
+                json.dumps(sequence),
+                fallback,
+            )
+        ]
+    if not sequence:
+        return [
+            diagnostic(
+                "ASB-BUNDLE-STAGE-SEQUENCE-EMPTY",
+                "ASB-R12",
+                "bundle",
+                "$/stage_sequence",
+                "non-empty executable Stage prefix",
+                "empty",
+                fallback,
+            )
+        ]
+    for stage in sequence:
+        if not authority.is_implemented(stage):
+            return [
+                diagnostic(
+                    "ASB-BUNDLE-STAGE-NOT-IMPLEMENTED",
+                    "ASB-R12",
+                    stage,
+                    "$/stage_sequence",
+                    "full_transaction_implemented Validation Profile",
+                    authority.profiles[stage]["validation"]["status"],
+                    stage,
+                )
+            ]
+    if len(manifest.get("artifacts", [])) != len(sequence) or len(
+        manifest.get("receipts", [])
+    ) != len(sequence):
+        return [
+            diagnostic(
+                "ASB-BUNDLE-STAGE-CARRIER-COUNT-MISMATCH",
+                "ASB-R12",
+                "bundle",
+                "$",
+                str(len(sequence)),
+                f"artifacts={len(manifest.get('artifacts', []))};receipts={len(manifest.get('receipts', []))}",
+                fallback,
+            )
+        ]
+    if manifest.get("overall_status") == "valid":
+        source = sequence[-1]
+        successor = authority.successor(source)
+        if successor is None or manifest.get("authorized_next_stage") != successor:
+            return [
+                diagnostic(
+                    "ASB-BUNDLE-AUTHORIZED-EDGE-INVALID",
+                    "ASB-R12",
+                    source,
+                    "$/authorized_next_stage",
+                    str(successor),
+                    str(manifest.get("authorized_next_stage")),
+                    source,
+                )
+            ]
+        if not authority.profiles[source]["validation"]["authorization_capable"]:
+            return [
+                diagnostic(
+                    "ASB-BUNDLE-SOURCE-NOT-AUTHORIZATION-CAPABLE",
+                    "ASB-R12",
+                    source,
+                    "$/stage_sequence",
+                    "authorization_capable Validation Profile",
+                    authority.profiles[source]["validation"]["status"],
+                    source,
+                )
+            ]
+        if len(manifest.get("boundaries", [])) != len(sequence) or len(
+            manifest.get("anchors", [])
+        ) != len(sequence):
+            return [
+                diagnostic(
+                    "ASB-BUNDLE-SUCCESS-CARRIER-COUNT-MISMATCH",
+                    "ASB-R12",
+                    source,
+                    "$",
+                    str(len(sequence)),
+                    f"boundaries={len(manifest.get('boundaries', []))};anchors={len(manifest.get('anchors', []))}",
+                    source,
+                )
+            ]
+    expected_schemas = {
+        "artifacts": ARTIFACT_SCHEMA,
+        "receipts": RECEIPT_SCHEMA,
+        "boundaries": BOUNDARY_SCHEMA,
+        "anchors": ANCHOR_SCHEMA,
+    }
+    for collection, expected_schema in expected_schemas.items():
+        for index, entry in enumerate(manifest.get(collection, [])):
+            if entry.get("schema") != expected_schema:
+                return [
+                    diagnostic(
+                        "ASB-BUNDLE-CARRIER-SCHEMA-INACTIVE",
+                        "ASB-R12",
+                        "bundle",
+                        f"$/{collection}/{index}/schema",
+                        expected_schema,
+                        str(entry.get("schema")),
+                        fallback,
+                    )
+                ]
+    return []
+
 def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
+    authority = pipeline_authority(root)
+    fallback_stage = first_implemented_stage(root)
     try:
         manifest = load_json(bundle / "manifest.json")
     except Exception as exc:
         return invalid_bundle_result("ASB-BUNDLE-MANIFEST-MISSING", "$/manifest.json", "valid manifest", type(exc).__name__)
     validators = schema_validators(root)
-    schema_errors = schema_diagnostics(validators["bundle"], manifest, "bundle", "$", "/decompose")
+    schema_errors = schema_diagnostics(
+        validators["bundle"], manifest, "bundle", "$", fallback_stage
+    )
     if schema_errors:
         return {
             "bundle_integrity_status": "invalid",
@@ -43,6 +183,14 @@ def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
             if path in seen:
                 return invalid_bundle_result("ASB-BUNDLE-DUPLICATE-PATH", f"$/{collection}", "unique path", path)
             seen.add(path)
+    semantic_errors = bundle_manifest_semantic_diagnostics(manifest, authority)
+    if semantic_errors:
+        return {
+            "bundle_integrity_status": "invalid",
+            "run_validation_status": "unknown",
+            "authorization_valid": False,
+            "diagnostics": semantic_errors,
+        }
     expected_paths = listed_paths(manifest)
     actual_paths = {str(path.relative_to(bundle).as_posix()) for path in bundle.rglob("*") if path.is_file()}
     if expected_paths != actual_paths:
@@ -89,7 +237,7 @@ def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
     failing_artifact_path = None
     if manifest.get("overall_status") == "invalid" and manifest.get("failure_event_path"):
         event = load_json(bundle / manifest["failure_event_path"])
-        failing_prefix = PREFIX[event["failing_artifact"]["stage_id"]]
+        failing_prefix = authority.prefix(event["failing_artifact"]["stage_id"])
         failing_artifact_path = f"artifacts/{failing_prefix}.json"
     for collection, kind in kind_map.items():
         for entry in manifest[collection]:
@@ -99,7 +247,9 @@ def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
             if collection == "artifacts" and entry["path"] == failing_artifact_path:
                 continue
             stage = value.get("stage_id") or value.get("source_stage") or "bundle"
-            repair = value.get("repair_target_stage") or (stage if stage in ORDER else "/decompose")
+            repair = value.get("repair_target_stage") or (
+                stage if stage in authority.stage_records else authority.implemented_stage_order[0]
+            )
             errors = schema_diagnostics(validators[kind], value, stage, f"$/{entry['path']}", repair)
             if errors:
                 return {
@@ -108,9 +258,26 @@ def validate_bundle(bundle: Path, root: Path = ROOT) -> dict[str, Any]:
                     "authorization_valid": False,
                     "diagnostics": errors,
                 }
+            if collection == "anchors":
+                errors = anchor_semantic_diagnostics(
+                    value, authority, f"$/{entry['path']}"
+                )
+                if errors:
+                    return {
+                        "bundle_integrity_status": "invalid",
+                        "run_validation_status": "unknown",
+                        "authorization_valid": False,
+                        "diagnostics": errors,
+                    }
     if manifest.get("failure_event_path"):
         value = load_json(bundle / manifest["failure_event_path"])
-        errors = schema_diagnostics(validators["failure_event"], value, value.get("failed_stage", "bundle"), "$/failure-event.json", value.get("repair_target_stage", "/decompose"))
+        errors = schema_diagnostics(
+            validators["failure_event"],
+            value,
+            value.get("failed_stage", "bundle"),
+            "$/failure-event.json",
+            value.get("repair_target_stage", fallback_stage),
+        )
         if errors:
             return {
                 "bundle_integrity_status": "invalid",

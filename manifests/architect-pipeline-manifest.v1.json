@@ -1,38 +1,5 @@
 {
   "final_project_gate_export_stage": "/project-gate-export",
-  "intermediate_stage_artifact_boundary": {
-    "anchor_schema": "ev4-stage-anchor@1.3.0",
-    "artifact_schema": "ev4-architect-pipeline-stage-artifact@1.1.0",
-    "authorization_source": "independently_regenerated_valid_bundle",
-    "boundary_schema": "ev4-stage-boundary-record@1.1.0",
-    "bundle_schema": "ev4-architect-validation-bundle@1.1.0",
-    "compatibility": "additive_nonbreaking_for_final_payload",
-    "downstream_enforcement": "insufficient_evidence",
-    "failure_event_schema": "ev4-architect-validation-failure-event@1.0.0",
-    "inactive_unknown_lifecycle": "evidence_backed_and_excluded_from_active_propagation",
-    "legacy_file_producing_authority_paths": "removed",
-    "output_replacement": "validator_owned_manifest_sentinel_and_atomic_publish",
-    "production_generate_command": "validate-run",
-    "production_verify_command": "validate-bundle",
-    "receipt_schema": "ev4-architect-stage-validation-receipt@1.1.0",
-    "runtime_enforcement": "insufficient_evidence",
-    "stage4_payload_lineage": "exact_regenerated_stage3_artifact_ref",
-    "stage_ids": [
-      "/decompose",
-      "/architectures",
-      "/score-evidence",
-      "/score-audit"
-    ],
-    "stage_version_map": {
-      "/architectures": "1.1.0",
-      "/decompose": "1.0.0",
-      "/score-audit": "1.2.0",
-      "/score-evidence": "1.3.0"
-    },
-    "standalone_authorization": "forbidden",
-    "structural_failure_contract": "deterministic_non_authorizing_preflight_no_bundle",
-    "validator": "scripts/check-architect-pipeline-stage-boundary.py"
-  },
   "legacy_compatibility_outputs": [
     {
       "canonical_for_project_gate": false,
