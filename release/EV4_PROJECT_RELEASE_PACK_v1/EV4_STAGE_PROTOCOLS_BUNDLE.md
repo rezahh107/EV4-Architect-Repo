@@ -1,21 +1,21 @@
 # EV4 Stage Protocols Bundle
 
 Status: release_candidate_quality_first_runtime  
-Version: 1.1.0
+Version: 1.2.0
 
-## Common Stage Result
+## Common Runtime Protocol
 
-Every logical Stage closes with `ev4-architect-stage-result@1.0.0`:
+Every logical Stage produces domain-specific Stage Output. One canonical evaluator derives the Stage Result:
 
 ```text
-pass → exact Manifest successor
-needs_input → minimum architecture-changing or required-evidence question
-blocked → explicit evidence-based repair route
+Stage Output + Run State + Manifest-owned checks
+→ scripts/architect_quality_runtime.py#evaluate_stage
+→ pass | needs_input | blocked
 ```
 
-Stage Anchors, Validation Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not ordinary continuation prerequisites.
+A serialized Stage Result is readable but non-authorizing. Stage Anchors, Validation Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not ordinary continuation prerequisites.
 
-All detailed Stage quality and hardening controls remain active. Only old transition-authorization clauses are superseded by `contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md`.
+The Pipeline Manifest owns the finite recognized checks for each Stage. Missing, unknown, cross-Stage, failed, unresolved, or improperly `not_applicable` required checks block continuation.
 
 ## /intake
 
@@ -27,16 +27,18 @@ Forbidden: architecture, scoring, recommendation, build tree, invented exact val
 
 ## /research
 
-Govern platform capability evidence and version-sensitive claims.
+Govern platform-capability evidence and version-sensitive claims.
 
 Disposition:
 
 ```text
-active_lookup_required
+active_lookup_completed
 existing_evidence_sufficient
 no_platform_question
 blocked_by_missing_required_source
 ```
+
+The first three may pass. No external lookup receipt is required for a truthful `no_platform_question` result.
 
 Forbidden: visual interpretation, scoring, recommendation, tree, implementation.
 
@@ -44,7 +46,7 @@ Forbidden: visual interpretation, scoring, recommendation, tree, implementation.
 
 ## /decompose
 
-Produce the visual role map and preserve:
+Produce the visual-role map and preserve:
 
 ```text
 observed
@@ -83,13 +85,13 @@ Forbidden: hidden recommendation, invented scores, candidate modification.
 
 Audit arithmetic, weights, denominator handling, evidence use, gate overrides, unknown discipline, cross-candidate consistency, and hidden recommendation.
 
-Only accepted state equivalent to `pass` or `pass_with_minor_flags` with no material defect permits recommendation.
+Only an accepted state equivalent to `pass` or `pass_with_minor_flags`, with no material defect, permits recommendation.
 
 `pass → /recommend`.
 
 ## /recommend
 
-Select one candidate from the audited eligible set.
+Select one candidate from the audited eligible set and establish:
 
 ```text
 selected_candidate_id
@@ -100,13 +102,21 @@ Forbidden: re-scoring, new architecture, tree, implementation, invented exact va
 
 `pass → /build-tree`.
 
+## Unknown Lifecycle
+
+Active unknowns persist in Run State. Omission is not resolution.
+
+Ordinary resolution requires an explicit type and note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+
 ## /build-tree
 
-Translate the locked candidate into an auditable Elementor Structure Panel tree.
+Translate the locked candidate into canonical structured Build Tree content.
 
-Required: node identities, parent relationships, wrapper justification, editable content, overlay boundaries, class intent, unknowns, stable tree digest.
+Required: node identities, parent relationships, wrapper justification, editable content, overlay boundaries, class intent, unknowns, and selected-candidate preservation.
 
-Forbidden: re-architecture, final CSS, implementation settings, exact-value invention.
+The evaluator computes the digest from the actual structured content. Do not create a wrapper Artifact solely to obtain a digest.
+
+Forbidden: re-architecture, final CSS, implementation settings, exact-value invention, caller-authored digest authority.
 
 `pass → /implementation`.
 
@@ -114,9 +124,9 @@ Forbidden: re-architecture, final CSS, implementation settings, exact-value inve
 
 Map the approved tree to Elementor elements, widgets, classes, variables, assets, responsive controls, interactions, accessibility, and scoped CSS needs.
 
-Required: exact candidate/tree preservation.
+The canonical structured Implementation content must contain the approved Build Tree representation. The evaluator derives both content identity and fidelity.
 
-Forbidden: unsupported assets, breakpoints, interactions, values, UI paths, global CSS, readiness overclaim.
+Forbidden: unsupported assets, breakpoints, interactions, values, UI paths, global CSS, readiness overclaim, `null == null` fidelity, fabricated digest equality.
 
 `pass → /final-audit`.
 
@@ -132,7 +142,7 @@ Blocker/high findings, candidate drift, unsupported exact values, invalid respon
 
 Package accepted outputs without adding decisions.
 
-Required: candidate lock, matching digests, findings and unknowns preserved, canonical Project Gate payload source.
+Required: candidate lock, actual canonical content identities, findings and unknowns preserved, and canonical Project Gate payload source.
 
 Forbidden: new decisions, hidden repair, legacy export substitution.
 
@@ -142,13 +152,30 @@ Forbidden: new decisions, hidden repair, legacy export substitution.
 
 Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.
 
-Preserve canonical payload Schema/semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
+A pass result must be derived from:
+
+```text
+actual canonical Architect Stage Payload
+→ existing Schema and semantic validation
+→ selected-candidate consistency
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
+```
+
+Caller-authored Booleans do not authorize success. Preserve locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
 This is terminal.
 
 ## Partial Rerun
 
-Use the earliest Stage whose owned information changed. Reuse only unaffected outputs and close the rerun Stage with a new Stage Result.
+Use the earliest Stage whose owned information changed. Invalidate dependent downstream Stage Results, preserve unaffected Run State, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
+
+Do not add a general rerun ledger, cryptographic rerun receipt, or independent rerun authorization.
+
+## Resume
+
+Use the smallest available Stage Output and Run State. Do not create persistent storage, immutable receipts, content-addressable storage, or Artifact registries solely for resume.
 
 ## Optional Audit Tooling
 
