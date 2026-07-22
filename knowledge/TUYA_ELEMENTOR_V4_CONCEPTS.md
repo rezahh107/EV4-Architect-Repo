@@ -9,7 +9,7 @@ Fact class: `project_conceptual_model`
 Aligned with:
 - `references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md` / `ev4-rag-strategy-contract@1.0.0`
 - `stages/02_RESEARCH.md` / `ev4-research-payload@1.0.0`
-- `contracts/STAGE_ANCHOR_CONTRACT.md` / `ev4-stage-anchor@1.1.0`
+- `contracts/STAGE_ANCHOR_CONTRACT.md` / `ev4-stage-anchor@1.4.0`
 - `contracts/PARTIAL_RERUN_CONTRACT.md` / `ev4-partial-rerun@1.0.0`
 - `diagnostics/LLM_DEBUG_TRACE_CONTRACT.md` / `ev4-debug-trace@1.0.0`
 Applies to: `/research`, `/architectures`, `/score-audit`, `/build-tree`, `/implementation`, `/final-audit`, `/handoff-export`, `/e2e-test`
@@ -75,7 +75,8 @@ TUYA_CONCEPT_REFERENCE_GATE:
   required_bindings:
     - ev4-rag-strategy-contract@1.0.0
     - ev4-research-payload@1.0.0
-    - ev4-stage-anchor@1.1.0
+    - ev4-stage-anchor@1.4.0
+    - ev4-architect-validation-bundle@1.2.0
     - ev4-partial-rerun@1.0.0
     - ev4-debug-trace@1.0.0
   required_controls:
@@ -97,14 +98,14 @@ If any required control is missing, this file is `active_but_repair_required` an
 
 ## Input Authorization Gate
 
-A stage may use this file only if the Stage Anchor and active stage contract allow `internal_concept_reference` input for that stage.
+A stage may use this file only if the active Stage contract allows `internal_concept_reference` input. Continuation additionally requires a `full_transaction_implemented` source profile and an independently regenerated Validation Bundle; a Stage Anchor alone authorizes nothing.
 
 Required input package:
 
 ```yaml
 TUYA_INPUT_GATE:
   required:
-    - valid ev4-stage-anchor@1.1.0
+    - current ev4-stage-anchor@1.4.0 inside a valid ev4-architect-validation-bundle@1.2.0
     - current stage source-access rule
     - source classification: internal_concept_reference
     - fact_class classification: project_conceptual_model
@@ -718,7 +719,8 @@ TUYA_CONCEPT_REFERENCE_PAYLOAD:
   aligned_contracts:
     - ev4-rag-strategy-contract@1.0.0
     - ev4-research-payload@1.0.0
-    - ev4-stage-anchor@1.1.0
+    - ev4-stage-anchor@1.4.0
+    - ev4-architect-validation-bundle@1.2.0
     - ev4-partial-rerun@1.0.0
     - ev4-debug-trace@1.0.0
   concept_fact_schema: ev4-tuya-concept-fact@1.0.0
@@ -746,7 +748,7 @@ Before using this file as an active contract, verify:
 - [ ] Exact settings, breakpoints, CSS values, z-indexes, and widget controls are not invented from TUYA.
 - [ ] Provisional/unknown/contradicted lifecycle is preserved.
 - [ ] Contradictions trigger repair routes instead of being smoothed.
-- [ ] Stage Anchor v1.1 fields preserve TUYA flags and confidence deltas.
+- [ ] Stage Anchor v1.4 `handoff_state` preserves TUYA flags and confidence deltas, and the independently regenerated Bundle verifies.
 - [ ] EV4_DEBUG_TRACE logs TUYA concept use without exposing hidden reasoning.
 - [ ] Handoff preserves TUYA limitations, flags, contradictions, and unknowns.
 
@@ -816,85 +818,8 @@ A stage uses this reference correctly only if:
 
 ---
 
-## NEXT WORK ANCHOR — /e2e-screenshot-validation
+## Non-Authorizing Next-Work Note — Screenshot Validation
 
-```text
-NEXT WORK ANCHOR — /e2e-screenshot-validation
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /tuya-concept-reference
-target_stage: /e2e-screenshot-validation
-target_stage_hardening_status: draft
-project_status_version: 0.15.0
-payload_schema_in:
-  - ev4-tuya-concept-reference@1.0.0
-  - ev4-e2e-test-report@1.0.0
-  - ev4-rag-strategy-contract@1.0.0
-payload_schema_out:
-  - ev4-e2e-screenshot-validation-report@0.1.0 or newer active schema
+`/tuya-concept-reference` and `/e2e-screenshot-validation` are not Pipeline Manifest Stages, so this document must not mint a Stage Anchor between them. The former pseudo-Anchor was invalid topology and is retired as authorization evidence.
 
-Carry-forward facts:
-- key_decisions:
-  - TUYA is active only as internal_concept_reference.
-  - TUYA facts are project_conceptual_model only.
-  - TUYA cannot prove official platform capability, visual grouping, scoring, recommendation, exact settings, or export/runtime behavior.
-- critical_unknowns:
-  - pixel-accurate raster screenshot interpretation remains unvalidated.
-  - real Elementor export JSON / EDIS remains unvalidated.
-  - live Elementor/browser rendering remains unvalidated.
-- confidence_delta:
-  - item: TUYA source classification
-    previous_confidence: provisional
-    current_confidence: confirmed
-    direction: resolved
-    reason: v1.0.0 source classification and downstream permission matrix added
-    downstream_impact: RAG/TUYA leakage checks can now enforce source boundaries
-- blocking_items:
-  - None for TUYA concept-reference contract hardening.
-  - Screenshot/export/live-rendering validation remain separate future tracks.
-- gate_results:
-  - TUYA contract gate: pass
-  - RAG alignment gate: pass
-  - Debug trace compatibility: pass
-- audit_flags:
-  - TUYA-LP probes must be preserved in E2E/final-audit.
-  - Do not remove E2E-001 textual-fixture medium flag.
-- required_user_confirmations:
-  - A real screenshot or screenshot fixture is required before pixel-accurate validation can run.
-
-Partial rerun state:
-- reusable_until:
-  - RAG Strategy v1.0.0 remains active
-  - Research contract v1.0.0 remains active
-  - TUYA source classification remains unchanged
-- invalidation_triggers:
-  - TUYA workbook source changes
-  - RAG Strategy source-class taxonomy changes
-  - Stage Source Access Matrix changes
-  - official docs/export evidence contradicts a TUYA concept used downstream
-- earliest_safe_rerun_stage: /research for source classification changes; /decompose for visual evidence changes; /score-evidence for scoring leakage; /final-audit for audit-only leakage
-- downstream_payloads_dependent_on_this_stage:
-  - future research payloads
-  - future architecture payloads
-  - future final-audit payloads
-  - future handoff payloads
-  - future E2E reports
-
-Stage boundary:
-- allowed_work:
-  - Prepare or run screenshot-based E2E validation when raster screenshot evidence exists.
-  - Validate that /decompose uses only visible/user evidence.
-  - Validate that TUYA does not leak into visual grouping, scoring, recommendation, implementation, final audit, or handoff.
-- forbidden_work:
-  - Do not mark pixel-accurate screenshot interpretation validated without raster screenshot evidence.
-  - Do not use TUYA to infer screenshot content.
-  - Do not remove E2E-001 medium flag unless a screenshot-based E2E resolves it.
-- stop_conditions:
-  - missing screenshot/visual fixture
-  - missing required payload chain
-  - TUYA leakage detected without repair route
-  - no verifiable screenshot-validation report schema
-
-Debug trace:
-- debug_trace_required: yes
-- expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
+Future screenshot validation remains blocked until raster evidence and a verifiable screenshot-validation report schema exist. It must preserve the TUYA leakage probes, use `/decompose` for visual-evidence repair, and never treat TUYA as screenshot, export, or runtime proof. Any actual pipeline continuation must use the Manifest edge, a `full_transaction_implemented` source profile, and a newly regenerated `ev4-architect-validation-bundle@1.2.0` containing the current `ev4-stage-anchor@1.4.0`.

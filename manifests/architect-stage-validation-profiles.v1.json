@@ -1,0 +1,389 @@
+{
+  "registry_schema": "ev4-architect-stage-validation-profiles@1.0.0",
+  "registry_id": "ev4-architect-stage-validation-profiles",
+  "registry_version": "1.0.0",
+  "owner_repository": "rezahh107/EV4-Architect-Repo",
+  "authorization_role": "validation_capability_only",
+  "profiles": [
+    {
+      "stage_id": "/intake",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
+          "stages/01_INTAKE.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Define a canonical machine-readable intake Artifact Schema.",
+          "Define deterministic blocker classification and repair ownership for intake failures."
+        ]
+      },
+      "artifact": {
+        "identity": "intake-artifact",
+        "version": "1.0.0",
+        "schema_id": "undefined",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/research",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
+          "stages/02_RESEARCH.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Publish the prose-defined ev4-research-payload@1.0.0 as a canonical JSON Schema.",
+          "Define executable source freshness, source conflict, and downstream-permission checks.",
+          "Define deterministic repair ownership for mixed research and downstream leakage failures."
+        ]
+      },
+      "artifact": {
+        "identity": "ev4-research-payload",
+        "version": "1.0.0",
+        "schema_id": "ev4-research-payload@1.0.0",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/decompose",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md",
+          "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json",
+          "stages/02_DECOMPOSE.md"
+        ],
+        "unresolved_semantic_decisions": []
+      },
+      "artifact": {
+        "identity": "ev4-architect-pipeline-stage-artifact",
+        "version": "1.1.0",
+        "schema_id": "ev4-architect-pipeline-stage-artifact@1.1.0",
+        "schema_path": "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json"
+      },
+      "validation": {
+        "status": "full_transaction_implemented",
+        "semantic_handler": "validate_decompose",
+        "structural_validation": "json_schema",
+        "semantic_validation": "registered_handler",
+        "executable": true,
+        "authorization_capable": true
+      },
+      "receipt": {"supported": true, "schema_id": "ev4-architect-stage-validation-receipt@1.1.0", "generator": "receipt_for"},
+      "bundle": {"supported": true, "independent_regeneration": true},
+      "repair": {"ownership_status": "deterministic", "earliest_repair_owner": "validator_derived", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/architectures",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md",
+          "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json",
+          "stages/03_ARCHITECTURES.md"
+        ],
+        "unresolved_semantic_decisions": []
+      },
+      "artifact": {
+        "identity": "ev4-architect-pipeline-stage-artifact",
+        "version": "1.1.0",
+        "schema_id": "ev4-architect-pipeline-stage-artifact@1.1.0",
+        "schema_path": "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json"
+      },
+      "validation": {
+        "status": "full_transaction_implemented",
+        "semantic_handler": "validate_architectures",
+        "structural_validation": "json_schema",
+        "semantic_validation": "registered_handler",
+        "executable": true,
+        "authorization_capable": true
+      },
+      "receipt": {"supported": true, "schema_id": "ev4-architect-stage-validation-receipt@1.1.0", "generator": "receipt_for"},
+      "bundle": {"supported": true, "independent_regeneration": true},
+      "repair": {"ownership_status": "deterministic", "earliest_repair_owner": "validator_derived", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/score-evidence",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md",
+          "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json",
+          "stages/04_SCORE_EVIDENCE.md"
+        ],
+        "unresolved_semantic_decisions": []
+      },
+      "artifact": {
+        "identity": "ev4-architect-pipeline-stage-artifact",
+        "version": "1.1.0",
+        "schema_id": "ev4-architect-pipeline-stage-artifact@1.1.0",
+        "schema_path": "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json"
+      },
+      "validation": {
+        "status": "full_transaction_implemented",
+        "semantic_handler": "validate_score_evidence",
+        "structural_validation": "json_schema",
+        "semantic_validation": "registered_handler",
+        "executable": true,
+        "authorization_capable": true
+      },
+      "receipt": {"supported": true, "schema_id": "ev4-architect-stage-validation-receipt@1.1.0", "generator": "receipt_for"},
+      "bundle": {"supported": true, "independent_regeneration": true},
+      "repair": {"ownership_status": "deterministic", "earliest_repair_owner": "validator_derived", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/score-audit",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md",
+          "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json",
+          "stages/05_SCORE_AUDIT.md"
+        ],
+        "unresolved_semantic_decisions": []
+      },
+      "artifact": {
+        "identity": "ev4-architect-pipeline-stage-artifact",
+        "version": "1.1.0",
+        "schema_id": "ev4-architect-pipeline-stage-artifact@1.1.0",
+        "schema_path": "schemas/ev4-architect-pipeline-stage-artifact.v1.schema.json"
+      },
+      "validation": {
+        "status": "full_transaction_implemented",
+        "semantic_handler": "validate_score_audit",
+        "structural_validation": "json_schema",
+        "semantic_validation": "registered_handler",
+        "executable": true,
+        "authorization_capable": true
+      },
+      "receipt": {"supported": true, "schema_id": "ev4-architect-stage-validation-receipt@1.1.0", "generator": "receipt_for"},
+      "bundle": {"supported": true, "independent_regeneration": true},
+      "repair": {"ownership_status": "deterministic", "earliest_repair_owner": "validator_derived", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/recommend",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "stages/06_RECOMMEND.md",
+          "stages/06_RECOMMEND_v1.1_HARDENING_PATCH.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Publish a canonical JSON Schema aligned to the active 1.1.0 hardening patch.",
+          "Define deterministic tie, confirmation, and selected-candidate-lock failure semantics.",
+          "Define executable earliest repair ownership across scoring and recommendation failures."
+        ]
+      },
+      "artifact": {
+        "identity": "ev4-recommend-payload",
+        "version": "1.1.0",
+        "schema_id": "ev4-recommend-payload@1.1.0",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/build-tree",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "stages/07_BUILD_TREE.md",
+          "contracts/BUILD_TREE_NAMING_AND_STRUCTURE_CONTRACT.md",
+          "contracts/BUILD_TREE_SEMANTIC_FIDELITY_CONTRACT.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Publish ev4-build-tree-payload@1.0.0 as a canonical JSON Schema.",
+          "Define executable semantic fidelity checks against the exact recommendation Artifact.",
+          "Define deterministic repair ownership for recommendation-versus-tree defects."
+        ]
+      },
+      "artifact": {
+        "identity": "ev4-build-tree-payload",
+        "version": "1.0.0",
+        "schema_id": "ev4-build-tree-payload@1.0.0",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/implementation",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "stages/08_IMPLEMENTATION.md",
+          "stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Publish the active implementation payload as a canonical JSON Schema.",
+          "Define deterministic semantic conformance against the exact build-tree Artifact.",
+          "Define repair ownership for implementation facts that conflict with upstream architecture."
+        ]
+      },
+      "artifact": {
+        "identity": "ev4-implementation-payload",
+        "version": "1.0.1",
+        "schema_id": "ev4-implementation-payload@1.0.0-plus-hardening-1.0.1",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/final-audit",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "stages/09_FINAL_AUDIT.md",
+          "stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Publish the active final-audit payload as a canonical JSON Schema.",
+          "Define deterministic severity, pass, and pass-with-minor-flags semantics.",
+          "Define executable earliest repair ownership for cross-stage audit findings."
+        ]
+      },
+      "artifact": {
+        "identity": "ev4-final-audit-payload",
+        "version": "1.0.1",
+        "schema_id": "ev4-final-audit-payload@1.0.0-plus-hardening-1.0.1",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/handoff-export",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "stages/10_HANDOFF_EXPORT.md",
+          "stages/STAGE_8_10_v1.0.1_HARDENING_ALIGNMENT_PATCH.md"
+        ],
+        "unresolved_semantic_decisions": [
+          "Publish the active handoff payload as a canonical JSON Schema.",
+          "Define deterministic handoff eligibility and E2E-claim checks.",
+          "Define executable repair ownership for packaging versus upstream evidence defects."
+        ]
+      },
+      "artifact": {
+        "identity": "ev4-handoff-export-payload",
+        "version": "1.0.1",
+        "schema_id": "ev4-handoff-export-payload@1.0.0-plus-hardening-1.0.1",
+        "schema_path": "not_implemented"
+      },
+      "validation": {
+        "status": "blocked_missing_semantics",
+        "semantic_handler": "not_implemented",
+        "structural_validation": "not_implemented",
+        "semantic_validation": "not_implemented",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "unresolved", "earliest_repair_owner": "undefined", "caller_selectable": false}
+    },
+    {
+      "stage_id": "/project-gate-export",
+      "grounding": {
+        "status": "explicit_active_contract",
+        "authoritative_sources": [
+          "manifests/architect-pipeline-manifest.v1.json",
+          "docs/ARCHITECT_PROJECT_GATE_EXPORTER.md",
+          "contracts/project-gate/producer-gate-export.v1.schema.json"
+        ],
+        "unresolved_semantic_decisions": []
+      },
+      "artifact": {
+        "identity": "producer-gate-export",
+        "version": "1.0.0",
+        "schema_id": "producer-gate-export.v1",
+        "schema_path": "contracts/project-gate/producer-gate-export.v1.schema.json"
+      },
+      "validation": {
+        "status": "terminal",
+        "semantic_handler": "terminal_no_successor",
+        "structural_validation": "external_export_contract",
+        "semantic_validation": "terminal_no_continuation",
+        "executable": false,
+        "authorization_capable": false
+      },
+      "receipt": {"supported": false, "schema_id": "not_supported", "generator": "not_supported"},
+      "bundle": {"supported": false, "independent_regeneration": false},
+      "repair": {"ownership_status": "not_applicable", "earliest_repair_owner": "not_applicable", "caller_selectable": false}
+    }
+  ]
+}

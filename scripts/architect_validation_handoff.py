@@ -113,10 +113,12 @@ def handoff_state_for(
             "reusable_until": predecessor["stage_id"] if predecessor and repair_target and stage_index(predecessor["stage_id"]) < stage_index(repair_target) else None,
             "invalidation_triggers": ["artifact_bytes_changed", "upstream_lineage_changed", "diagnostic_ownership_changed"],
             "earliest_safe_rerun_stage": earliest,
-            "downstream_payloads_dependent_on_this_stage": ORDER[stage_index(stage) + 1 :],
+            "downstream_payloads_dependent_on_this_stage": list(
+                implemented_stage_order()[implemented_stage_index(stage) + 1 :]
+            ),
         },
         "stage_boundary": {
-            "allowed_work": [NEXT_STAGE[stage]] if authorized else [f"repair:{earliest}"],
+            "allowed_work": [stage_successor(stage)] if authorized else [f"repair:{earliest}"],
             "forbidden_work": ["independent_authorization", "downstream_reconstruction"],
             "stop_conditions": ["bundle_integrity_invalid"] if authorized else ["repair_not_completed", "fresh_validation_missing"],
         },
@@ -131,11 +133,11 @@ def success_anchor_for(
     stage = artifact["stage_id"]
     return {
         "anchor_schema": ANCHOR_SCHEMA,
-        "anchor_id": f"asb-anchor-{artifact['run_id']}-{PREFIX[stage]}-{boundary_digest[:12]}",
+        "anchor_id": f"asb-anchor-{artifact['run_id']}-{stage_prefix(stage)}-{boundary_digest[:12]}",
         "run_id": artifact["run_id"],
         "anchor_type": "NEXT_STAGE_ANCHOR",
         "source_stage": stage,
-        "target_stage": NEXT_STAGE[stage],
+        "target_stage": stage_successor(stage),
         "repair_target_stage": None,
         "boundary_ref": {
             "boundary_id": boundary["boundary_id"],
@@ -159,7 +161,7 @@ def repair_anchor_for(
     repair = result["repair_target_stage"]
     return {
         "anchor_schema": ANCHOR_SCHEMA,
-        "anchor_id": f"asb-repair-anchor-{artifact['run_id']}-{PREFIX[stage]}-{boundary_digest[:12]}",
+        "anchor_id": f"asb-repair-anchor-{artifact['run_id']}-{stage_prefix(stage)}-{boundary_digest[:12]}",
         "run_id": artifact["run_id"],
         "anchor_type": "REPAIR_ANCHOR",
         "source_stage": stage,
@@ -193,11 +195,124 @@ def manifest_digest(manifest: dict[str, Any]) -> str:
     clone["bundle_content_digest"] = "0" * 64
     return sha_bytes(canonical_bytes(clone))
 
+
+def anchor_semantic_diagnostics(
+    anchor: dict[str, Any], authority: PipelineAuthority, base_path: str = "$"
+) -> list[dict[str, Any]]:
+    source = anchor.get("source_stage")
+    fallback = authority.implemented_stage_order[0]
+    if source not in authority.stage_records:
+        return [
+            diagnostic(
+                "ASB-ANCHOR-UNKNOWN-SOURCE-STAGE",
+                "ASB-R12",
+                str(source),
+                f"{base_path}/source_stage",
+                "Manifest Stage",
+                str(source),
+                fallback,
+            )
+        ]
+    profile = authority.profiles[source]
+    if anchor.get("anchor_type") == "NEXT_STAGE_ANCHOR":
+        successor = authority.successor(source)
+        if successor is None:
+            return [
+                diagnostic(
+                    "ASB-ANCHOR-TERMINAL-CONTINUATION",
+                    "ASB-R12",
+                    source,
+                    f"{base_path}/target_stage",
+                    "null terminal successor",
+                    str(anchor.get("target_stage")),
+                    source,
+                )
+            ]
+        if anchor.get("target_stage") != successor:
+            return [
+                diagnostic(
+                    "ASB-ANCHOR-TOPOLOGY-INVALID",
+                    "ASB-R12",
+                    source,
+                    f"{base_path}/target_stage",
+                    successor,
+                    str(anchor.get("target_stage")),
+                    source,
+                )
+            ]
+        if not profile["validation"]["authorization_capable"]:
+            return [
+                diagnostic(
+                    "ASB-ANCHOR-SOURCE-NOT-AUTHORIZATION-CAPABLE",
+                    "ASB-R12",
+                    source,
+                    f"{base_path}/source_stage",
+                    "authorization_capable Validation Profile",
+                    profile["validation"]["status"],
+                    source,
+                )
+            ]
+    elif anchor.get("anchor_type") == "REPAIR_ANCHOR":
+        repair = anchor.get("repair_target_stage")
+        if repair not in authority.stage_records:
+            return [
+                diagnostic(
+                    "ASB-ANCHOR-UNKNOWN-REPAIR-STAGE",
+                    "ASB-R12",
+                    source,
+                    f"{base_path}/repair_target_stage",
+                    "Manifest Stage",
+                    str(repair),
+                    source,
+                )
+            ]
+        if authority.stage_index(repair) > authority.stage_index(source):
+            return [
+                diagnostic(
+                    "ASB-ANCHOR-REPAIR-TARGET-AFTER-FAILURE",
+                    "ASB-R12",
+                    source,
+                    f"{base_path}/repair_target_stage",
+                    "same or earlier owning Stage",
+                    str(repair),
+                    source,
+                )
+            ]
+    return []
+
+
+def standalone_anchor_state(
+    anchor: dict[str, Any], authority: PipelineAuthority, root: Path = ROOT
+) -> dict[str, Any]:
+    source = anchor.get("source_stage")
+    known_source = source in authority.stage_records
+    successor = authority.successor(source) if known_source else None
+    legal_edge = (
+        anchor.get("anchor_type") == "NEXT_STAGE_ANCHOR"
+        and successor is not None
+        and anchor.get("target_stage") == successor
+    )
+    implemented = known_source and authority.is_implemented(source)
+    return {
+        "anchor_schema_valid": schema_validators(root)["anchor"].is_valid(anchor),
+        "legal_manifest_edge": legal_edge,
+        "source_stage_validation_implemented": implemented,
+        "independently_regenerated_bundle_required": True,
+        "anchor_alone_authorizes": False,
+        "authorization_valid": False,
+    }
+
 def validate_generated_carriers(output: Path, root: Path = ROOT) -> list[dict[str, Any]]:
+    authority = pipeline_authority(root)
+    fallback_stage = first_implemented_stage(root)
     validators = schema_validators(root)
     diagnostics: list[dict[str, Any]] = []
     manifest = load_json(output / "manifest.json")
-    diagnostics.extend(schema_diagnostics(validators["bundle"], manifest, "bundle", "$", "/decompose"))
+    diagnostics.extend(
+        schema_diagnostics(
+            validators["bundle"], manifest, "bundle", "$", fallback_stage
+        )
+    )
     mappings = [
         ("receipt", "receipts", "*.receipt.json"),
         ("failure_event", ".", "failure-event.json"),
@@ -208,6 +323,14 @@ def validate_generated_carriers(output: Path, root: Path = ROOT) -> list[dict[st
         for path in (output / folder).glob(pattern):
             value = load_json(path)
             stage = value.get("stage_id") or value.get("source_stage") or value.get("failed_stage") or "bundle"
-            repair = value.get("repair_target_stage") or (stage if stage in ORDER else "/decompose")
+            repair = value.get("repair_target_stage") or (
+                stage if stage in authority.stage_records else authority.implemented_stage_order[0]
+            )
             diagnostics.extend(schema_diagnostics(validators[kind], value, stage, f"$/{path.relative_to(output)}", repair))
+            if kind == "anchor":
+                diagnostics.extend(
+                    anchor_semantic_diagnostics(
+                        value, authority, f"$/{path.relative_to(output)}"
+                    )
+                )
     return sort_diagnostics(diagnostics)

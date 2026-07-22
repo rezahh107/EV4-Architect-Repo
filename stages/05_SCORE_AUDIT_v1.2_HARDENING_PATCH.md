@@ -15,6 +15,8 @@ Stage 5 audits Stage 4. However, Stage 5 itself can accidentally leak recommenda
 
 This patch makes Stage 5 self-auditing and prepares a neutral handoff for Stage 6 when candidates are close.
 
+Executable compatibility boundary: this patch contains prose-level behavior that is not fully represented by the current `ev4-architect-pipeline-stage-artifact@1.1.0` Schema. The current transaction authorizes Stage 6 only for `overall_audit_status: pass` with `allowed_next_stage: /recommend` and `required_repairs: []`. In particular, `pass_with_minor_flags` is currently non-authorizing until separately implemented.
+
 Core addition:
 
 ```text
@@ -337,7 +339,7 @@ Stage 5 may return `pass` only if:
 - no blocker exists
 ```
 
-Stage 5 may return `pass_with_minor_flags` only if:
+Future prose-level support may return `pass_with_minor_flags` only if the executable Schema and validator first implement it and all of these conditions hold:
 
 ```text
 - all flags are non-blocking

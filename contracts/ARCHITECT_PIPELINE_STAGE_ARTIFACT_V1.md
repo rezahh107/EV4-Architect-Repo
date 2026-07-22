@@ -9,11 +9,13 @@ artifact_schema: ev4-architect-pipeline-stage-artifact@1.1.0
 receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
 failure_event_schema: ev4-architect-validation-failure-event@1.0.0
 boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.3.0
-bundle_schema: ev4-architect-validation-bundle@1.1.0
+anchor_schema: ev4-stage-anchor@1.4.0
+bundle_schema: ev4-architect-validation-bundle@1.2.0
 ```
 
-Historical `ev4-stage-boundary-record@1.0.0`, `ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, and `ev4-architect-validation-bundle@1.0.0` are non-authorizing evidence only.
+Historical `ev4-stage-boundary-record@1.0.0`, `ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, `ev4-stage-anchor@1.3.0`, `ev4-architect-validation-bundle@1.0.0`, and `ev4-architect-validation-bundle@1.1.0` are non-authorizing evidence only.
+
+Pipeline topology and Stage versions are owned only by `manifests/architect-pipeline-manifest.v1.json`. Executable validation capability is owned only by `manifests/architect-stage-validation-profiles.v1.json`. Neither the Validator nor this contract maintains another authoritative transition or Stage-version table.
 
 ## Production authority
 
@@ -44,9 +46,9 @@ generated_authorization_files: []
 The removed legacy file-producing flags are `--write-receipt`, `--write-receipts`, and `--write-anchors`.
 
 
-## Exact Stage versions
+## Executable Validation Profiles
 
-The executable Stage-version authority is closed and exact:
+The currently implemented transaction profiles, with Stage versions derived from the Manifest, are:
 
 ```yaml
 /decompose: 1.0.0
@@ -55,7 +57,7 @@ The executable Stage-version authority is closed and exact:
 /score-audit: 1.2.0
 ```
 
-The Manifest, active Stage documents, Schema conditionals, semantic Validator, and fixtures must agree with this map. Any other Stage/version pair produces an invalid Receipt and cannot authorize continuation.
+The Artifact Schema conditionals, semantic handlers, and fixtures must agree with the Registry's implemented Stage set. A Manifest Stage whose Validation Profile is not `full_transaction_implemented` produces no authorization Bundle. A legal edge never bypasses a blocked profile.
 
 ## Unknown lifecycle
 

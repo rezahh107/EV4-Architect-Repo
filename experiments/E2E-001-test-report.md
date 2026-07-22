@@ -11,6 +11,8 @@ Project status version at start: 0.11.0
 Run mode: full pipeline validation
 Release effect: release-blocker-removal eligible for the prompt-pack contract, with non-blocking limitation noted for raster screenshot interpretation
 
+Historical evidence notice: this report predates the Validation Profiles Registry. Its `ev4-stage-anchor@1.1.0` records are preserved verbatim as historical evidence and do not authorize current continuation.
+
 ---
 
 ## 1. Input Authorization

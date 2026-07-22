@@ -3,8 +3,10 @@
 Status: confirmed_hardened_v1.0.0
 Version: 1.0.0
 Payload schema: ev4-build-tree-payload@1.0.0
-Anchor required: yes
+Validation transaction required for continuation: yes; current profile blocked
 Debug trace compatible: yes
+Validation Profile: `blocked_missing_semantics`
+Continuation authorization: blocked until `ev4-build-tree-payload@1.0.0` has a canonical JSON Schema, registered semantic fidelity handler, deterministic repair ownership, and independent Bundle regeneration.
 
 ## Purpose
 
@@ -24,7 +26,7 @@ Stage 7 must not invent a new architecture, re-score candidates, override Stage 
 
 Stage 7 must stop if any required input is missing:
 
-- `STAGE ANCHOR` from `/recommend` to `/build-tree` using `ev4-stage-anchor@1.0.0`;
+- an independently regenerated `ev4-architect-validation-bundle@1.2.0` from an implemented `/recommend` profile, containing the current Anchor; currently unavailable because `/recommend` is blocked;
 - `Recommendation_Payload` using `ev4-recommend-payload@1.1.0` or newer compatible version;
 - `Score_Audit_Payload` using the active Stage 5 schema;
 - selected primary candidate or explicit `decision_requires_user_input` state;
@@ -267,7 +269,7 @@ Stage 7 must output these sections:
 11. `CARRIED-FORWARD UNKNOWNS`
 12. `STAGE 7 SELF-AUDIT`
 13. `Build_Tree_Payload`
-14. `NEXT STAGE ANCHOR — /implementation`
+14. `VALIDATION PROFILE BLOCKED REPORT` — no Bundle while this profile remains blocked
 
 ## Build_Tree_Payload Schema
 
@@ -289,14 +291,14 @@ carried_forward_unknowns:
 required_user_confirmations:
 implementation_blockers:
 implementation_allowed: true | false
-stage_8_anchor_required: true
+stage_8_bundle_required: true
 ```
 
 ## Stage 7 Self-Audit
 
 Before finishing, Stage 7 must verify:
 
-- valid Stage Anchor was provided;
+- valid Validation Bundle was provided;
 - Stage 6 selected exactly one eligible candidate;
 - no rejected, blocked, or approval-pending candidate was used;
 - no new architecture was invented;
@@ -310,7 +312,7 @@ Before finishing, Stage 7 must verify:
 - overlay stages are contained;
 - responsive structure is described without final CSS;
 - `Build_Tree_Payload` is emitted;
-- next Stage Anchor is emitted.
+- no continuation Bundle is emitted while the profile remains blocked.
 
 If any item fails, Stage 7 must return `fail_requires_build_tree_repair` and must not authorize `/implementation`.
 
@@ -318,7 +320,7 @@ If any item fails, Stage 7 must return `fail_requires_build_tree_repair` and mus
 
 Stage 7 must stop when:
 
-- Stage Anchor is missing or outdated;
+- Validation Bundle is missing or outdated;
 - Stage 6 did not produce a primary recommendation;
 - `decision_requires_user_input` is active;
 - an implementation blocker remains unresolved;
@@ -341,4 +343,4 @@ Stage 7 passes only when:
 - design-system hooks are present;
 - unknowns and confirmations are preserved;
 - no final CSS/code is produced;
-- `Build_Tree_Payload` and next Stage Anchor are emitted.
+- `Build_Tree_Payload` semantics are complete and the registered validator owns any future transaction emission; currently continuation remains blocked.

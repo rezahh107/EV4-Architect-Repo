@@ -1,6 +1,6 @@
 {
   "anchor_id": "asb-anchor-run-asb-fixture-score-evidence-38a0a1566038",
-  "anchor_schema": "ev4-stage-anchor@1.3.0",
+  "anchor_schema": "ev4-stage-anchor@1.4.0",
   "anchor_type": "NEXT_STAGE_ANCHOR",
   "boundary_ref": {
     "boundary_id": "asb-boundary-run-asb-fixture-score-evidence-b07f5e1845ac",

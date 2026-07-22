@@ -3,19 +3,29 @@ name: validate-architect-pipeline-stage-boundary
 on:
   pull_request:
     paths:
+      - '02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md'
+      - 'AGENTS.md'
+      - 'README.md'
+      - 'STATUS.md'
       - 'contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md'
+      - 'contracts/PARTIAL_RERUN_CONTRACT.md'
       - 'contracts/STAGE_ANCHOR_CONTRACT.md'
+      - 'docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md'
+      - 'experiments/END_TO_END_PIPELINE_TEST_PLAN.md'
+      - 'knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md'
+      - 'references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md'
+      - 'release/EV4_PROJECT_RELEASE_PACK_v1/**'
       - 'schemas/**'
       - 'fixtures/architect-pipeline-stage-boundary/**'
+      - 'scripts/check-architect-validation-profiles.py'
       - 'scripts/check-architect-pipeline-stage-boundary.py'
       - 'scripts/architect_validation_*.py'
       - 'tests/test_architect_pipeline_stage_boundary_validator.py'
+      - 'tests/test_architect_validation_profiles.py'
       - 'tests/test_architect_validation_transaction_mutations.py'
-      - 'stages/02_DECOMPOSE.md'
-      - 'stages/03_ARCHITECTURES.md'
-      - 'stages/04_SCORE_EVIDENCE.md'
-      - 'stages/05_SCORE_AUDIT.md'
+      - 'stages/**'
       - 'manifests/architect-pipeline-manifest.v1.json'
+      - 'manifests/architect-stage-validation-profiles.v1.json'
       - 'planning/DECISION_ESCAPE_ROUTES.yml'
       - '.github/workflows/validate-architect-pipeline-stage-boundary.yml'
 
@@ -63,7 +73,10 @@ jobs:
           python - <<'PY'
           import py_compile
           from pathlib import Path
-          paths = [Path('scripts/check-architect-pipeline-stage-boundary.py')]
+          paths = [
+              Path('scripts/check-architect-pipeline-stage-boundary.py'),
+              Path('scripts/check-architect-validation-profiles.py'),
+          ]
           paths.extend(sorted(Path('scripts').glob('architect_validation_*.py')))
           for path in paths:
               py_compile.compile(
@@ -85,17 +98,31 @@ jobs:
           from pathlib import Path
           from jsonschema import Draft202012Validator
           names = [
+              'ev4-architect-pipeline-manifest.v1.schema.json',
+              'architect-stage-validation-profiles.v1.schema.json',
               'ev4-architect-pipeline-stage-artifact.v1.schema.json',
               'ev4-architect-stage-validation-receipt.v1.schema.json',
               'ev4-architect-validation-failure-event.v1.schema.json',
               'ev4-stage-boundary-record.v1.schema.json',
               'ev4-stage-anchor.v1.schema.json',
+              'ev4-stage-anchor.v1.4.schema.json',
               'ev4-architect-validation-bundle.v1.schema.json',
+              'ev4-architect-validation-bundle.v1.2.schema.json',
           ]
           for name in names:
               schema = json.loads((Path('schemas') / name).read_text())
               Draft202012Validator.check_schema(schema)
           PY
+
+      - name: Validate Manifest and Validation Profiles authority
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          python scripts/check-architect-validation-profiles.py
+          echo 'repository_status_checkpoint=after_profile_validation'
+          git status --porcelain
+          test -z "$(git status --porcelain)"
 
       - name: Run deterministic success and failure Bundle transactions
         env:
@@ -142,7 +169,7 @@ jobs:
           git status --porcelain
           test -z "$(git status --porcelain)"
 
-      - name: Validate fixtures and focused regression tests
+      - name: Validate Architect stage boundary fixtures and focused regression tests
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
@@ -150,6 +177,7 @@ jobs:
           python scripts/check-architect-pipeline-stage-boundary.py --fixtures
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
             tests/test_architect_pipeline_stage_boundary_validator.py \
+            tests/test_architect_validation_profiles.py \
             tests/test_architect_validation_transaction_mutations.py
           echo 'repository_status_checkpoint=after_pytest'
           git status --porcelain

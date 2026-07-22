@@ -62,6 +62,156 @@ def make_success(tmp_path: Path) -> Path:
     return bundle
 
 
+def score_audit_sequence(tmp_path: Path, **payload_updates) -> Path:
+    sequence = tmp_path / "score-audit-sequence"
+    shutil.copytree(VALID, sequence)
+    path = sequence / "score-audit.json"
+    artifact = load(path)
+    artifact["payload"].update(payload_updates)
+    write(path, artifact)
+    return sequence
+
+
+def assert_score_audit_failure(
+    tmp_path: Path,
+    sequence: Path,
+    expected_code: str,
+    expected_repair_target: str,
+):
+    bundle = tmp_path / "score-audit-bundle"
+    generated = asb.generate_transaction(sequence, bundle, ROOT)
+    verified = asb.validate_bundle(bundle, ROOT)
+
+    assert generated["bundle_integrity_status"] == "valid"
+    assert generated["run_validation_status"] == "invalid"
+    assert generated["authorization_valid"] is False
+    assert generated["manifest"]["authorized_next_stage"] is None
+    assert generated["manifest"]["repair_target_stage"] == expected_repair_target
+    assert expected_code in {
+        item["code"] for item in generated["diagnostics"]
+    }
+
+    assert verified["bundle_integrity_status"] == "valid"
+    assert verified["run_validation_status"] == "invalid"
+    assert verified["authorization_valid"] is False
+    assert verified["manifest"]["authorized_next_stage"] is None
+    assert verified["manifest"]["repair_target_stage"] == expected_repair_target
+    assert verified["verification_status"] == "invalid_bundle_verified"
+
+
+def test_score_audit_explicit_valid_pass_authorizes_recommend(tmp_path):
+    sequence = score_audit_sequence(
+        tmp_path,
+        overall_audit_status="pass",
+        allowed_next_stage="/recommend",
+        required_repairs=[],
+    )
+    bundle = tmp_path / "score-audit-bundle"
+    generated = asb.generate_transaction(sequence, bundle, ROOT)
+    verified = asb.validate_bundle(bundle, ROOT)
+
+    assert generated["bundle_integrity_status"] == "valid"
+    assert generated["run_validation_status"] == "valid"
+    assert generated["authorization_valid"] is True
+    assert generated["manifest"]["authorized_next_stage"] == "/recommend"
+    assert generated["manifest"]["repair_target_stage"] is None
+    assert verified["verification_status"] == "valid_bundle_verified"
+    assert verified["authorization_valid"] is True
+    assert verified["manifest"]["authorized_next_stage"] == "/recommend"
+
+
+@pytest.mark.parametrize(
+    "status,repair_text,expected_repair_target",
+    [
+        ("fail_scoring", "Repair Stage 4 scoring", "/score-evidence"),
+        ("fail_missing_input", "Restore required audit input", "/score-audit"),
+        ("insufficient_evidence", "Obtain sufficient evidence", "/score-audit"),
+    ],
+)
+def test_score_audit_supported_failure_statuses_fail_closed(
+    tmp_path, status, repair_text, expected_repair_target
+):
+    sequence = score_audit_sequence(
+        tmp_path,
+        overall_audit_status=status,
+        allowed_next_stage=None,
+        required_repairs=[repair_text],
+    )
+    assert_score_audit_failure(
+        tmp_path,
+        sequence,
+        "ASB-SCORE-AUDIT-NOT-PASSED",
+        expected_repair_target,
+    )
+
+
+def test_score_audit_failure_status_cannot_authorize_recommend(tmp_path):
+    sequence = score_audit_sequence(
+        tmp_path,
+        overall_audit_status="fail_scoring",
+        allowed_next_stage="/recommend",
+        required_repairs=["Repair Stage 4 scoring"],
+    )
+    assert_score_audit_failure(
+        tmp_path,
+        sequence,
+        "ASB-SCORE-AUDIT-NOT-PASSED",
+        "/score-evidence",
+    )
+
+
+@pytest.mark.parametrize(
+    "payload_updates,expected_code",
+    [
+        (
+            {
+                "overall_audit_status": "pass",
+                "allowed_next_stage": None,
+                "required_repairs": [],
+            },
+            "ASB-SCORE-AUDIT-NEXT-STAGE-INCONSISTENT",
+        ),
+        (
+            {
+                "overall_audit_status": "pass",
+                "allowed_next_stage": "/recommend",
+                "required_repairs": ["Some repair"],
+            },
+            "ASB-SCORE-AUDIT-PASS-HAS-REPAIRS",
+        ),
+    ],
+)
+def test_score_audit_contradictory_pass_fails_closed(
+    tmp_path, payload_updates, expected_code
+):
+    sequence = score_audit_sequence(tmp_path, **payload_updates)
+    assert_score_audit_failure(
+        tmp_path,
+        sequence,
+        expected_code,
+        "/score-audit",
+    )
+
+
+@pytest.mark.parametrize(
+    "status",
+    ["pass_with_minor_flags", "unsupported_status"],
+)
+def test_score_audit_unsupported_status_fails_closed(tmp_path, status):
+    sequence = score_audit_sequence(
+        tmp_path,
+        overall_audit_status=status,
+        allowed_next_stage=None,
+        required_repairs=["Repair unsupported audit outcome"],
+    )
+    assert_score_audit_failure(
+        tmp_path,
+        sequence,
+        "ASB-SCHEMA-VALIDATION-FAILED",
+        "/score-audit",
+    )
+
+
 def test_changed_failing_artifact_with_manifest_only_is_rejected(tmp_path):
     bundle = make_failure(tmp_path)
     path = bundle / "artifacts/architectures.json"

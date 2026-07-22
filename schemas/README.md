@@ -1,5 +1,27 @@
 # Schemas
 
+## Architect Stage Validation Authority
+
+Current machine-readable authority is split deliberately:
+
+```text
+manifests/architect-pipeline-manifest.v1.json
+  sole topology and Stage-version authority
+manifests/architect-stage-validation-profiles.v1.json
+  Validation capability and grounding status only
+schemas/architect-stage-validation-profiles.v1.schema.json
+  strict Registry shape
+```
+
+Current generated carrier schemas are `ev4-stage-anchor@1.4.0` in
+`schemas/ev4-stage-anchor.v1.4.schema.json` and
+`ev4-architect-validation-bundle@1.2.0` in
+`schemas/ev4-architect-validation-bundle.v1.2.schema.json`. Historical Anchor
+1.1.0–1.3.0 and Bundle 1.1.0 records remain readable, non-authorizing evidence.
+An Anchor alone authorizes nothing.
+
+## Architect Project Gate Payload
+
 Active Architect-owned schema added by this migration step:
 
 ```text

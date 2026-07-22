@@ -1,7 +1,7 @@
 # End-to-End Pipeline Test Plan
 
-Status: confirmed_hardened_v1.0.0
-Version: 1.0.0
+Status: blocked_by_validation_profiles_v1.1.0
+Version: 1.1.0
 Plan schema: ev4-e2e-test-plan@1.0.0
 Report schema: ev4-e2e-test-report@1.0.0
 Applies to: validation before release-ready confirmation
@@ -140,35 +140,23 @@ The E2E runner must verify that every stage follows the active Source Access Mat
 
 ## Stage Anchor Requirements
 
-Before every stage after `/intake`, the E2E runner must validate a `STAGE ANCHOR` with schema:
+For a Manifest transition whose source profile is `full_transaction_implemented`, the E2E runner must independently regenerate and validate:
 
 ```text
-ev4-stage-anchor@1.1.0
+ev4-architect-validation-bundle@1.2.0
+containing ev4-stage-anchor@1.4.0
 ```
 
-Minimum required anchor fields:
+The current Anchor shape is:
 
 ```text
-- source_stage
-- target_stage
-- target_stage_hardening_status
-- project_status_version
-- payload_schema_in
-- payload_schema_out
-- critical_unknowns
-- confidence_delta
-- blocking_items
-- gate_results
-- audit_flags
-- required_user_confirmations
-- partial_rerun_state
-- allowed_work
-- forbidden_work
-- stop_conditions
-- debug_trace_required
+- anchor_schema, anchor_id, run_id, anchor_type
+- source_stage, target_stage, repair_target_stage
+- boundary_ref, failure_event_ref
+- handoff_state
 ```
 
-If an anchor is missing, outdated, schema-mismatched, or inconsistent with the previous payload, the E2E report must mark:
+The Pipeline Manifest is the sole topology and Stage-version authority; the Validation Profiles Registry is the sole capability authority. An Anchor alone authorizes nothing. If the source profile is blocked, or the Bundle is missing, stale, schema-mismatched, or not independently reproducible, the E2E report must mark:
 
 ```text
 e2e_status: fail
@@ -375,7 +363,8 @@ The first E2E run passes only if:
 
 ```text
 - full stage sequence completes through /handoff-export;
-- no stage starts without a valid ev4-stage-anchor@1.1.0 where required;
+- no transition starts without an independently regenerated `ev4-architect-validation-bundle@1.2.0` where its source profile is executable;
+- every `blocked_missing_semantics` source Stage stops without producing a Bundle;
 - no required payload schema is missing;
 - unknowns do not disappear silently;
 - Stage 4 does not convert ? / unknown / N/A into unsupported numeric score;
@@ -432,97 +421,8 @@ stage_10_flag_preservation_checked: yes
 
 ---
 
-## NEXT WORK ANCHOR — Run E2E-001
+## Current Execution Boundary
 
-```text
-NEXT WORK ANCHOR — /e2e-test
-anchor_schema: ev4-stage-anchor@1.1.0
-source_stage: /e2e-test-plan
-target_stage: /e2e-test
-target_stage_hardening_status: confirmed
-project_status_version: 0.11.0
-payload_schema_in:
-  - ev4-e2e-test-plan@1.0.0
-  - ev4-e2e-fixture@1.0.0
-payload_schema_out:
-  - ev4-e2e-test-report@1.0.0
+`/e2e-test-plan` and `/e2e-test` are not Pipeline Manifest Stages, so this plan cannot mint a Stage Anchor between them. The previous pseudo-Anchor is retired as authorization evidence.
 
-Carry-forward facts:
-- key_decisions:
-  - E2E test plan contract is confirmed_hardened_v1.0.0.
-  - First fixture is E2E-001 smart-home connector hero.
-  - E2E-001 is a realistic textual mockup, not a raster screenshot.
-- selected_or_active_candidates:
-  - Full pipeline validation from /intake through /handoff-export.
-- rejected_or_blocked_candidates:
-  - Partial /build-tree-only run cannot remove release blocker.
-- critical_unknowns:
-  - Pixel-accurate screenshot interpretation is not testable with textual fixture alone.
-  - Real Elementor export evidence is not available in E2E-001.
-- confidence_delta:
-  - item: E2E test harness readiness
-    previous_confidence: unknown
-    current_confidence: confirmed
-    direction: increased
-    reason: v1.0.0 test plan now defines fixture, report schema, negative controls, repair routes, and release boundary.
-    downstream_impact: E2E-001 can run without asking for additional planning input.
-- blocking_items:
-  - Prompt pack is not release-ready until one E2E report passes.
-- gate_results:
-  - E2E plan hardening gate passed.
-  - E2E execution gate not yet run.
-- audit_flags:
-  - Textual fixture cannot validate pixel-accurate visual interpretation.
-- tie_or_ambiguity_flags:
-  - If E2E recommendation reaches a tie, Stage 6 must preserve tie protocol.
-- required_user_confirmations:
-  - None for E2E-001 test execution.
-- repair_routes:
-  - Use report repair routing table to identify earliest safe rerun stage.
-
-Partial rerun state:
-- reusable_until: E2E plan remains reusable unless fixture, stage schema, anchor schema, debug trace schema, or source matrix changes.
-- invalidation_triggers:
-  - fixture changed
-  - Stage 8/9/10 schema changed
-  - Stage Anchor Contract changed
-  - Debug Trace Contract changed
-  - Source Access Matrix changed
-- earliest_safe_rerun_stage: /e2e-test-plan if the plan changes; /intake if only fixture content changes before first run.
-- downstream_payloads_dependent_on_this_stage:
-  - ev4-e2e-test-report@1.0.0
-
-Stage input package:
-- required_inputs_present:
-  - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
-  - experiments/E2E-001-smart-home-connector-fixture.md
-  - STATUS.md
-  - active stage/contracts listed in STATUS.md
-- required_inputs_missing:
-  - None for textual-fixture E2E execution
-- files_or_sections_to_reference:
-  - experiments/END_TO_END_PIPELINE_TEST_PLAN.md
-  - experiments/E2E-001-smart-home-connector-fixture.md
-  - contracts/STAGE_ANCHOR_CONTRACT.md
-  - diagnostics/LLM_DEBUG_TRACE_CONTRACT.md
-  - references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
-
-Stage boundary:
-- allowed_work:
-  - Run E2E-001 through every stage and produce ev4-e2e-test-report@1.0.0.
-  - Record first failure, repair route, invalidated downstream, and release-blocker state.
-- forbidden_work:
-  - Do not mark release-ready unless the E2E report passes all release-blocker conditions.
-  - Do not skip anchors, payloads, score audit, final audit, or handoff preservation checks.
-  - Do not invent screenshot-only facts beyond the textual fixture.
-- stop_conditions:
-  - Missing required stage/contract file.
-  - Invalid or absent E2E fixture.
-  - Any blocker/high defect without repair route.
-  - E2E report cannot be produced in schema ev4-e2e-test-report@1.0.0.
-
-Debug trace:
-- debug_trace_required: yes
-- previous_debug_trace_id: None
-- expected_debug_trace_schema: ev4-debug-trace@1.0.0
-```
+A new full-pipeline E2E run is currently blocked: `/intake`, `/research`, `/recommend`, `/build-tree`, `/implementation`, `/final-audit`, and `/handoff-export` are `blocked_missing_semantics`. E2E-001 remains historical fixture evidence only. Full execution may resume only after each relevant source profile has a canonical schema, deterministic semantic rules, deterministic repair ownership, and Bundle regeneration support recorded in the Registry.

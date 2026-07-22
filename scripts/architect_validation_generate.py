@@ -8,8 +8,9 @@ def preflight_result(
     expected: str,
     observed: str,
     diagnostics: list[dict[str, Any]] | None = None,
-    repair_target: str = "/decompose",
+    repair_target: str | None = None,
 ) -> dict[str, Any]:
+    repair_target = repair_target or first_implemented_stage()
     items = diagnostics or [
         diagnostic(code, "ASB-R11", repair_target, path, expected, observed, repair_target)
     ]
@@ -45,6 +46,7 @@ def _owned_output_directory(output: Path) -> bool:
 def validate_output_target(
     sequence: Path, output: Path, root: Path = ROOT
 ) -> list[dict[str, Any]]:
+    fallback_stage = first_implemented_stage(root)
     diagnostics: list[dict[str, Any]] = []
     try:
         sequence_resolved = sequence.resolve(strict=True)
@@ -53,11 +55,11 @@ def validate_output_target(
             diagnostic(
                 "ASB-UNSAFE-OUTPUT-PATH",
                 "ASB-R11",
-                "/decompose",
+                fallback_stage,
                 "$/sequence",
                 "existing Sequence directory",
                 type(exc).__name__,
-                "/decompose",
+                fallback_stage,
             )
         ]
     output_resolved = output.resolve(strict=False)
@@ -68,11 +70,11 @@ def validate_output_target(
             diagnostic(
                 "ASB-UNSAFE-OUTPUT-PATH",
                 "ASB-R11",
-                "/decompose",
+                fallback_stage,
                 "$/output",
                 "non-filesystem-root output",
                 str(output_resolved),
-                "/decompose",
+                fallback_stage,
             )
         )
     if output_resolved == root_resolved:
@@ -80,11 +82,11 @@ def validate_output_target(
             diagnostic(
                 "ASB-UNSAFE-OUTPUT-PATH",
                 "ASB-R11",
-                "/decompose",
+                fallback_stage,
                 "$/output",
                 "output distinct from repository root",
                 str(output_resolved),
-                "/decompose",
+                fallback_stage,
             )
         )
     if _path_overlap(sequence_resolved, output_resolved):
@@ -92,11 +94,11 @@ def validate_output_target(
             diagnostic(
                 "ASB-UNSAFE-OUTPUT-PATH",
                 "ASB-R11",
-                "/decompose",
+                fallback_stage,
                 "$/output",
                 "output disjoint from Sequence directory",
                 str(output_resolved),
-                "/decompose",
+                fallback_stage,
             )
         )
     if output.exists() and not _owned_output_directory(output):
@@ -104,11 +106,11 @@ def validate_output_target(
             diagnostic(
                 "ASB-OUTPUT-NOT-VALIDATOR-OWNED",
                 "ASB-R11",
-                "/decompose",
+                fallback_stage,
                 "$/output",
                 f"existing directory with exact {OUTPUT_OWNERSHIP_SENTINEL} ownership sentinel",
                 str(output_resolved),
-                "/decompose",
+                fallback_stage,
             )
         )
     return sort_diagnostics(diagnostics)
@@ -117,6 +119,7 @@ def validate_output_target(
 def _render_transaction(
     result: dict[str, Any], sequence: Path, output: Path, root: Path
 ) -> dict[str, Any]:
+    authority = pipeline_authority(root)
     for folder in ["artifacts", "receipts", "boundaries", "anchors"]:
         (output / folder).mkdir(parents=True, exist_ok=True)
     artifact_entries = []
@@ -126,7 +129,7 @@ def _render_transaction(
     for item in result["processed"]:
         artifact = item["artifact"]
         stage = artifact["stage_id"]
-        prefix = PREFIX[stage]
+        prefix = authority.prefix(stage)
         artifact_path = output / "artifacts" / f"{prefix}.json"
         artifact_path.write_bytes(item["path"].read_bytes())
         artifact_entries.append(
@@ -155,7 +158,7 @@ def _render_transaction(
         for item in result["processed"]:
             artifact = item["artifact"]
             stage = artifact["stage_id"]
-            prefix = PREFIX[stage]
+            prefix = authority.prefix(stage)
             boundary = success_boundary_for(
                 artifact, item["digest"], item["receipt"], receipt_digests[stage]
             )
@@ -171,7 +174,7 @@ def _render_transaction(
                 )
             )
             predecessor = processed_by_stage.get(
-                PREDECESSOR.get(stage, ""), {}
+                authority.predecessor(stage) or "", {}
             ).get("artifact")
             anchor = success_anchor_for(
                 artifact, predecessor, boundary, boundary_digest
@@ -186,9 +189,9 @@ def _render_transaction(
                     "anchor",
                 )
             )
-        authorized_next_stage = NEXT_STAGE[
+        authorized_next_stage = authority.successor(
             result["processed"][-1]["artifact"]["stage_id"]
-        ]
+        )
         overall_status = "valid"
         repair_target = None
         authorization_valid = True
@@ -214,7 +217,7 @@ def _render_transaction(
             )
         )
         predecessor = processed_by_stage.get(
-            PREDECESSOR.get(failed_stage, ""), {}
+            authority.predecessor(failed_stage) or "", {}
         ).get("artifact")
         anchor = repair_anchor_for(
             result,

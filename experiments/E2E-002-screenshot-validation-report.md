@@ -7,6 +7,8 @@ Date: 2026-06-22
 Input type: raster screenshot supplied in ChatGPT conversation
 Source image label: smart-home connector hero screenshot
 
+Historical evidence notice: this report predates the Validation Profiles Registry. Its `ev4-stage-anchor@1.1.0` record is preserved verbatim as historical evidence and does not authorize current continuation.
+
 ---
 
 ## Purpose

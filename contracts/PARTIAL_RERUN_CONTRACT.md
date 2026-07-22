@@ -170,9 +170,9 @@ If `user_confirmation_required: yes`, stop after the plan and wait.
 
 ---
 
-## Stage Anchor Integration
+## Stage Anchor and Bundle Integration
 
-Every Stage Anchor v1.1+ should include:
+The current `ev4-stage-anchor@1.4.0` carries this state under `handoff_state`:
 
 ```text
 partial_rerun_state:
@@ -181,6 +181,8 @@ partial_rerun_state:
 - earliest_safe_rerun_stage:
 - downstream_payloads_dependent_on_this_stage:
 ```
+
+The Anchor is non-authorizing by itself. Its source Stage must be `full_transaction_implemented`, and the Anchor must be contained in an independently regenerated `ev4-architect-validation-bundle@1.2.0`. A blocked Validation Profile produces no Bundle and no continuation.
 
 ---
 

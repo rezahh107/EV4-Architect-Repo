@@ -63,10 +63,9 @@ The model must run `/intake` first. It must not recommend architecture, produce 
 ## After /intake
 
 ```text
-Continue to /research using the Stage Anchor from /intake.
-Research only the current section's architecture-changing unknowns and version-sensitive Elementor capabilities.
-Preserve unsupported or project-specific behavior as unknown.
-Produce a STAGE ANCHOR for /decompose.
+Current status: BLOCKED_VALIDATION_PROFILE.
+The Manifest requires /intake → /research, but /intake is not full_transaction_implemented.
+Do not continue from an Anchor or from conversation memory. Preserve the intake output and stop.
 ```
 
 ---
@@ -74,13 +73,9 @@ Produce a STAGE ANCHOR for /decompose.
 ## After /research
 
 ```text
-Continue to /decompose using the Stage Anchor from /research.
-Decompose by visual role, not implementation.
-Do not recommend architecture yet.
-Do not build an Elementor tree yet.
-Do not use TUYA/RAG/docs to invent visual groups.
-Mark unknowns explicitly.
-Produce a STAGE ANCHOR for /architectures.
+Current status: BLOCKED_VALIDATION_PROFILE.
+/research remains mandatory, but its executable Validation Transaction is not implemented.
+Do not authorize /research → /decompose and never bypass with /intake → /decompose.
 ```
 
 ---
@@ -171,7 +166,7 @@ Produce either FINAL BUILDER HANDOFF or HANDOFF BLOCKED REPORT.
 <!-- EV4_ARCHITECT_FINAL_PROJECT_GATE_START -->
 ## Final Project Gate Step
 
-When `/handoff-export` is accepted and its Stage Anchor authorizes the next stage:
+`/project-gate-export` is the terminal Manifest Stage. The legal `/handoff-export → /project-gate-export` edge does not authorize continuation while `/handoff-export` remains `blocked_missing_semantics`. Run the following only after an active Registry profile and independently regenerated Bundle authorize that exact edge:
 
 ```text
 Run /project-gate-export.

@@ -1,9 +1,9 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.18.0
-Status: repository_repair_handoff_root_cause_repair_implemented_pending_exact_head_ci_and_independent_review
-Last confirmed stage: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`; PR #33 is a Draft repair increment on branch `feat/repository-repair-recommendation-handoff`
-Current next step: run all applicable Workflows on the resulting exact PR #33 Head, then obtain a fresh independent exact-Head review; owner-only Merge remains required
+Version: 0.19.0
+Status: stage_validation_authority_convergence_implemented_in_draft_pr_35_pending_exact_head_ci_and_independent_review
+Last confirmed stage: PR #33 merged into `main` at `f6f1912d06c4b6c2e0013c26bb14915a55000c80`; this repair started from exact `main` SHA `ca154ff96c793e7d8987a823e62620912fc9d2ed`, and PR #35 is Draft on `agent/repair-stage-validation-authority`
+Current next step: run all applicable Workflows on the final exact PR #35 Head, then obtain a fresh independent exact-Head review; owner-only Merge remains required
 Language: Persian reports, English technical labels allowed
 Last automation update: 2026-07-22
 
@@ -103,11 +103,11 @@ independent acceptance of its findings, and it does not authorize PR #30 or late
 The current state does not claim:
 
 - final closure of ARCHBOOT-F01 or ARCHBOOT-F02;
-- independent technical acceptance of PR #30, PR #32, or PR #33;
+- independent technical acceptance of PR #30, PR #32, PR #33, or PR #35;
 - repository-backed owner authorization or an approved bootstrap increment;
-- Merge authorization, approval, release, or deployment for PR #33;
+- Merge authorization, approval, release, or deployment for PR #35;
 - external model-host loading of AGENTS.md or repository instructions;
-- real conversational runtime enforcement of Repository Repair Recommendation behavior;
+- real conversational runtime enforcement of Repository Repair Recommendation or Stage Validation behavior;
 - automatic root-cause diagnosis or automatic repository repair;
 - repository-wide enforcement or self-healing;
 - real non-synthetic Architect-to-CE handoff;
@@ -124,12 +124,66 @@ writing a final tested Head SHA into this file would itself create a new, unvali
 
 ## ARCH-GOV-STAGE-BOUNDARY-001
 
-Status: merged_observed_not_independently_accepted
-Scope gate: authorized for bounded intermediate Stage Artifact enforcement at `/decompose` through `/score-audit`.
-Live merge evidence: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`.
-Evidence state: Schema-backed, deterministic Bundle generation, independent Bundle regeneration, focused fixture/mutation testing, and exact-Head CI evidence were recorded in PR #32; independent technical acceptance remains unestablished.
+Status: authority_convergence_implemented_in_draft_pr_35_pending_exact_head_ci
+Scope gate: authorized for Manifest-wide topology/capability reconciliation while executable validation remains bounded to `/decompose` through `/score-audit`.
+Live baseline evidence: PR #32 merged into `main` at `8f3cc638f0b7a34b90935efcce68a3928c94309f`; PR #35 is the unmerged convergence repair.
+Evidence state: local Schema, Registry, deterministic Bundle, independent regeneration, topology, blocked-Stage, historical-carrier, fixture, mutation, and compatibility tests pass; final exact-Head CI and independent technical acceptance remain pending.
 Runtime enforcement: `insufficient_evidence`. Downstream enforcement: `insufficient_evidence`.
 Final Architect Stage Payload v1 authority remains unchanged.
+
+## Stage Validation Authority Convergence
+
+```yaml
+increment_id: ARCH-GOV-STAGE-VALIDATION-AUTHORITY-CONVERGENCE-001
+pull_request: 35
+draft: true
+base_branch: main
+base_sha: ca154ff96c793e7d8987a823e62620912fc9d2ed
+working_branch: agent/repair-stage-validation-authority
+final_pr_head: recorded_externally_after_final_metadata_commit
+exact_head_ci: pending_final_head
+canonical_topology_authority: manifests/architect-pipeline-manifest.v1.json
+canonical_validation_capability_authority: manifests/architect-stage-validation-profiles.v1.json
+registry_authorization_role: validation_capability_only
+implemented_transactions:
+  - /decompose
+  - /architectures
+  - /score-evidence
+  - /score-audit
+blocked_missing_semantics:
+  - /intake
+  - /research
+  - /recommend
+  - /build-tree
+  - /implementation
+  - /final-audit
+  - /handoff-export
+terminal_stage: /project-gate-export
+anchor_schema: ev4-stage-anchor@1.4.0
+bundle_schema: ev4-architect-validation-bundle@1.2.0
+historical_anchor_schema_preserved: ev4-stage-anchor@1.3.0
+historical_bundle_schema_preserved: ev4-architect-validation-bundle@1.1.0
+research_mandatory: true
+intake_to_decompose_bypass_forbidden: true
+anchor_alone_authorizes: false
+architect_run_executed: false
+selected_candidate_id_semantics_changed: false
+final_project_gate_payload_semantics_changed: false
+main_modified_directly: false
+merge_status: unmerged
+merge_authorized: false
+approval_performed: false
+auto_merge_enabled: false
+deployment_performed: false
+runtime_enforcement: insufficient_evidence
+downstream_enforcement: insufficient_evidence
+```
+
+Every non-terminal profile without a complete canonical Artifact Schema, deterministic
+semantic validator, Receipt generation, repair ownership, and independent Bundle
+regeneration remains fail-closed. A legal Manifest edge is necessary topology evidence;
+it is not continuation authorization. Final exact-Head CI belongs in the PR record because
+writing that final SHA here would itself create a new Head.
 
 ## PR32 Validation Transaction Repair
 
@@ -197,6 +251,10 @@ increment_id: ARCH-GOV-REPOSITORY-REPAIR-HANDOFF-001
 pull_request: 33
 working_branch: feat/repository-repair-recommendation-handoff
 starting_reviewed_head: 21cab91e6bc2dfae63d5cc2e9ac25ea54b731676
+final_pr_head: 8a7757cf4b9e25ac3bb705753f0c223325da909c
+merge_commit: f6f1912d06c4b6c2e0013c26bb14915a55000c80
+merge_status: merged_observed
+github_state_evidence: observed
 change_kind: bounded_behavioral_contract_root_cause_repair
 scope_gate: authorized
 compatibility: additive_nonbreaking
@@ -222,17 +280,18 @@ fixtures:
   boundary: 5
   manual_full_prompt_copies: removed_except_one_renderer_generated_golden_snapshot
 tests: tests/test_repository_repair_recommendation_handoff.py
-local_validation_state: locally_validated
-exact_head_ci: pending_final_head
-independent_review: pending_final_head
+local_validation_state: historical_locally_validated
+exact_head_ci: not_revalidated_by_current_maintenance
+independent_review: not_established
+merge_authorization_evidence: not_established
 runtime_enforcement: insufficient_evidence
 automatic_root_cause_detection: not_implemented
 automatic_repository_repair: not_implemented
 repository_self_healing: not_implemented
 repository_wide_enforcement: not_claimed
-merge_authorized: false
-approval_performed: false
-deployment_performed: false
+merge_authorized: not_established
+approval_performed: not_established
+deployment_performed: not_established
 ```
 
 This increment centralizes repository-side eligibility, record validation, and deterministic prompt rendering. It does not create a new Stage, Stage Artifact, Stage Anchor authority, repair mode, runtime service, orchestration framework, automatic diagnosis, automatic repository modification path, or downstream contract change.

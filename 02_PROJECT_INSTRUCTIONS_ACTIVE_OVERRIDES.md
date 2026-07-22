@@ -1,7 +1,7 @@
 # Project Instructions — Active Overrides
 
 Status: active
-Version: 0.5.0
+Version: 0.6.0
 Applies to: current EV4 Architect Project Instructions until the master file is repackaged
 
 ---
@@ -14,9 +14,16 @@ When creating a ChatGPT Project or Custom GPT release pack, include this file wi
 
 ---
 
-## Stage Anchor Requirement
+## Stage Validation Profile and Anchor Requirement
 
-Before starting any stage after `/intake`, the user or assistant must provide a current `ev4-stage-anchor@1.3.0` generated inside an independently verified Validation Bundle.
+Every transition is governed by the active Validation Profile for its source Stage in `manifests/architect-stage-validation-profiles.v1.json`.
+
+- A source Stage marked `full_transaction_implemented` requires a current `ev4-stage-anchor@1.4.0` inside an independently regenerated `ev4-architect-validation-bundle@1.2.0`.
+- A source Stage marked `contract_defined_not_implemented`, `blocked_missing_semantics`, or `blocked_contract_conflict` authorizes no continuation.
+- The terminal Stage authorizes no successor.
+- A legal Manifest edge is necessary topology evidence; it is not continuation authorization.
+
+`/research` remains mandatory. `/intake → /decompose` is forbidden. Because `/intake` and `/research` do not yet have `full_transaction_implemented` profiles, no current Bundle may claim either transition is authorized.
 
 A Stage Anchor is a user-facing handoff carrier. It never independently authorizes continuation. Machine authorization derives only from a `validate-bundle` result with:
 
@@ -26,22 +33,22 @@ run_validation_status: valid
 authorization_valid: true
 ```
 
-Historical `ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` records are non-authorizing evidence only. If the current Anchor or verified Bundle is missing, inconsistent, or forged, stop and regenerate the complete Validation Transaction from exact Stage Artifact bytes.
+Historical `ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, and `ev4-stage-anchor@1.3.0` records are non-authorizing evidence only. If the source profile is executable and either the current Anchor or independently verified Bundle is missing, inconsistent, or forged, stop and regenerate the complete Validation Transaction from exact Stage Artifact bytes. If the source profile is not executable, stop at that Stage; do not fabricate a Bundle or bypass the Stage.
 
 Do not rely on conversation memory alone.
 
 ---
 
-## Target Stage Hardening Gate
+## Target Stage Capability Gate
 
-Every Stage Anchor must preserve target-stage hardening state inside its evidence-derived `handoff_state`. A prose-only hardening claim cannot override a blocked or invalid Bundle.
+Caller-authored target-stage hardening labels are not part of the current Anchor and cannot authorize work. Source capability is read from the Validation Profiles Registry, topology from the Manifest, and evidence-derived state from `handoff_state`.
 
 Rules:
 
 - A valid success Bundle may hand off only to its exact `authorized_next_stage`.
 - A valid failure Bundle may hand off only to its exact `repair_target_stage` for repair.
 - A malformed or non-reproducible Bundle authorizes no work.
-- If target-stage hardening remains unknown, inspect `STATUS.md` before continuing.
+- Entering a target Stage does not imply that its outbound Validation Profile is executable; a blocked target must stop before its next transition.
 
 ---
 
@@ -63,7 +70,7 @@ This exists to prevent quiet drift such as:
 
 If the user says that only one thing changed, do not restart the full pipeline automatically.
 
-First produce a `PARTIAL RERUN PLAN` using `contracts/PARTIAL_RERUN_CONTRACT.md` and the current Repair Anchor or Success Anchor.
+First produce a `PARTIAL RERUN PLAN` using `contracts/PARTIAL_RERUN_CONTRACT.md` and the independently verified Bundle containing the current Repair or Success Anchor.
 
 The plan must identify:
 
@@ -195,14 +202,14 @@ Exception: only a user-approved quick sketch mode may produce a non-audited draf
 
 ## Architect Stage Boundary Validation Transaction
 
-Stage 2 through Stage 5 use `ev4-architect-pipeline-stage-artifact@1.1.0`. The complete current evidence set is:
+The active executable profiles are `/decompose`, `/architectures`, `/score-evidence`, and `/score-audit`. They use `ev4-architect-pipeline-stage-artifact@1.1.0`. The complete current evidence set is:
 
 ```yaml
 receipt_schema: ev4-architect-stage-validation-receipt@1.1.0
 failure_event_schema: ev4-architect-validation-failure-event@1.0.0
 boundary_schema: ev4-stage-boundary-record@1.1.0
-anchor_schema: ev4-stage-anchor@1.3.0
-bundle_schema: ev4-architect-validation-bundle@1.1.0
+anchor_schema: ev4-stage-anchor@1.4.0
+bundle_schema: ev4-architect-validation-bundle@1.2.0
 ```
 
 The earliest owning producer boundary must fail when a required canonical Artifact is missing or semantically invalid. Downstream reconstruction from prose, Stage Anchor text, fixture names, self-declared `gate_results: pass`, or caller-authored evidence is forbidden. This transaction does not replace the final `ev4-architect-stage-payload@1.0.0` Project Gate payload.
@@ -222,7 +229,7 @@ python scripts/check-architect-pipeline-stage-boundary.py validate-bundle \
 
 `validate-run` is the only file-producing production path. `validate-bundle` independently regenerates success and failure evidence from exact contained Artifact bytes. The removed legacy flags `--write-receipt`, `--write-receipts`, and `--write-anchors` must not be reintroduced.
 
-The exact active Stage-version map is:
+Stage topology and Stage versions come only from `manifests/architect-pipeline-manifest.v1.json`. Executable coverage, handler identity, and carrier support come only from `manifests/architect-stage-validation-profiles.v1.json`. The current executable Stage versions derived from those sources are:
 
 ```yaml
 /decompose: 1.0.0

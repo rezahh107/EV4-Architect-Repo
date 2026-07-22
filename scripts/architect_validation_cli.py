@@ -60,12 +60,15 @@ def validate_fixture_suite(root: Path = ROOT) -> dict[str, Any]:
 
 
 def diagnostic_artifact(path: Path, root: Path = ROOT) -> dict[str, Any]:
+    authority = pipeline_authority(root)
     validators = schema_validators(root)
     try:
         artifact = load_json(path)
-        stage = artifact.get("stage_id", "/decompose")
+        stage = artifact.get("stage_id", authority.implemented_stage_order[0])
         errors = schema_diagnostics(validators["artifact"], artifact, stage, "$", stage)
-        expected_version = STAGE_VERSIONS.get(stage)
+        expected_version = (
+            authority.stage_version(stage) if stage in authority.stage_records else None
+        )
         if expected_version and artifact.get("stage_version") != expected_version:
             errors.insert(
                 0,
@@ -84,14 +87,18 @@ def diagnostic_artifact(path: Path, root: Path = ROOT) -> dict[str, Any]:
             diagnostic(
                 "ASB-SCHEMA-VALIDATION-FAILED",
                 "ASB-R01",
-                "/decompose",
+                authority.implemented_stage_order[0],
                 "$",
                 "valid Artifact",
                 type(exc).__name__,
-                "/decompose",
+                authority.implemented_stage_order[0],
             )
         ]
-    stage = artifact.get("stage_id", "/decompose") if "artifact" in locals() else "/decompose"
+    stage = (
+        artifact.get("stage_id", authority.implemented_stage_order[0])
+        if "artifact" in locals()
+        else authority.implemented_stage_order[0]
+    )
     return {
         "status": "invalid",
         "diagnostic_only": True,

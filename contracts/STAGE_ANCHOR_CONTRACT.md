@@ -1,12 +1,14 @@
 # Stage Anchor Contract
 
 Status: active
-Current Schema: `ev4-stage-anchor@1.3.0`
-Schema path: `schemas/ev4-stage-anchor.v1.schema.json`
+Current Schema: `ev4-stage-anchor@1.4.0`
+Schema path: `schemas/ev4-stage-anchor.v1.4.schema.json`
 
 ## Authority boundary
 
 An Anchor is a user-facing handoff carrier. It never independently authorizes continuation. Machine authorization derives only from an independently regenerated valid Validation Bundle.
+
+Legal source/target topology is derived from `manifests/architect-pipeline-manifest.v1.json`. Source-stage executable capability is derived from `manifests/architect-stage-validation-profiles.v1.json`. The Anchor Schema does not maintain a competing transition table.
 
 The only active binding shape is:
 
@@ -21,25 +23,31 @@ The obsolete v1.2 fields `source_artifact` and `source_validation` are not permi
 ## Success Anchor
 
 ```yaml
-anchor_schema: ev4-stage-anchor@1.3.0
+anchor_schema: ev4-stage-anchor@1.4.0
+anchor_id: <deterministic Anchor identity>
+run_id: <exact Run identity>
 anchor_type: NEXT_STAGE_ANCHOR
 source_stage: <validated Stage>
 target_stage: <next Stage>
 repair_target_stage: null
 boundary_ref: <ev4-stage-boundary-record@1.1.0 reference>
 failure_event_ref: null
+handoff_state: <evidence-derived current state>
 ```
 
 ## Repair Anchor
 
 ```yaml
-anchor_schema: ev4-stage-anchor@1.3.0
+anchor_schema: ev4-stage-anchor@1.4.0
+anchor_id: <deterministic Anchor identity>
+run_id: <exact Run identity>
 anchor_type: REPAIR_ANCHOR
 source_stage: <actual failed Stage>
 target_stage: null
 repair_target_stage: <earliest repair owner>
 boundary_ref: <Repair Boundary reference>
 failure_event_ref: <Failure Event reference>
+handoff_state: <evidence-derived repair state>
 ```
 
 ## Semantic handoff state
@@ -90,4 +98,4 @@ This flag is optional, non-authorizing, and non-blocking. It must not be interpr
 
 ## Historical compatibility
 
-`ev4-stage-anchor@1.1.0` and `ev4-stage-anchor@1.2.0` remain readable as historical evidence only. They cannot authorize current continuation and are never silently upgraded.
+`ev4-stage-anchor@1.1.0`, `ev4-stage-anchor@1.2.0`, and `ev4-stage-anchor@1.3.0` remain readable as historical evidence only. They cannot authorize current continuation and are never silently upgraded.

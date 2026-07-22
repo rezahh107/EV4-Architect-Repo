@@ -350,6 +350,8 @@ Fail if payload is missing, malformed, schema-incompatible, or omits known defec
 
 Stage 5 must output exactly this structure:
 
+Executable transaction boundary: the current `ev4-architect-pipeline-stage-artifact@1.1.0` Schema recognizes `pass`, `fail_missing_input`, `fail_scoring`, and `insufficient_evidence` for `overall_audit_status`. Only `pass` with `allowed_next_stage: /recommend` and an empty `required_repairs` list can authorize Stage 6. Every failure status, unsupported status, or contradictory pass is non-authorizing. The broader status vocabulary below, including `pass_with_minor_flags`, remains prose-only until separately implemented.
+
 ```text
 SCORE AUDIT REPORT
 
@@ -529,6 +531,8 @@ Return to the precise repair route indicated by Score_Audit_Payload.next_action.
 ## Intermediate Stage Artifact Boundary
 
 Producer-owned intermediate Artifact: `/score-audit` emits `ev4-architect-pipeline-stage-artifact@1.1.0` and remains an independent audit. Missing Stage 2, Stage 3, or Stage 4 validated lineage returns the earliest repair target and must not be silently repaired. Passing audit preserves `selected_candidate_id: null`, `scores_audited: true`, and `allowed_next_stage: /recommend`.
+
+For the current executable transaction, `overall_audit_status: pass` is necessary but not sufficient: `allowed_next_stage` must equal `/recommend` and `required_repairs` must be empty. `pass_with_minor_flags` is not currently Schema-supported and must not authorize continuation.
 
 If an executable validator/tool is available, place the complete ordered Stage Artifact sequence in one directory and execute the canonical Validation Transaction:
 
