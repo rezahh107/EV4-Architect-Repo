@@ -6,7 +6,7 @@ These instructions apply to the entire repository unless a closer nested `AGENTS
 
 ## Repository Role
 
-`EV4-Architect-Repo` owns EV4 architecture decisions: visual intake, candidate generation and scoring, `selected_candidate_id`, approved structure and class intent, forbidden work, and the Architect handoff.
+`EV4-Architect-Repo` owns EV4 architecture decisions: visual intake, evidence-governed research, candidate generation and scoring, `selected_candidate_id`, approved structure and class intent, forbidden work, unknowns, and Architect handoff.
 
 It does not prove constructability, execute Elementor actions, or claim responsive or production completion.
 
@@ -14,20 +14,41 @@ It does not prove constructability, execute Elementor actions, or claim responsi
 
 1. `README.md`
 2. `STATUS.md`
-3. `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md`
+3. `contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md`
 4. `02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md`
 5. `manifests/architect-conversation-bootstrap.v1.json`
-6. `schemas/architect-conversation-bootstrap.v1.schema.json`
-7. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
-8. `schemas/ev4-architect-stage-payload.v1.schema.json`
-9. `scripts/check-architect-stage-payload.py`
-10. `manifests/architect-pipeline-manifest.v1.json`
-11. `manifests/architect-stage-validation-profiles.v1.json`
-12. the relevant stage, contract, schema, fixture, and diagnostic files for the task
+6. `manifests/architect-pipeline-manifest.v1.json`
+7. `contracts/ARCHITECT_STAGE_RESULT_V1.md`
+8. `schemas/ev4-architect-stage-result.v1.schema.json`
+9. `manifests/architect-stage-validation-profiles.v1.json`
+10. `contracts/ARCHITECT_STAGE_EVIDENCE_PAYLOAD_V1.md`
+11. the relevant Stage, contract, Schema, fixture, validator, and hardening-patch files
 
-When sources conflict, follow the highest-authority current contract or explicit active override. Do not silently merge incompatible rules.
+When sources conflict, the active Alignment Contract supersedes only continuation-authorization clauses. Preserve all stricter quality controls that do not conflict with quality-driven continuation.
 
-The Pipeline Manifest is the sole machine-readable authority for Stage inventory, order, versions, legal success edges, and terminal identity. The Validation Profiles Registry is the sole machine-readable authority for executable validation capability and grounding status. The Registry is not continuation authority; only independently regenerated Bundle evidence can authorize a transition from a `full_transaction_implemented` source Stage.
+## Runtime Authority
+
+The Pipeline Manifest is the sole machine-readable authority for Stage inventory, order, versions, legal successor, and terminal identity.
+
+Normal user-facing continuation is owned by:
+
+```text
+contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
+contracts/ARCHITECT_STAGE_RESULT_V1.md
+schemas/ev4-architect-stage-result.v1.schema.json
+scripts/architect_quality_runtime.py
+```
+
+```text
+Stage output
+→ Stage-specific quality checks
+→ Stage Result: pass | needs_input | blocked
+→ exact Manifest successor, minimum blocking input, or explicit repair route
+```
+
+Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, independent Bundle regeneration, exact-head CI, PR review, Merge evidence, and repository maintenance are not normal-run continuation prerequisites.
+
+`manifests/architect-stage-validation-profiles.v1.json` describes optional deterministic audit capability. A Stage does not block merely because its profile is not `full_transaction_implemented`.
 
 ## User-Facing Bootstrap
 
@@ -37,53 +58,13 @@ The canonical new-run bootstrap contract is:
 manifests/architect-conversation-bootstrap.v1.json
 ```
 
-Apply it only when the user is starting a user-facing Architect run.
+If the user's intent is only a recognized new-run trigger such as `شروع`, and no screenshot, section description, active run, or resumable passed Stage Result is present, return the exact bootstrap response and do nothing else.
 
-If the user's intent is only a recognized new-run trigger such as `شروع`, and no screenshot, section description, active run, or valid Stage Anchor is present, respond exactly with the text between the markers below and do nothing else.
+If the user supplies a screenshot or usable section description with the trigger, run `/intake` directly without repeating supplied information.
 
-<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_START -->
-```text
-EV4 Architect آماده است.
+If a passed Stage Result exists, continue only to its exact Manifest successor.
 
-برای شروع یک سکشن جدید:
-1. تصویر سکشن را ارسال کن.
-2. اگر معلوم است، مشخص کن تصویر مربوط به Desktop، Tablet یا Mobile است.
-3. محدودیت‌ها، Assetها یا رفتارهای مورد انتظار را فقط در صورت وجود اضافه کن.
-
-پس از دریافت ورودی، مسیر رسمی از اینجا شروع می‌شود:
-/intake → /research → /decompose
-
-تا پیش از دریافت ورودی، هیچ معماری، Elementor tree، مقدار دقیق یا توصیه‌ای تولید نمی‌شود.
-```
-<!-- EV4_ARCHITECT_BOOTSTRAP_RESPONSE_END -->
-
-The routing and pre-input prohibitions below are rendered from the canonical manifest. Do not paraphrase, reverse, or supplement them inside this controlled block.
-
-<!-- EV4_ARCHITECT_BOOTSTRAP_ROUTING_START -->
-```text
-trigger_with_screenshot_or_section_description:
-If the user supplies `شروع` together with a screenshot or usable section description, do not repeat the bootstrap questions. Run `/intake` using the supplied input.
-
-valid_stage_anchor_present:
-If a valid Stage Anchor is present, do not restart the run. Continue only from the anchor's authorized target stage.
-
-latest_stage_output_without_valid_anchor:
-If a prior stage output exists but its required Stage Anchor is missing or stale, request or regenerate the required anchor instead of guessing from conversation memory.
-
-explicit_repository_maintenance_request:
-If the user explicitly requests repository maintenance, code changes, audit, PR work, or documentation work, operate in repository-maintenance mode; do not interpret `شروع` inside that request as a new Architect project run.
-
-before_input_forbidden:
-- run_any_pipeline_stage: Do not run any pipeline stage before usable project input exists.
-- recommend_architecture: Do not recommend architecture before usable project input exists.
-- produce_elementor_tree: Do not produce an Elementor tree before usable project input exists.
-- invent_exact_values: Do not invent exact values before usable project input exists.
-- claim_stage_anchor: Do not emit or claim a Stage Anchor before a pipeline stage has produced one.
-- claim_builder_or_production_readiness: Do not claim Builder readiness, responsive completion, or production readiness from bootstrap state.
-```
-<!-- EV4_ARCHITECT_BOOTSTRAP_ROUTING_END -->
-
-The first controlled project sequence is always:
+The first controlled sequence is always:
 
 ```text
 /intake → /research → /decompose
@@ -91,16 +72,52 @@ The first controlled project sequence is always:
 
 Do not skip `/research`.
 
-## AI Authority Governance
+## Research Stage
 
-Apply `docs/governance/AI_AUTHORITY_GOVERNANCE_ADOPTION.md` to repository work.
+`/research` records exactly one disposition:
 
-- AI is the technical decision authority; repository evidence is factual authority.
-- Human technical approval and owner acknowledgement must not be treated, accepted, or used as substitutes for repository evidence.
-- Keep the Scope Gate and Progress Gate separate.
-- Bind validation and independent review claims to the exact current revision.
-- Any head change makes an earlier review stale.
-- Do not claim machine enforcement from prose-only governance.
+```text
+active_lookup_required
+existing_evidence_sufficient
+no_platform_question
+blocked_by_missing_required_source
+```
+
+Research does not score or recommend architecture. Official documentation proves platform capability only; it does not decide project-specific visual interpretation. Unsupported or version-sensitive claims remain unknown unless evidence resolves them.
+
+## Quality Invariants
+
+Do not:
+
+- jump directly from screenshot or description to a final Elementor tree;
+- recommend during `/intake`, `/research`, `/decompose`, `/architectures`, or `/score-evidence`;
+- convert unknown evidence into numeric confidence or invented exact values;
+- run `/recommend` before `/score-audit` is accepted;
+- change `selected_candidate_id` after lock;
+- re-architect during `/build-tree`, `/implementation`, or `/final-audit`;
+- silently remove an active unknown without evidence-backed lifecycle transition;
+- hand off with blocker/high final-audit findings;
+- substitute legacy Builder Feed for canonical Project Gate export.
+
+All detailed Stage quality, source-access, scoring, accessibility, responsive, performance, and fidelity rules remain active from their owning documents and patches.
+
+## Stage Result Semantics
+
+```yaml
+pass:
+  blocking_issues: []
+  next_stage: exact Manifest successor
+
+needs_input:
+  blocking_issues: minimum architecture-changing or required-evidence question
+  next_stage: null
+
+blocked:
+  blocking_issues: genuine quality, evidence, fidelity, or handoff defect
+  next_stage: null
+```
+
+Missing Anchor, Bundle, independent regeneration, incomplete Validation Profile, unavailable exact-head CI, unavailable PR review, or pending repository maintenance cannot by itself block a normal Run.
 
 ## Project Gate Handoff
 
@@ -111,134 +128,48 @@ Architect output
 → not accepted: Architect repair package
 ```
 
-Project Gate integration is documented. Project Gate owns the common Stage Evidence Bundle envelope, canonical JSON, SHA-256, provenance, structured diagnostics, and envelope validation.
+The final boundary remains strongly fail-closed. Preserve canonical Architect Stage Payload validation, semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
-Architect owns Architect-specific evidence, Architect decisions, Architect payload schema, Architect semantic validation, Architect fixtures, and Architect export behavior.
+## Optional Audit Tooling
 
-The gate may run this repository's official schemas and validators. It must not create missing architecture facts, change locked identity, or prove implementation strategy.
+`contracts/STAGE_ANCHOR_CONTRACT.md`, `contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md`, Validation Profiles, and `architect_validation_*` scripts remain available for repository audits, compatibility evidence, and deterministic regression.
 
-## Architect Stage Payload v1
+Historical carriers remain readable and truthfully labeled. They do not authorize ordinary internal Stage movement.
 
-Canonical Architect payload:
+## Repository Repair Boundary
 
-```text
-ev4-architect-stage-payload@1.0.0
-```
+Run repair and repository maintenance are separate. A routine Stage quality failure returns an evidence-based Run repair route; it does not automatically require repository work.
 
-This payload may be wrapped inside the Project Gate Stage Evidence Bundle envelope. It is not a CE proof, Builder runtime intake package, Responsive completion package, or production release claim.
-
-Critical behavioral rules are tracked with stable IDs `A-R01` through `A-R12`. Do not reuse an ID for a different meaning.
-
-## Hard Boundaries
-
-Do not:
-
-- change `selected_candidate_id` after lock;
-- present approved architecture as proven implementation strategy;
-- invent geometry, assets, overlays, interactions, responsive behavior, Dynamic Loop behavior, accessibility evidence, or Elementor UI paths;
-- claim Builder readiness, responsive completion, browser validation, or production readiness without downstream evidence;
-- copy Architect schemas into Project Gate as competing canonical contracts;
-- treat legacy builder-feed exports as the canonical Architect Stage Payload.
-
-## Repository Repair Recommendation Boundary
-
-The behavioral contract is documented in:
-
-```text
-contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md
-```
-
-The sole executable eligibility, record-validation, and prompt-rendering authority is:
-
-```text
-scripts/repository_repair_handoff.py
-```
-
-Do not reimplement its trigger predicate in `AGENTS.md`, Project Instructions, fixtures, or tests. Do not accept a hand-authored prompt as equivalent to renderer output.
-
-The active Architect Run must not modify repository files, create or update a repository PR, create a branch, commit, push, approve, merge, deploy, release, enable auto-merge, or modify repository settings. A recommendation does not replace the current Repair Anchor, Success Anchor, Validation Bundle, or earliest safe rerun stage, and it is not proof of a repository defect or repository-write authority.
+An active Architect project Run must not edit repository files, create branches or PRs, commit, push, approve, merge, deploy, release, enable auto-merge, or modify repository settings.
 
 ## Change Rules
 
-For changes affecting downstream CE intake:
+For repository changes:
 
 - preserve public contract behavior unless a breaking change is explicitly approved;
-- update the owning contract/schema and every affected fixture or example;
-- state whether the change is compatible, breaking, proposed, or unverified;
-- preserve locked identity fields and valid existing evidence;
+- update owning contracts/Schemas and affected fixtures/tests;
+- state compatibility and evidence boundaries;
+- preserve locked identity and valid evidence;
 - avoid unrelated refactoring;
-- coordinate downstream adapter changes through reviewed pull requests.
-
-## Decision Escape Routes
-
-Before opening or completing any PR that changes schemas, validators, prompts, fixtures, pipeline docs, handoff artifacts, fallback behavior, or decision-bearing outputs, review `planning/DECISION_ESCAPE_ROUTES.yml`.
-
-Do not mark an escape route as resolved unless its `enforcement_status` meets the required threshold for its risk and `session_scope`. Do not mark a Critical cross-turn rule as resolved with single-artifact `ci_enforced`.
-
-Do not add authored `resolved` or `production_ready` fields; those are derived audit conclusions.
+- review `planning/DECISION_ESCAPE_ROUTES.yml` before changing decision-bearing outputs.
 
 ## Validation
 
-For Architect Stage Payload v1 changes, run:
+For quality-first runtime changes:
 
 ```bash
-python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
-python scripts/check-architect-stage-payload.py
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_stage_payload_validator.py
-```
-
-For bootstrap or first-run changes, run:
-
-```bash
-python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0'
+python -m pip install 'jsonschema>=4.22.0' 'pytest>=8.0.0' 'PyYAML>=6.0.0'
+python scripts/check-architect-quality-runtime.py
 python scripts/check-architect-bootstrap.py
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_architect_bootstrap_semantics.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
+  tests/test_architect_quality_runtime.py \
+  tests/test_architect_bootstrap_semantics.py
 ```
 
-For Repository Repair Recommendation Handoff changes, run:
+Existing payload, governance, release-pack, and optional transaction suites remain applicable.
 
-```bash
-python -m py_compile scripts/repository_repair_handoff.py tests/test_repository_repair_recommendation_handoff.py
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q tests/test_repository_repair_recommendation_handoff.py
-```
-
-For Architect Stage Validation authority, Anchor, Bundle, or transaction changes, run:
-
-```bash
-python scripts/check-architect-validation-profiles.py
-python scripts/check-architect-pipeline-stage-boundary.py --fixtures
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q \
-  tests/test_architect_validation_profiles.py \
-  tests/test_architect_pipeline_stage_boundary_validator.py \
-  tests/test_architect_validation_transaction_mutations.py
-```
-
-This repository does not yet have a universal validation entry point for every historical prompt-pack contract. Do not claim repository-wide validation unless it was actually executed.
-
-For documentation-only changes, verify links, repository names, file paths, status labels, and cross-repository role descriptions against the current repository contents.
+Do not claim repository-wide, chat-runtime, downstream, browser, Elementor, or production validation unless that evidence was actually obtained.
 
 ## Evidence and Reporting
 
-Use explicit states such as:
-
-```text
-observed
-validated
-resolved
-derived
-proposed
-unverified
-insufficient_evidence
-```
-
-User-facing explanations may be Persian. Technical identifiers, paths, schema IDs, rule IDs, and diagnostic codes remain in English.
-
-## Pull Requests
-
-A PR should explain:
-
-- the problem or contract change;
-- files and boundaries affected;
-- compatibility impact;
-- validation actually executed;
-- remaining unverified behavior or missing evidence.
+Use explicit states: `observed`, `implemented`, `validated`, `inferred`, `proposed`, `unverified`, and `insufficient_evidence`. Technical identifiers, paths, Schema IDs, and diagnostics remain in English.
