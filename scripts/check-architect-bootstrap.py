@@ -15,6 +15,7 @@ BOOTSTRAP_REL = Path("manifests/architect-conversation-bootstrap.v1.json")
 SCHEMA_REL = Path("schemas/architect-conversation-bootstrap.v1.schema.json")
 PIPELINE_REL = Path("manifests/architect-pipeline-manifest.v1.json")
 ALIGNMENT_REL = Path("contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md")
+STAGE_RESULT_REL = Path("contracts/ARCHITECT_STAGE_RESULT_V1.md")
 AGENTS_REL = Path("AGENTS.md")
 README_REL = Path("README.md")
 STATUS_REL = Path("STATUS.md")
@@ -63,9 +64,28 @@ CONTROLLED_RUNTIME_DOCS = (
     OVERRIDES_REL,
     FIRST_RUN_REL,
     PROJECT_INSTRUCTIONS_REL,
+    STAGE_RESULT_REL,
     CORE_BUNDLE_REL,
     PROTOCOLS_REL,
 )
+CLAIM_TRUTH_DOCS = (
+    STAGE_RESULT_REL,
+    OVERRIDES_REL,
+    PROJECT_INSTRUCTIONS_REL,
+)
+REQUIRED_STAGE_CLAIM_TERMS = (
+    "A Stage heading is not a Stage Result.",
+    "stage_status: not_evaluated",
+    "claim_basis: reasoning_output_only",
+    "evaluation_mode",
+    "evaluated_stage_output_digest",
+    "same-context self-audit is not independent review",
+)
+ALLOWED_EVALUATION_MODES = {
+    "model_assessed",
+    "validator_backed",
+    "external_boundary_verified",
+}
 FORBIDDEN_ACTIVE_AUTHORIZATION_PATTERNS = (
     re.compile(r"continue only from the anchor's authorized target stage", re.IGNORECASE),
     re.compile(r"request or regenerate the required anchor", re.IGNORECASE),
@@ -210,11 +230,16 @@ def validate_repository(root: Path) -> dict[str, Any]:
     require(len(stage_ids) == len(set(stage_ids)), "duplicate Stage identity")
     require(all(stage.get("mandatory") is True for stage in stages), "all project Stages must remain mandatory")
     for index, stage in enumerate(stages):
+        require(stage.get("evaluation_mode") in ALLOWED_EVALUATION_MODES, f"unsupported evaluation_mode at {stage.get('stage_id')}")
         require(isinstance(stage.get("required_quality_checks"), list) and stage["required_quality_checks"], f"{stage.get('stage_id')} missing finite required checks")
         require(len(stage["required_quality_checks"]) == len(set(stage["required_quality_checks"])), f"{stage.get('stage_id')} duplicate checks")
         if index < len(stages) - 1:
             require(stage.get("next_stage") == stages[index + 1].get("stage_id"), f"illegal successor at {stage.get('stage_id')}")
     require(stages[-1].get("next_stage") is None, "terminal Stage must have no successor")
+    require(stages[-1].get("evaluation_mode") == "external_boundary_verified", "terminal Stage must remain external_boundary_verified")
+    stage_map = {stage["stage_id"]: stage for stage in stages}
+    require(stage_map["/build-tree"].get("evaluation_mode") == "validator_backed", "/build-tree evaluation_mode drift")
+    require(stage_map["/implementation"].get("evaluation_mode") == "validator_backed", "/implementation evaluation_mode drift")
 
     initial = bootstrap["initial_sequence"]
     require(initial == stage_ids[: len(initial)], "bootstrap initial_sequence differs from Manifest prefix")
@@ -235,6 +260,10 @@ def validate_repository(root: Path) -> dict[str, Any]:
         reject_authorization_patterns(relative.as_posix(), document)
         require("/research" in document, f"{relative} must preserve /research")
         require("/project-gate-export" in document, f"{relative} must preserve terminal export")
+    for relative in CLAIM_TRUTH_DOCS:
+        document = docs[relative]
+        for term in REQUIRED_STAGE_CLAIM_TERMS:
+            require(term in document, f"{relative} missing Stage claim truth term: {term}")
     require(manifest_ref in docs[AGENTS_REL], "AGENTS.md must reference bootstrap Manifest")
     require(manifest_ref in docs[README_REL], "README.md must reference bootstrap Manifest")
     require(manifest_ref in docs[FIRST_RUN_REL], "First Run Guide must reference bootstrap Manifest")
@@ -256,6 +285,7 @@ def validate_repository(root: Path) -> dict[str, Any]:
         "forbidden_operations": len(EXPECTED_FORBIDDEN_IDS),
         "final_stage": final_stage,
         "controlled_runtime_docs": len(CONTROLLED_RUNTIME_DOCS),
+        "claim_truth_docs": len(CLAIM_TRUTH_DOCS),
     }
 
 
