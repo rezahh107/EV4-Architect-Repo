@@ -1,7 +1,7 @@
 # Project Instructions — Active Overrides
 
 Status: active  
-Version: 0.7.0  
+Version: 0.8.0  
 Applies to: current EV4 Architect Project Instructions and release-pack mirrors
 
 ## Authority
@@ -12,13 +12,22 @@ Read and apply first:
 contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
 contracts/ARCHITECT_STAGE_RESULT_V1.md
 manifests/architect-pipeline-manifest.v1.json
+scripts/architect_quality_runtime.py#evaluate_stage
 ```
 
 This file supersedes only authorization-driven continuation clauses in `01_PROJECT_INSTRUCTIONS.md`, active Stage documents, hardening patches, source-access references, contracts, and release-pack mirrors. All non-conflicting quality controls remain active.
 
 ## Normal Run Continuation
 
-Every Stage produces a result compatible with:
+Every Stage produces domain-specific Stage Output. One canonical evaluator combines it with current Run State and the finite Stage checks in the Pipeline Manifest:
+
+```text
+Stage Output + Run State + fixed Stage rules
+→ evaluate_stage
+→ evaluator-derived Stage Result
+```
+
+The derived result is compatible with:
 
 ```text
 ev4-architect-stage-result@1.0.0
@@ -26,17 +35,19 @@ ev4-architect-stage-result@1.0.0
 
 ```yaml
 pass:
-  meaning: Stage quality criteria are satisfied.
+  meaning: all Stage quality criteria are satisfied
   next_stage: exact Manifest successor
 
 needs_input:
-  meaning: minimum architecture-changing or required-evidence input remains.
+  meaning: minimum architecture-changing or required-evidence input remains
   next_stage: null
 
 blocked:
-  meaning: a genuine quality, evidence, fidelity, or final-handoff defect remains.
+  meaning: a genuine quality, evidence, fidelity, or final-handoff defect remains
   next_stage: null
 ```
+
+A producer-authored or serialized Stage Result is readable but non-authorizing. Resume must resolve the smallest available corresponding Stage Output and Run State and recompute. Do not create a persistent store, immutable receipt, or Artifact registry solely for resume.
 
 A Stage must not stop solely because:
 
@@ -50,20 +61,22 @@ PR review or Merge evidence is unavailable
 repository maintenance is pending
 ```
 
-The Pipeline Manifest remains authoritative for Stage order and legal successor. Stage quality determines continuation.
+The Pipeline Manifest remains authoritative for Stage order, legal successor, evaluation mode, and finite required checks. Stage quality determines continuation.
 
 ## Research Requirement
 
-`/research` remains mandatory. `/intake → /decompose` is forbidden.
+`/research` remains mandatory. Do not use `/intake → /decompose`.
 
-Record one disposition:
+Record exactly one disposition:
 
 ```text
-active_lookup_required
+active_lookup_completed
 existing_evidence_sufficient
 no_platform_question
 blocked_by_missing_required_source
 ```
+
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. Do not require external citations, URLs, retrieval metadata, or source receipts when no platform-capability claim requires active lookup.
 
 Only `blocked_by_missing_required_source` blocks, and only when a downstream decision genuinely depends on evidence that cannot be obtained.
 
@@ -74,25 +87,34 @@ Research continues to enforce:
 - research does not score or recommend architecture;
 - unsupported and version-sensitive claims remain unknown.
 
+## Finite Stage Checks
+
+The evaluator rejects:
+
+- a missing required check;
+- an unknown or cross-Stage check;
+- a failed or unresolved required check;
+- forbidden `not_applicable`;
+- an unresolved blocker;
+- a non-successor continuation.
+
+Conversational Stage checks may be supported by structured model assessment. This is not independent or deterministic repository proof.
+
 ## Partial Rerun
 
-Use `contracts/PARTIAL_RERUN_CONTRACT.md` with the latest valid Stage output and Stage Result.
+Use the latest valid Stage Output and current Run State.
 
-Identify changed input, earliest safe rerun Stage, reusable outputs, invalidated outputs, required evidence, and minimum confirmation.
+Identify the earliest affected Stage, invalidate dependent downstream results, preserve unaffected state, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
 
-Do not require Anchor or Bundle authorization for an ordinary partial rerun.
+Do not require Anchor, Bundle, independent rerun authorization, cryptographic rerun receipts, or a general rerun-event ledger.
 
 ## Unknown Lifecycle
 
-An active unknown cannot disappear merely because a later Stage omits it.
+An active unknown cannot disappear because a later Stage omits it.
 
-It leaves the active set only through an explicit evidence-backed state:
+Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
 
-```text
-resolved_with_evidence
-not_applicable
-stale after valid rerun
-```
+An arbitrary non-empty string cannot close a downstream-critical unknown.
 
 Do not convert absent evidence into an exact value or numeric confidence.
 
@@ -113,21 +135,23 @@ Do not convert absent evidence into an exact value or numeric confidence.
 /project-gate-export
 ```
 
-No visual-to-build-tree shortcut or non-successor continuation is allowed.
+No visual-to-Build-Tree shortcut or non-successor continuation is allowed.
 
 ## Scoring and Recommendation
 
 `/score-evidence` uses the approved rubric, `?` for missing evidence, and `N/A` only when truly non-applicable. It must not hide a recommendation.
 
-`/recommend` may run only after accepted `/score-audit` status equivalent to `pass` or `pass_with_minor_flags` with no material defect.
+`/recommend` may run only after accepted `/score-audit` status equivalent to `pass` or `pass_with_minor_flags`, with no material defect.
 
-After recommendation, `selected_candidate_id` is immutable unless an explicit repair or rerun invalidates the recommendation.
+After recommendation, `selected_candidate_id` is immutable unless a legitimate rerun reaches `/recommend` or earlier.
 
 ## Fidelity and Final Audit
 
-`/build-tree` preserves the selected architecture.
+For `/build-tree` and `/implementation`, canonical content means the existing structured Stage Output. Do not create a wrapper Artifact solely to compute a digest.
 
-`/implementation` preserves the approved tree and must not invent exact values, assets, breakpoints, interactions, or Elementor paths.
+The evaluator computes digests from actual content and rejects missing content, fabricated SHA-like strings, `null == null`, candidate drift, and approved-tree mismatch.
+
+Conversational Stage output does not require cryptographic identity.
 
 `/final-audit` blocks handoff for at least:
 
@@ -144,42 +168,21 @@ implementation/tree mismatch
 
 ## Final Project Gate Boundary
 
-Strong fail-closed validation remains mandatory at:
+The terminal `/project-gate-export` pass result must be derived from:
 
 ```text
-Architect → Project Gate
+actual canonical Architect Stage Payload
+→ existing Schema and semantic validation
+→ selected-candidate consistency
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
 ```
 
-Preserve canonical Architect Stage Payload validation, semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
+Caller-controlled success Booleans cannot replace actual validation. Preserve locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
 
 ## Optional Audit Tooling
 
 Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, Validation Profiles, independent regeneration, and `authorization_valid` remain optional repository-audit and deterministic-regression tooling.
 
 They do not authorize ordinary internal Stage movement and their absence is not a project-run blocker.
-
-## Repository Repair Separation
-
-Routine Run repair and repository maintenance are separate.
-
-A Stage quality failure first returns the current Run repair route. It must not automatically require a repository branch, PR, exact-head review, owner Merge, or status reconciliation.
-
-An active Architect project Run must not perform repository write actions.
-
-## Source Access
-
-RAG and TUYA source-classification, evidence-state, freshness, conflict, and leakage controls remain active. Any older clause requiring Anchor, Bundle, independent regeneration, or profile completeness before ordinary source use is superseded.
-
-## Validation Boundary
-
-Normal-run validation:
-
-```bash
-python scripts/check-architect-quality-runtime.py
-python scripts/check-architect-bootstrap.py
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
-  tests/test_architect_quality_runtime.py \
-  tests/test_architect_bootstrap_semantics.py
-```
-
-Optional transaction validation remains separate and does not replace the final `ev4-architect-stage-payload@1.0.0` contract.
