@@ -1,6 +1,6 @@
 # STATUS — Elementor V4 Architect Prompt Pack
 
-Version: 0.21.1  
+Version: 0.21.2  
 Status: quality_first_runtime_root_repair_pending_exact_head_ci_and_fresh_rereview  
 Last confirmed `main`: `b433966e44bb89c7949a709728b201ce1d37ac45`  
 Current branch: `simplify/quality-first-architect-runtime`  
@@ -153,7 +153,16 @@ ARCH_02:
   final_pr_head: 05f9ba12d5d64d49280ca7e596fdeed6c0f37073
   merge_commit: be9bdea9ae246b1587043f2582c1a950ea2a6ec5
   merge_status: merged
+  github_state_evidence: observed
   audit_status: merged_observed_not_independently_accepted
+  findings_preserved:
+    - ARCH02-F01
+    - ARCH02-F03
+    - ARCH02-F05
+  identity_rule: PATH_IS_INTENTIONAL_IDENTITY_INPUT
+  real_run_evidence: pending
+  exact_merged_main_validation: insufficient_evidence
+  independent_acceptance: not_established
 
 ARCH_BOOTSTRAP:
   pull_request: 30
@@ -169,6 +178,8 @@ ARCH_STAGE_VALIDATION_AUTHORITY:
   merge_commit: b433966e44bb89c7949a709728b201ce1d37ac45
   merge_status: merged
 ```
+
+The ARCH-02 block is historical evidence only. It does not reintroduce runtime authorization, exact-head, independent-review, or repository-maintenance prerequisites into normal Architect Runs.
 
 ## Evidence Boundaries
 
