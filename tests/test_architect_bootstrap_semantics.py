@@ -16,10 +16,18 @@ validator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(validator)
 
 CONTROLLED_PATHS = [
+    Path("AGENTS.md"),
+    Path("README.md"),
+    Path("STATUS.md"),
+    Path("02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md"),
     Path("contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md"),
     Path("manifests/architect-conversation-bootstrap.v1.json"),
     Path("manifests/architect-pipeline-manifest.v1.json"),
     Path("schemas/architect-conversation-bootstrap.v1.schema.json"),
+    Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md"),
+    Path("release/EV4_PROJECT_RELEASE_PACK_v1/PROJECT_INSTRUCTIONS_FINAL.md"),
+    Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CORE_CONTRACTS_BUNDLE.md"),
+    Path("release/EV4_PROJECT_RELEASE_PACK_v1/EV4_STAGE_PROTOCOLS_BUNDLE.md"),
 ]
 
 
@@ -74,6 +82,21 @@ def remove_alignment_boundary(root: Path) -> None:
     path.write_text(path.read_text(encoding="utf-8").replace("authorization_role: none", "authorization_role: required", 1), encoding="utf-8")
 
 
+def reintroduce_profile_block(root: Path) -> None:
+    path = root / "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md"
+    path.write_text(path.read_text(encoding="utf-8") + "\nBLOCKED_VALIDATION_PROFILE\n", encoding="utf-8")
+
+
+def skip_research_in_first_run(root: Path) -> None:
+    path = root / "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md"
+    path.write_text(path.read_text(encoding="utf-8").replace("/intake → /research → /decompose", "/intake → /decompose", 1), encoding="utf-8")
+
+
+def drop_pr35_reconciliation(root: Path) -> None:
+    path = root / "STATUS.md"
+    path.write_text(path.read_text(encoding="utf-8").replace("pull_request: 35", "pull_request: 999", 1), encoding="utf-8")
+
+
 MUTATIONS: list[tuple[str, Callable[[Path], None]]] = [
     ("wrong_contract_version", wrong_contract_version),
     ("missing_stage_result_precondition", missing_stage_result_precondition),
@@ -81,6 +104,9 @@ MUTATIONS: list[tuple[str, Callable[[Path], None]]] = [
     ("manifest_requires_anchor", manifest_requires_anchor),
     ("remove_research", remove_research),
     ("remove_alignment_boundary", remove_alignment_boundary),
+    ("reintroduce_profile_block", reintroduce_profile_block),
+    ("skip_research_in_first_run", skip_research_in_first_run),
+    ("drop_pr35_reconciliation", drop_pr35_reconciliation),
 ]
 
 
@@ -89,6 +115,7 @@ def test_canonical_repository_passes() -> None:
     assert result["continuation_model"] == "quality_driven"
     assert result["initial_sequence"] == "/intake → /research → /decompose"
     assert result["final_stage"] == "/project-gate-export"
+    assert result["controlled_runtime_docs"] == 7
 
 
 @pytest.mark.parametrize(("name", "mutate"), MUTATIONS, ids=[name for name, _ in MUTATIONS])
