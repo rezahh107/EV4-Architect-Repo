@@ -35,8 +35,6 @@ EXPECTED_CONTRACT_ID = "ev4-architect-conversation-bootstrap"
 EXPECTED_CONTRACT_VERSION = "1.1.0"
 EXPECTED_OWNER = "rezahh107/EV4-Architect-Repo"
 EXPECTED_ACTIVATION_MODE = "new_architect_run"
-EXPECTED_INITIAL_SEQUENCE = ["/intake", "/research", "/decompose"]
-EXPECTED_FINAL_STAGE = "/project-gate-export"
 EXPECTED_TRIGGER_POLICY_ID = "ev4-architect-bootstrap-trigger-policy"
 EXPECTED_TRIGGER_POLICY_VERSION = "1.0.0"
 EXPECTED_TRIGGERS = [
@@ -260,26 +258,38 @@ def validate_repository(root: Path) -> dict[str, Any]:
 
     stages = pipeline.get("project_execution_stages")
     require(isinstance(stages, list) and len(stages) >= 4, "pipeline manifest must define project stages")
-    initial_stages = stages[:3]
+    bootstrap_initial = bootstrap.get("initial_sequence")
+    require(
+        isinstance(bootstrap_initial, list) and bootstrap_initial,
+        "bootstrap initial_sequence must be a non-empty derived Manifest prefix",
+    )
+    initial_stages = stages[: len(bootstrap_initial)]
     initial_ids = [stage.get("stage_id") if isinstance(stage, dict) else None for stage in initial_stages]
-    require(initial_ids == EXPECTED_INITIAL_SEQUENCE, "pipeline initial sequence is not canonical")
+    require(
+        bootstrap_initial == initial_ids,
+        "bootstrap initial_sequence differs from the Pipeline Manifest prefix",
+    )
     for stage in initial_stages:
         require(stage.get("mandatory") is True, f"initial stage {stage.get('stage_id')} must remain mandatory")
-    require(bootstrap["initial_sequence"] == initial_ids, "bootstrap initial_sequence differs from pipeline manifest")
     require(bootstrap["first_stage"] == initial_ids[0], "bootstrap first_stage differs from pipeline manifest")
+    require("/research" in initial_ids, "mandatory /research is missing from the bootstrap Manifest prefix")
 
     final_stage = stages[-1]
     require(isinstance(final_stage, dict), "final pipeline stage must be an object")
-    require(final_stage.get("stage_id") == EXPECTED_FINAL_STAGE, "pipeline is missing the final Project Gate stage")
+    final_stage_id = pipeline.get("final_project_gate_export_stage")
+    require(
+        isinstance(final_stage_id, str) and final_stage_id,
+        "pipeline final_project_gate_export_stage must be a non-empty string",
+    )
+    require(
+        final_stage.get("stage_id") == final_stage_id,
+        "pipeline final Project Gate identity differs from its terminal Manifest Stage",
+    )
     require(final_stage.get("mandatory") is True, "final Project Gate stage must remain mandatory")
     require(final_stage.get("next_stage") is None, "final Project Gate stage must terminate the project sequence")
     require(
-        pipeline.get("final_project_gate_export_stage") == EXPECTED_FINAL_STAGE,
-        "pipeline final_project_gate_export_stage is not canonical",
-    )
-    require(
-        bootstrap["final_project_gate_instruction"]["stage_id"] == EXPECTED_FINAL_STAGE,
-        "bootstrap final Project Gate stage identity is not canonical",
+        bootstrap["final_project_gate_instruction"]["stage_id"] == final_stage_id,
+        "bootstrap final Project Gate stage identity differs from the Pipeline Manifest",
     )
 
     response = bootstrap["bootstrap_response"]
@@ -311,7 +321,7 @@ def validate_repository(root: Path) -> dict[str, Any]:
     for label, document in (("AGENTS.md", agents), ("README.md", readme), ("EV4_FIRST_RUN_GUIDE.md", first_run)):
         require(manifest_ref in document, f"{label} must reference the canonical bootstrap manifest")
 
-    sequence_text = " → ".join(EXPECTED_INITIAL_SEQUENCE)
+    sequence_text = " → ".join(initial_ids)
     require(sequence_text in agents, "AGENTS.md must show the canonical initial sequence")
     require(sequence_text in readme, "README.md must show the canonical initial sequence")
     require(sequence_text in first_run, "First Run guide must show the canonical initial sequence")
@@ -367,7 +377,7 @@ def validate_repository(root: Path) -> dict[str, Any]:
         "initial_sequence": sequence_text,
         "recognized_triggers": len(triggers),
         "forbidden_operations": len(EXPECTED_FORBIDDEN_IDS),
-        "final_stage": EXPECTED_FINAL_STAGE,
+        "final_stage": final_stage_id,
     }
 
 

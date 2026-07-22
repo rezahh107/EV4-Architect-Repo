@@ -1,6 +1,6 @@
 {
   "anchor_id": "asb-anchor-run-asb-fixture-architectures-7e2177521649",
-  "anchor_schema": "ev4-stage-anchor@1.3.0",
+  "anchor_schema": "ev4-stage-anchor@1.4.0",
   "anchor_type": "NEXT_STAGE_ANCHOR",
   "boundary_ref": {
     "boundary_id": "asb-boundary-run-asb-fixture-architectures-422bff98581d",

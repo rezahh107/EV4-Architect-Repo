@@ -271,7 +271,7 @@ def test_exact_stage_version_map_rejects_each_independent_mutation(tmp_path, sta
     assert generated["run_validation_status"] == "invalid"
     assert generated["authorization_valid"] is False
     assert generated["manifest"]["repair_target_stage"] == stage
-    receipt = load(bundle / f"receipts/{asb.PREFIX[stage]}.receipt.json")
+    receipt = load(bundle / f"receipts/{asb.stage_prefix(stage)}.receipt.json")
     assert any(item["code"] == "ASB-STAGE-VERSION-MISMATCH" for item in receipt["diagnostics"])
     assert asb.validate_bundle(bundle, ROOT)["verification_status"] == "invalid_bundle_verified"
 
@@ -298,7 +298,7 @@ def test_stage_documents_use_only_current_transaction_authority_path():
             "/score-evidence": ROOT / "stages/04_SCORE_EVIDENCE.md",
             "/score-audit": ROOT / "stages/05_SCORE_AUDIT.md",
         }[stage]
-        assert f"Version: {asb.STAGE_VERSIONS[stage]}" in stage_path.read_text(encoding="utf-8")
+        assert f"Version: {asb.stage_version(stage)}" in stage_path.read_text(encoding="utf-8")
 
 
 def test_resolved_and_inactive_unknowns_authorize_without_active_propagation(tmp_path):
@@ -510,7 +510,11 @@ def test_failed_generation_never_publishes_partial_or_replaces_owned_output(tmp_
 
 def test_manifest_stage_documents_and_all_artifact_fixtures_share_exact_version_map():
     manifest = load(ROOT / "manifests/architect-pipeline-manifest.v1.json")
-    assert manifest["intermediate_stage_artifact_boundary"]["stage_version_map"] == asb.STAGE_VERSIONS
+    manifest_versions = {
+        stage["stage_id"]: stage["stage_version"]
+        for stage in manifest["project_execution_stages"]
+    }
+    implemented = set(asb.implemented_stage_order())
     fixture_root = ROOT / "fixtures/architect-pipeline-stage-boundary"
     checked = 0
     for path in sorted(fixture_root.rglob("*.json")):
@@ -522,8 +526,8 @@ def test_manifest_stage_documents_and_all_artifact_fixtures_share_exact_version_
             isinstance(value, dict)
             and value.get("artifact_schema") == asb.ARTIFACT_SCHEMA
             and "payload" in value
-            and value.get("stage_id") in asb.STAGE_VERSIONS
+            and value.get("stage_id") in implemented
         ):
             checked += 1
-            assert value["stage_version"] == asb.STAGE_VERSIONS[value["stage_id"]], path
+            assert value["stage_version"] == manifest_versions[value["stage_id"]], path
     assert checked >= 100
