@@ -1,37 +1,25 @@
 # Quality-First Architect Runtime Alignment
 
 Status: active_canonical_alignment  
-Version: 1.0.0  
+Version: 1.1.0  
 Applies to: normal user-facing EV4 Architect Runs
 
 ## Authority and precedence
 
-This contract is the active continuation-semantics alignment for:
+This contract defines normal-run continuation semantics. It supersedes only clauses that make internal authorization carriers, repository workflow evidence, or Validation Profile completeness prerequisites for ordinary Stage continuation.
 
-```text
-AGENTS.md
-01_PROJECT_INSTRUCTIONS.md
-02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md
-all active Stage documents and hardening patches
-references/ELEMENTOR_KNOWLEDGE_BASE_RAG_STRATEGY.md
-knowledge/TUYA_ELEMENTOR_V4_CONCEPTS.md
-release/EV4_PROJECT_RELEASE_PACK_v1/*
-contracts/STAGE_ANCHOR_CONTRACT.md
-contracts/PARTIAL_RERUN_CONTRACT.md
-contracts/ARCHITECT_PIPELINE_STAGE_ARTIFACT_V1.md
-```
-
-It supersedes only clauses that treat internal authorization carriers, repository workflow evidence, or Validation Profile completeness as prerequisites for ordinary Stage continuation.
-
-All evidence, scoring, candidate-lock, unknown-lifecycle, fidelity, audit, source-access, accessibility, responsive, performance, and final-handoff quality controls in those sources remain active unless explicitly changed here.
+All controls that materially protect evidence quality, scoring, candidate selection, unknown lifecycle, architecture fidelity, Final Audit, and the final Project Gate handoff remain active.
 
 Machine-readable authority:
 
 ```text
-Stage topology/order/version/successor/terminal
+Stage topology, order, versions, successor, and terminal identity
 → manifests/architect-pipeline-manifest.v1.json
 
-Normal continuation result
+Canonical continuation evaluator
+→ scripts/architect_quality_runtime.py#evaluate_stage
+
+Derived Stage Result shape
 → ev4-architect-stage-result@1.0.0
 
 Optional deterministic transaction capability
@@ -44,29 +32,66 @@ Final Architect → Project Gate handoff
 ## Selected runtime architecture
 
 ```text
-one canonical pipeline
-one Stage order
-one quality-driven continuation model
-strong fail-closed final Project Gate boundary
+Stage Output
++ current Run State
++ fixed Stage rules
+→ evaluate_stage
+→ evaluator-derived Stage Result
++ updated Run State
++ exact Manifest continuation decision
 ```
 
 Stage quality determines progression.
 
-```text
-Stage output
-→ Stage-specific quality checks
-→ Stage Result: pass | needs_input | blocked
-→ exact Manifest successor, minimum blocking input, or explicit repair route
+A caller-authored or serialized Stage Result is not continuation authority. A serialized Stage Result remains readable as a summary, resume hint, compatibility record, fixture, or diagnostic artifact, but the runtime must recompute the decision from the corresponding Stage Output and Run State.
+
+There is one pipeline, one Stage order, one continuation evaluator, and one final fail-closed Project Gate boundary. No alternative lean, strict, enterprise, legacy, or feature-flagged runtime is introduced.
+
+## Small data model
+
+### Stage Output
+
+Contains the actual domain work produced by the Stage and structured assessment evidence for that Stage.
+
+### Stage Result
+
+Contains only the evaluator-derived decision, including:
+
+```yaml
+run_id:
+stage_id:
+stage_status: pass | needs_input | blocked
+quality_checks:
+blocking_issues:
+carried_unknowns:
+next_stage:
+evaluation_mode:
+evaluated_stage_output_digest:
 ```
 
-No `lean`, `strict`, `personal`, `enterprise`, or legacy authorization-driven runtime profile is introduced. There is no feature flag preserving old transition authorization behavior.
+### Run State
+
+Contains only state required for pipeline correctness:
+
+```yaml
+run_id:
+current_stage:
+completed_stages:
+unknown_ledger:
+selected_candidate_id:
+selected_candidate_locked:
+build_tree_digest:
+implementation_digest:
+```
+
+Do not add a general event store, evidence graph, immutable receipt chain, capability system, approval model, or repository-governance state machine.
 
 ## Stage Result semantics
 
 ```yaml
 pass:
   blocking_issues: []
-  next_stage: exact Manifest successor or null for terminal Stage
+  next_stage: exact Manifest successor or null for the terminal Stage
 
 needs_input:
   blocking_issues: minimum architecture-changing or required-evidence question
@@ -77,7 +102,7 @@ blocked:
   next_stage: null
 ```
 
-A Stage Result does not claim real chat-runtime enforcement. It is the canonical repository contract and deterministic validation carrier for the normal Run.
+A Stage Result never becomes authoritative merely because it conforms to JSON Schema. The schema preserves historical readability; `evaluate_stage` remains the sole active continuation-decision authority.
 
 ## Internal carrier migration
 
@@ -101,13 +126,9 @@ validation_profiles_registry:
   full_transaction_implemented_required_for_normal_run: false
 ```
 
-Receipt, Boundary, Failure Event, Anchor, Bundle, and independent regeneration tooling remain readable and testable. They do not authorize ordinary Stage movement.
+Receipt, Boundary, Failure Event, Anchor, Bundle, independent regeneration, and `authorization_valid` remain optional historical or repository-audit tooling. They do not authorize ordinary Stage movement.
 
-`authorization_valid` is a legacy/optional transaction field only. It is not a normal-run continuation predicate.
-
-## Conditions that do not block a normal Run
-
-The following conditions may affect optional repository-audit evidence, but do not produce `needs_input` or `blocked` by themselves:
+The following cannot block a normal Run by themselves:
 
 ```text
 Anchor missing
@@ -118,11 +139,9 @@ profile status blocked_missing_semantics
 exact-head CI unavailable
 PR review unavailable
 Merge evidence unavailable
-repository status reconciliation pending
+repository reconciliation pending
 repository maintenance not performed
 ```
-
-Repository development validation remains separate from project runtime validation.
 
 ## Required Stage order
 
@@ -143,20 +162,24 @@ Repository development validation remains separate from project runtime validati
 
 No mandatory logical Stage may be skipped. Continuation to a non-successor Stage is invalid.
 
-## Research disposition
+## Research no-op completion
 
-`/research` remains mandatory and records exactly one:
+`/research` remains a mandatory logical Stage, but active external lookup is conditional.
+
+The evaluator supports exactly these runtime dispositions:
 
 ```text
-active_lookup_required
+active_lookup_completed
 existing_evidence_sufficient
 no_platform_question
 blocked_by_missing_required_source
 ```
 
-The first three may pass when their evidence obligations are satisfied. `blocked_by_missing_required_source` blocks only when a downstream decision genuinely depends on evidence that cannot be obtained.
+`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. A normal Run must not be blocked merely because no external lookup was necessary.
 
-Research continues to enforce:
+Do not require citations, URLs, retrieval metadata, source receipts, or repository-maintenance evidence when no platform-capability claim requires active research.
+
+Research still enforces:
 
 ```text
 platform capability ≠ project-specific behavior
@@ -166,114 +189,141 @@ unsupported claims remain unknown
 version-sensitive claims require version-aware evidence
 ```
 
-Any older RAG/TUYA clause requiring Anchor, Bundle, independent regeneration, or `full_transaction_implemented` before source use is superseded for normal Runs. Its source-classification and leakage-prevention controls remain active.
+## Minimal Stage check authority
 
-## Quality invariants preserved
+The Pipeline Manifest owns one finite list of recognized checks for each Stage. Do not duplicate the same check inventory in another registry.
 
-### Intake
+The evaluator rejects:
 
-- lightweight defaults/constraint capture;
-- ask only blocking or architecture-changing questions;
-- preserve non-blocking unknowns;
-- no recommendation, scoring, build tree, or invented exact value.
+- a missing required check;
+- an unknown check;
+- a check owned by another Stage;
+- a failed or unresolved required check;
+- forbidden `not_applicable`;
+- unresolved blockers;
+- a non-successor continuation.
 
-### Visual decomposition
+For conversational Stages, structured model assessment may establish the check evidence. This is runtime assessment, not deterministic repository proof or independent evidence.
 
-- no screenshot-to-build-tree jump;
-- preserve `observed`, `likely/inferred`, `unknown`, and `not_allowed_yet`;
-- do not infer actual Elementor DOM or choose final implementation architecture.
+## Minimal unknown lifecycle
 
-### Architecture and scoring
+Active unknowns live in Run State and persist until the evaluator accepts an explicit resolution. Omission from a later Stage Output is not resolution.
 
-- viable architecture families and coverage evidence before scoring;
-- approved rubric;
-- `?` for missing evidence;
-- `N/A` only when genuinely non-applicable;
-- no numeric conversion of unknowns;
-- no hidden recommendation.
+Ordinary resolution requires:
 
-### Score Audit and recommendation
-
-- `/recommend` is forbidden before accepted `/score-audit`;
-- accepted audit state is `pass` or `pass_with_minor_flags` only when no material defect remains;
-- selected candidate comes from the audited eligible set;
-- `selected_candidate_id` becomes immutable after lock.
-
-### Unknown lifecycle
-
-An active unknown remains active until explicitly:
-
-```text
-resolved_with_evidence
-not_applicable
-stale after valid rerun
+```yaml
+unknown_id:
+resolution_type: user_confirmation | authoritative_source | validated_artifact | not_applicable
+note:
+resolved_at_stage:
+evidence_ref: optional
 ```
 
-Omission is not resolution.
+A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns. An arbitrary string cannot close such an unknown.
 
-### Build and implementation fidelity
+Do not add a generalized typed-evidence framework, cross-run evidence graph, chained hash, immutable resolution receipt, or general transition-event schema.
 
-- `/build-tree` preserves the selected architecture;
-- `/implementation` preserves the approved tree;
-- no unsupported assets, values, breakpoints, interactions, Elementor paths, or hidden re-architecture.
+## Candidate lock
 
-### Final Audit
+After `/recommend`, the evaluator establishes and preserves the selected candidate identity. Downstream Stages cannot substitute, remove, or silently unlock it.
 
-At minimum, handoff is blocked by:
+A partial rerun invalidates the lock only when the earliest affected Stage is `/recommend` or earlier.
 
-```text
-blocker finding
-high-severity architecture drift
-candidate-lock violation
-unsupported exact value
-missing required content
-invalid responsive strategy
-unresolved downstream-critical unknown
-implementation/tree mismatch
-```
+## Canonical content and digest boundary
 
-### Final Project Gate boundary
+For `/build-tree` and `/implementation`, an Artifact means the existing canonical structured output owned by that Stage. It may be an existing JSON object, structured Stage Output, or another already-defined repository representation.
 
-The final Project Gate boundary remains fail-closed.
-
-Preserve:
+Do not create a wrapper Artifact, receipt, registry, or storage layer merely to compute a digest.
 
 ```text
-canonical Architect Stage Payload
-JSON Schema validation
-semantic validation
-locked identity validation
-canonical serialization
-provenance
-digest/hash integrity
-invalid-payload rejection
-legacy-output non-substitution
+no real canonical content
+→ no claimed Artifact digest
 ```
+
+The evaluator computes:
+
+- the Build Tree digest from actual canonical Build Tree content;
+- the Implementation digest from actual canonical Implementation content;
+- the approved-tree comparison from the actual embedded Build Tree content.
+
+It must reject `null == null`, equal fabricated digest strings, or caller-authored SHA-like values without corresponding content.
+
+Ordinary conversational questions, prose, reasoning summaries, and analytical Stage output do not require cryptographic identity.
+
+## Resume behavior
+
+Resume validation uses the smallest available mechanism.
+
+When Stage Output and Run State are already present in the active conversation or runtime object, evaluate them directly. If they are unavailable, request or regenerate only the minimum missing material.
+
+Do not introduce persistent databases, content-addressable storage, external registries, immutable receipts, or new Artifact stores solely to resume a Run.
 
 ## Partial rerun
 
-Ordinary partial reruns use the latest valid Stage output and Stage Result. Start at the earliest Stage whose owned information changed, invalidate dependent downstream outputs, preserve unaffected evidence, and do not require Anchor or Bundle authorization.
+A partial rerun must identify the earliest affected Stage, invalidate dependent downstream results, preserve unaffected state, reactivate unknowns whose resolutions depended on invalidated work, and preserve or invalidate candidate lock according to Stage ownership.
+
+Do not require Anchor, Bundle, independent rerun authorization, cryptographic rerun receipts, or chained invalidation proofs.
+
+## Quality invariants preserved
+
+The active runtime continues to enforce:
+
+- lightweight `/intake` with only blocking or architecture-changing questions;
+- no direct screenshot-to-Build-Tree path;
+- observation versus inference separation;
+- architecture-family coverage before scoring;
+- evidence-backed scoring and `?` for missing evidence;
+- no hidden recommendation or numeric conversion of unknowns;
+- accepted `/score-audit` before `/recommend`;
+- immutable selected candidate after lock;
+- Build Tree and Implementation fidelity;
+- persistent unknown lifecycle;
+- blocker/high Final Audit findings prevent handoff;
+- unresolved downstream-critical unknowns prevent final handoff.
+
+## Final Project Gate boundary
+
+The final Project Gate boundary remains fail-closed.
+
+A terminal pass is derived only from:
+
+```text
+actual canonical Architect Stage Payload
+→ existing Schema and semantic validator
+→ selected-candidate consistency check
+→ existing Producer Gate exporter
+→ actual canonical export
+→ contract and digest verification
+→ derived terminal Stage Result
+```
+
+Caller-controlled values such as `canonical_payload_valid: true` or `legacy_export_substituted: false` are informational assertions only and cannot authorize success.
+
+Preserve canonical payload validation, semantic validation, locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
+
+## Test migration rule
+
+Before changing an existing test, classify it as:
+
+```yaml
+preserved_quality_invariant:
+obsolete_runtime_authorization_expectation:
+historical_compatibility:
+unrelated:
+```
+
+A test may be updated or retired only when it specifically asserts a runtime requirement intentionally removed by this repair.
+
+Do not weaken tests protecting Stage order, evidence discipline, candidate locking, unknown preservation, Build Tree/Implementation fidelity, Final Audit, or Project Gate validation.
+
+For changed authorization tests, replacement coverage must prove that the removed Anchor/Bundle/CI/review requirements no longer block normal runtime operation while the quality invariant remains protected.
 
 ## Repository repair separation
 
-Routine Stage failure first returns a Run repair route. It does not automatically recommend or require repository repair.
+Tests, CI, exact revision identity, and independent review may validate the code change in PR #36. They are development-quality controls and do not become Architect runtime prerequisites.
 
-Repository maintenance may still use branches, tests, CI, exact revision identity, review, and one bounded PR. That discipline must not leak into the user-facing project Run.
-
-## Historical and optional sources
-
-Historical experiment reports, old transaction fixtures, Anchors, Bundles, receipts, and profile statuses remain truthful evidence of their tested system. They must be labeled historical or optional when cited and cannot override this active alignment for normal Runs.
+Routine Stage failure returns a Run repair route. It does not automatically require repository repair.
 
 ## Validation boundary
 
-Repository tests may prove deterministic contract behavior at an exact revision. They do not by themselves prove:
-
-```text
-real ChatGPT/model-host enforcement
-live Elementor rendering
-real Elementor export JSON behavior
-browser/device validity
-downstream acceptance
-release readiness
-production readiness
-```
+Repository tests may prove deterministic contract behavior at an exact revision. They do not prove real ChatGPT host enforcement, live Elementor rendering, browser/device validity, downstream acceptance, release readiness, or production readiness.
