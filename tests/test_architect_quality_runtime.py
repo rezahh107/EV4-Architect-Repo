@@ -28,6 +28,10 @@ def outputs() -> list[dict]:
     return checker.load_outputs(FIXTURE_PATH, REPO_ROOT)
 
 
+def trusted() -> dict:
+    return checker.trusted_context(REPO_ROOT)
+
+
 def evaluate_prefix(items: list[dict], count: int):
     state = runtime.initial_run_state(items[0]["run_id"], root=REPO_ROOT)
     results = []
@@ -39,7 +43,7 @@ def evaluate_prefix(items: list[dict], count: int):
 
 
 def test_full_pipeline_is_evaluator_derived_and_passes() -> None:
-    outcome = runtime.evaluate_run(outputs(), root=REPO_ROOT)
+    outcome = runtime.evaluate_run(outputs(), root=REPO_ROOT, trusted_context=trusted())
     assert outcome["status"] == "valid", outcome["errors"]
     assert outcome["all_required_stages_visited"] is True
     assert all(item["evaluated_stage_output_digest"].startswith("sha256:") for item in outcome["results"])
@@ -175,7 +179,7 @@ def test_project_gate_candidate_mismatch_rejected() -> None:
 
 
 def test_partial_rerun_reactivates_unknown_and_invalidates_lock() -> None:
-    outcome = runtime.evaluate_run(outputs(), root=REPO_ROOT)
+    outcome = runtime.evaluate_run(outputs(), root=REPO_ROOT, trusted_context=trusted())
     rerun = runtime.apply_partial_rerun(outcome["run_state"], "/score-evidence", root=REPO_ROOT)
     assert "U-mobile-behavior" in rerun["reactivated_unknowns"]
     assert rerun["candidate_lock_invalidated"] is True
