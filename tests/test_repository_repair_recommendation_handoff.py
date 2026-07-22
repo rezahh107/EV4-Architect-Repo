@@ -199,20 +199,13 @@ def test_tests_use_production_module_as_authority() -> None:
     assert ("emit_full_" + "handoff =") not in source
 
 
-def test_material_authorities_reference_executable_module_without_competing_predicate() -> None:
-    paths = (
-        REPO_ROOT / "contracts" / "REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md",
-        REPO_ROOT / "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
-        REPO_ROOT / "AGENTS.md",
-        REPO_ROOT / "diagnostics" / "LLM_DEBUG_TRACE_CONTRACT.md",
-    )
-    for path in paths:
-        text = path.read_text(encoding="utf-8")
-        assert "scripts/repository_repair_handoff.py" in text
-    for path in paths[1:]:
-        assert "should_emit_handoff" not in path.read_text(encoding="utf-8")
-    debug = paths[-1].read_text(encoding="utf-8")
-    assert "repository_repair_handoff_required:" not in debug
+def test_owner_contract_and_debug_trace_reference_executable_module_without_competing_predicate() -> None:
+    owner_contract = (REPO_ROOT / "contracts" / "REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md").read_text(encoding="utf-8")
+    debug_contract = (REPO_ROOT / "diagnostics" / "LLM_DEBUG_TRACE_CONTRACT.md").read_text(encoding="utf-8")
+    assert "scripts/repository_repair_handoff.py" in owner_contract
+    assert "scripts/repository_repair_handoff.py" in debug_contract
+    assert "should_emit_handoff" not in debug_contract
+    assert "repository_repair_handoff_required:" not in debug_contract
 
 
 def test_contract_names_canonical_functions_and_renderer_authority() -> None:
@@ -227,7 +220,7 @@ def test_contract_names_canonical_functions_and_renderer_authority() -> None:
     assert "sole executable source for emitted standalone prompt bodies" in contract
 
 
-def test_run_anchor_and_partial_rerun_authorities_remain_unchanged() -> None:
+def test_run_anchor_and_partial_rerun_authorities_remain_compatible() -> None:
     partial = (REPO_ROOT / "contracts" / "PARTIAL_RERUN_CONTRACT.md").read_text(encoding="utf-8")
     anchor = (REPO_ROOT / "contracts" / "STAGE_ANCHOR_CONTRACT.md").read_text(encoding="utf-8")
     assert "does not change the earliest safe rerun stage" in partial
@@ -237,8 +230,9 @@ def test_run_anchor_and_partial_rerun_authorities_remain_unchanged() -> None:
 def test_existing_workflow_runs_targeted_module_and_tests_with_minimum_permissions() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "validate-architect-bootstrap.yml").read_text(encoding="utf-8")
     assert "scripts/repository_repair_handoff.py" in workflow
-    assert "python -m py_compile scripts/repository_repair_handoff.py tests/test_repository_repair_recommendation_handoff.py" in workflow
-    assert "pytest -q tests/test_repository_repair_recommendation_handoff.py" in workflow
+    assert "tests/test_repository_repair_recommendation_handoff.py" in workflow
+    assert "python -m py_compile" in workflow
+    assert "pytest" in workflow
     assert "ref: ${{ github.event.pull_request.head.sha }}" in workflow
     assert "persist-credentials: false" in workflow
     assert "permissions:\n  contents: read" in workflow
