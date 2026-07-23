@@ -35,28 +35,35 @@
     }
   },
   "additionalProperties": true,
-  "allOf": [
-    {
-      "not": {
-        "anyOf": [
-          {"required": ["status"]},
-          {"required": ["stage_status"]},
-          {"required": ["checks"]},
-          {"required": ["quality_checks"]},
-          {"required": ["next_stage"]},
-          {"required": ["canonical_payload_valid"]},
-          {"required": ["legacy_export_substituted"]},
-          {"required": ["build_tree_digest"]},
-          {"required": ["implementation_digest"]},
-          {"required": ["implementation_tree_digest"]},
-          {"required": ["continuation_authorized"]},
-          {"required": ["official_pass"]},
-          {"required": ["official_digest"]}
-        ]
-      }
-    }
-  ],
+  "propertyNames": {
+    "not": {"$ref": "#/$defs/caller_authority_field"}
+  },
   "$defs": {
+    "caller_authority_field": {
+      "enum": [
+        "stage_result_schema",
+        "stage_status",
+        "blocking_issues",
+        "carried_unknowns",
+        "quality_checks",
+        "next_stage",
+        "decision_state",
+        "runtime_context",
+        "project_gate_export",
+        "evaluation_mode",
+        "evaluated_stage_output_digest",
+        "status",
+        "checks",
+        "canonical_payload_valid",
+        "legacy_export_substituted",
+        "build_tree_digest",
+        "implementation_digest",
+        "implementation_tree_digest",
+        "continuation_authorized",
+        "official_pass",
+        "official_digest"
+      ]
+    },
     "check_record": {
       "type": "object",
       "required": ["result", "reason"],
