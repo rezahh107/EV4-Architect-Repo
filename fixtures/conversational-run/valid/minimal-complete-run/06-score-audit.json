@@ -1,0 +1,18 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/score-audit",
+  "stage_version": "1.2.0",
+  "check_evidence": {
+    "score_audit_acceptance": {"result": "pass", "reason": "The evidence scoring is internally consistent and accepted."},
+    "rubric_integrity": {"result": "pass", "reason": "The approved rubric and denominator handling are preserved."},
+    "unknowns_not_numeric": {"result": "pass", "reason": "No Unknown is converted into a number."}
+  },
+  "canonical_content": {
+    "audit_status": "pass",
+    "eligible_candidates": ["ARCH-FAM-A", "ARCH-FAM-C"],
+    "material_defects": []
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
