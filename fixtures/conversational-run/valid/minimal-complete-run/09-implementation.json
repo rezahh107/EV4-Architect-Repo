@@ -3,9 +3,9 @@
   "stage_id": "/implementation",
   "stage_version": "1.0.1",
   "check_evidence": {
-    "selected_candidate_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
-    "canonical_implementation_present": {"result": "pass", "reason": "The structured Implementation content is present."},
-    "approved_build_tree_preserved": {"result": "pass", "reason": "The exact approved Build Tree representation is embedded."}
+    "selected_candidate_preserved": {"claim": "The Implementation preserves ARCH-FAM-C.", "reason": "The decision input identifies the Runtime-locked Candidate."},
+    "canonical_implementation_present": {"claim": "Structured Implementation content is present.", "reason": "The Stage includes the approved tree, element mapping, and class intent."},
+    "approved_build_tree_preserved": {"claim": "The prior approved Build Tree is embedded.", "reason": "Runtime can digest and compare the embedded structure against the prior Build Tree."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
   "canonical_content": {
