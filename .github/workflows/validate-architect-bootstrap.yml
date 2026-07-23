@@ -20,7 +20,7 @@ on:
       - 'manifests/architect-conversation-bootstrap.v1.json'
       - 'manifests/architect-pipeline-manifest.v1.json'
       - 'schemas/architect-conversation-bootstrap.v1.schema.json'
-      - 'schemas/ev4-architect-conversational-stage-output-base.v1.schema.json'
+      - 'schemas/architect-conversational-stage-output-base.v1.schema.json'
       - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
       - 'schemas/ev4-architect-stage-result.v1.schema.json'
       - 'release/EV4_PROJECT_RELEASE_PACK_v1/**'
