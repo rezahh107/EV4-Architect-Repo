@@ -3,6 +3,7 @@ name: validate-architect-bootstrap
 on:
   pull_request:
     paths:
+      - '.gitignore'
       - 'AGENTS.md'
       - 'README.md'
       - 'STATUS.md'
@@ -47,8 +48,6 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    env:
-      PYTHONPYCACHEPREFIX: /tmp/ev4-architect-pycache
     steps:
       - name: Checkout exact pull request head
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
