@@ -36,6 +36,8 @@ A serialized Stage Result remains readable as a summary, resume hint, compatibil
 
 A Stage heading is not a Stage Result.
 
+A same-context self-audit is not independent review.
+
 Without a valid derived Stage Result, report only:
 
 ```yaml
