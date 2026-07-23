@@ -34,12 +34,7 @@ on:
       - 'scripts/architect_runtime_payload_assembler.py'
       - 'scripts/architect_project_gate_exporter/eligibility.py'
       - 'scripts/repository_repair_handoff.py'
-      - 'tests/test_architect_bootstrap_semantics.py'
-      - 'tests/test_architect_conversational_stage_output.py'
-      - 'tests/test_architect_conversational_stage_output_root_complete.py'
-      - 'tests/test_architect_runtime_truth_spine.py'
-      - 'tests/test_architect_quality_runtime.py'
-      - 'tests/test_repository_repair_recommendation_handoff.py'
+      - 'tests/**'
       - '.github/workflows/validate-architect-bootstrap.yml'
 
 permissions:
@@ -77,6 +72,7 @@ jobs:
             scripts/check-architect-quality-runtime.py \
             scripts/check-architect-conversational-stage-output.py \
             scripts/check-architect-bootstrap.py \
+            scripts/check-architect-stage-payload.py \
             scripts/repository_repair_handoff.py \
             tests/test_architect_quality_runtime.py \
             tests/test_architect_conversational_stage_output.py \
@@ -108,6 +104,9 @@ jobs:
 
       - name: Validate conversational Stage Output examples and fixtures
         run: python scripts/check-architect-conversational-stage-output.py
+
+      - name: Validate Architect Stage Payload
+        run: python scripts/check-architect-stage-payload.py
 
       - name: Validate Architect bootstrap semantics
         id: bootstrap_semantics
@@ -159,6 +158,27 @@ jobs:
 
       - name: Enforce conversational Stage Output test result
         if: steps.conversational_stage_output_tests.outcome != 'success'
+        run: exit 1
+
+      - name: Run full repository test suite
+        id: full_repository_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q 2>&1 | tee "${{ runner.temp }}/architect-full-repository-tests.log"
+
+      - name: Upload full repository test diagnostics
+        if: always() && steps.full_repository_tests.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-full-repository-tests-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/architect-full-repository-tests.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce full repository test result
+        if: steps.full_repository_tests.outcome != 'success'
         run: exit 1
 
       - name: Run repository repair handoff tests
