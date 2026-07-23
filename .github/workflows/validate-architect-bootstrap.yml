@@ -90,14 +90,14 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/check-architect-quality-runtime.py 2>&1 | tee architect-quality-runtime.log
+          python scripts/check-architect-quality-runtime.py 2>&1 | tee "${{ runner.temp }}/architect-quality-runtime.log"
 
       - name: Upload quality Runtime diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: architect-quality-runtime-${{ github.event.pull_request.head.sha }}
-          path: architect-quality-runtime.log
+          path: ${{ runner.temp }}/architect-quality-runtime.log
           if-no-files-found: error
           retention-days: 2
 
@@ -114,14 +114,14 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/check-architect-bootstrap.py 2>&1 | tee architect-bootstrap-semantics.log
+          python scripts/check-architect-bootstrap.py 2>&1 | tee "${{ runner.temp }}/architect-bootstrap-semantics.log"
 
       - name: Upload bootstrap semantic diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: architect-bootstrap-semantics-${{ github.event.pull_request.head.sha }}
-          path: architect-bootstrap-semantics.log
+          path: ${{ runner.temp }}/architect-bootstrap-semantics.log
           if-no-files-found: error
           retention-days: 2
 
@@ -145,14 +145,14 @@ jobs:
             tests/test_architect_conversational_stage_output.py \
             tests/test_architect_conversational_stage_output_root_complete.py \
             tests/test_architect_runtime_truth_spine.py \
-            2>&1 | tee architect-conversational-stage-output-tests.log
+            2>&1 | tee "${{ runner.temp }}/architect-conversational-stage-output-tests.log"
 
       - name: Upload conversational Stage Output test diagnostics
         if: always() && steps.conversational_stage_output_tests.outcome != 'skipped'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: architect-conversational-stage-output-tests-${{ github.event.pull_request.head.sha }}
-          path: architect-conversational-stage-output-tests.log
+          path: ${{ runner.temp }}/architect-conversational-stage-output-tests.log
           if-no-files-found: error
           retention-days: 2
 
