@@ -91,6 +91,10 @@ validated_pass:
 
 ## User-Facing Stage Claim Truth
 
+A Stage heading is not a Stage Result.
+
+A same-context self-audit is not independent review.
+
 Before reporting `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or an equivalent Persian execution claim, show:
 
 ```yaml
