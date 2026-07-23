@@ -3,9 +3,9 @@
   "stage_id": "/research",
   "stage_version": "1.0.0",
   "check_evidence": {
-    "research_scope_resolved": {"result": "pass", "reason": "No platform-capability question requires active lookup."},
-    "platform_project_boundary_preserved": {"result": "pass", "reason": "Research does not decide project-specific visual structure."},
-    "unsupported_claims_remain_unknown": {"result": "pass", "reason": "No unsupported platform claim is converted into fact."}
+    "research_scope_resolved": {"claim": "No platform-capability question requires active lookup.", "reason": "The bounded input is architecture interpretation only."},
+    "platform_project_boundary_preserved": {"claim": "Research does not decide project-specific visual structure.", "reason": "No recommendation or selected Candidate is introduced."},
+    "unsupported_claims_remain_unknown": {"claim": "Unsupported platform claims remain unknown.", "reason": "No unsupported claim is converted into exact fact."}
   },
   "research_disposition": "no_platform_question",
   "canonical_content": {"questions": [], "evidence": [], "disposition_reason": "The bounded input is architecture interpretation only."},
