@@ -59,30 +59,16 @@ def prefinal_outputs() -> list[dict]:
     return conversational.load_output_files(PREFINAL_DIR, root=REPO_ROOT)
 
 
-def trusted_context() -> dict:
-    sha = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-    return {
-        "producer_provenance": {
-            "repository": "rezahh107/EV4-Architect-Repo",
-            "ref": "exact-head-root-complete-test",
-            "commit_sha": sha,
-        }
-    }
+def run_context() -> runtime.RunContext:
+    return runtime.RunContext(source_kind="fixture")
 
 
 def evaluate_prefix(outputs: list[dict], count: int):
     state = runtime.initial_run_state(outputs[0]["run_id"], root=REPO_ROOT)
     for output in outputs[:count]:
         result, state = runtime.evaluate_stage(
-            output["stage_id"],
-            output,
-            state,
-            root=REPO_ROOT,
+            output["stage_id"], output, state, root=REPO_ROOT,
+            run_context=run_context(),
         )
         assert result["stage_status"] == "pass", result["blocking_issues"]
     return state
@@ -99,72 +85,44 @@ def assert_structured_invalid(outcome: dict, text: str) -> None:
 def test_authority_classification_is_derived_from_stage_result_schema() -> None:
     schema = read_json(STAGE_RESULT_SCHEMA_PATH)
     classification = runtime.derive_stage_result_authority(schema)
-
     expected_forbidden = {
-        "stage_result_schema",
-        "stage_status",
-        "blocking_issues",
-        "carried_unknowns",
-        "quality_checks",
-        "next_stage",
-        "decision_state",
-        "runtime_context",
-        "project_gate_export",
-        "evaluation_mode",
-        "evaluated_stage_output_digest",
-        "recommendation_made",
-        "hidden_recommendation",
-        "unknown_converted_to_exact",
-        "selected_candidate_id",
-        "selected_candidate_locked",
-        "build_tree_digest",
-        "approved_build_tree_digest",
-        "implementation_tree_digest",
-        "architecture_drift",
-        "canonical_payload_valid",
-        "legacy_export_substituted",
-        "source_payload_digest",
-        "export_digest",
-        "validator_identity",
-        "validation_result",
-        "export_id",
-        "status",
-        "checks",
-        "implementation_digest",
-        "continuation_authorized",
-        "official_pass",
-        "official_digest",
+        "stage_result_schema", "stage_status", "completion_class",
+        "quality_check_basis", "blocking_issues", "carried_unknowns",
+        "quality_checks", "next_stage", "decision_state", "runtime_context",
+        "project_gate_export", "evaluation_mode", "evaluated_stage_output_digest",
+        "recommendation_made", "hidden_recommendation", "unknown_converted_to_exact",
+        "selected_candidate_id", "selected_candidate_locked", "build_tree_digest",
+        "approved_build_tree_digest", "implementation_tree_digest", "architecture_drift",
+        "canonical_payload_valid", "legacy_export_substituted", "source_payload_digest",
+        "export_digest", "validator_identity", "validation_result", "export_id",
+        "runtime_issued_payload", "functional_eligibility", "execution_context",
+        "handoff_allowed", "status", "checks", "implementation_digest",
+        "continuation_authorized", "official_pass", "official_digest",
+        "project_gate_payload", "synthetic", "source_kind", "producer_provenance",
     }
     assert expected_forbidden <= classification.forbidden_top_level_stage_output_fields
     assert classification.shared_stage_output_fields == {
-        "run_id",
-        "stage_id",
-        "stage_version",
-        "research_disposition",
+        "run_id", "stage_id", "stage_version", "research_disposition",
         "final_audit_findings",
     }
-    assert runtime.CALLER_AUTHORITY_FIELDS == (
-        classification.forbidden_top_level_stage_output_fields
-    )
+    assert runtime.CALLER_AUTHORITY_FIELDS == classification.forbidden_top_level_stage_output_fields
 
 
 def test_top_level_approved_build_tree_digest_is_rejected() -> None:
     output = copy.deepcopy(prefinal_outputs()[0])
     output["approved_build_tree_digest"] = "sha256:" + "a" * 64
-
     assert conversational.validate_base_structure(output, root=REPO_ROOT)
-    result, _ = runtime.evaluate_stage(
-        "/intake",
-        output,
-        runtime.initial_run_state(output["run_id"], root=REPO_ROOT),
-        root=REPO_ROOT,
-    )
-    assert result["stage_status"] == "blocked"
+    state = runtime.initial_run_state(output["run_id"], root=REPO_ROOT)
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/intake", output, state, root=REPO_ROOT, run_context=run_context()
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
-        and "approved_build_tree_digest" in issue["reason"]
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        and diagnostic.path == "approved_build_tree_digest"
+        for diagnostic in caught.value.diagnostics
     )
+    assert state["completed_stages"] == []
 
 
 @pytest.mark.parametrize(
@@ -176,16 +134,13 @@ def test_top_level_approved_build_tree_digest_is_rejected() -> None:
     ],
 )
 def test_new_nested_stage_result_property_requires_base_schema_mirror_update(
-    tmp_path: Path,
-    definition_name: str,
-    new_field: str,
+    tmp_path: Path, definition_name: str, new_field: str
 ) -> None:
     root = copy_release_tree(tmp_path)
     schema_path = root / conversational.STAGE_RESULT_SCHEMA_PATH
     schema = read_json(schema_path)
     schema["$defs"][definition_name]["properties"][new_field] = {"type": "boolean"}
     write_json(schema_path, schema)
-
     with pytest.raises(ValueError, match="classification mirror update"):
         conversational.load_authority(root)
 
@@ -194,11 +149,8 @@ def test_runtime_and_base_schema_forbidden_sets_cannot_drift(tmp_path: Path) -> 
     root = copy_release_tree(tmp_path)
     schema_path = root / conversational.BASE_SCHEMA_PATH
     schema = read_json(schema_path)
-    schema["$defs"]["caller_authority_field"]["enum"].remove(
-        "approved_build_tree_digest"
-    )
+    schema["$defs"]["caller_authority_field"]["enum"].remove("approved_build_tree_digest")
     write_json(schema_path, schema)
-
     with pytest.raises(ValueError, match="classification mirror update"):
         conversational.load_authority(root)
 
@@ -208,13 +160,9 @@ def test_legitimate_stage_extension_and_approved_tree_content_remain_allowed() -
     output["stage_specific_extension"] = {"allowed": True}
     assert conversational.validate_base_structure(output, root=REPO_ROOT) == []
     assert "approved_build_tree" in output["canonical_content"]
-
     state = evaluate_prefix(prefinal_outputs(), 8)
     result, _ = runtime.evaluate_stage(
-        "/implementation",
-        output,
-        state,
-        root=REPO_ROOT,
+        "/implementation", output, state, root=REPO_ROOT, run_context=run_context()
     )
     assert result["stage_status"] == "pass", result["blocking_issues"]
 
@@ -231,37 +179,30 @@ def canonical_examples() -> list[str]:
 
 
 @pytest.mark.parametrize("example_path", canonical_examples())
-def test_each_example_omitted_from_mirror_is_rejected(
-    tmp_path: Path,
-    example_path: str,
-) -> None:
+def test_each_example_omitted_from_mirror_is_rejected(tmp_path: Path, example_path: str) -> None:
     root = copy_release_tree(tmp_path)
-    mutate_upload_set(
-        root,
-        lambda value: value["example_paths"].remove(example_path),
+    mutate_upload_set(root, lambda value: value["example_paths"].remove(example_path))
+    assert_structured_invalid(
+        conversational.validate_release_upload_set(root=root),
+        "example mirror omits canonical repository examples",
     )
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "example mirror omits canonical repository examples")
 
 
 @pytest.mark.parametrize("example_path", canonical_examples())
 def test_each_example_omitted_from_minimum_upload_paths_is_rejected(
-    tmp_path: Path,
-    example_path: str,
+    tmp_path: Path, example_path: str
 ) -> None:
     root = copy_release_tree(tmp_path)
-    mutate_upload_set(
-        root,
-        lambda value: value["minimum_upload_paths"].remove(example_path),
+    mutate_upload_set(root, lambda value: value["minimum_upload_paths"].remove(example_path))
+    assert_structured_invalid(
+        conversational.validate_release_upload_set(root=root),
+        "minimum upload set omits required sources",
     )
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "minimum upload set omits required sources")
 
 
 @pytest.mark.parametrize("example_path", canonical_examples())
 def test_each_example_omitted_from_both_lists_is_rejected(
-    tmp_path: Path,
-    example_path: str,
+    tmp_path: Path, example_path: str
 ) -> None:
     root = copy_release_tree(tmp_path)
 
@@ -290,27 +231,17 @@ def test_unknown_and_duplicate_example_paths_are_rejected(tmp_path: Path) -> Non
     assert_structured_invalid(outcome, "listed example is missing on disk")
 
 
-@pytest.mark.parametrize(
-    "bad_value",
-    ["", 7, "../outside.json", "contracts/not-an-example.json"],
-)
-def test_invalid_example_path_values_are_rejected(
-    tmp_path: Path,
-    bad_value: object,
-) -> None:
+@pytest.mark.parametrize("bad_value", ["", 7, "../outside.json", "contracts/not-an-example.json"])
+def test_invalid_example_path_values_are_rejected(tmp_path: Path, bad_value: object) -> None:
     root = copy_release_tree(tmp_path)
-    mutate_upload_set(
-        root,
-        lambda value: value["example_paths"].append(bad_value),
-    )
+    mutate_upload_set(root, lambda value: value["example_paths"].append(bad_value))
     outcome = conversational.validate_release_upload_set(root=root)
     assert outcome["status"] == "invalid"
     assert any(
         marker in error
         for error in outcome["errors"]
         for marker in (
-            "value must be a string",
-            "value must be a non-empty string",
+            "value must be a string", "value must be a non-empty string",
             "outside the canonical examples directory",
         )
     )
@@ -337,10 +268,8 @@ def test_new_repository_example_requires_upload_set_mirror_update(tmp_path: Path
 
 def test_malformed_example_json_is_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
-    path = root / canonical_examples()[0]
-    path.write_text("{not-json", encoding="utf-8")
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "invalid JSON")
+    (root / canonical_examples()[0]).write_text("{not-json", encoding="utf-8")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "invalid JSON")
 
 
 def test_example_wrong_stage_version_is_rejected(tmp_path: Path) -> None:
@@ -349,8 +278,7 @@ def test_example_wrong_stage_version_is_rejected(tmp_path: Path) -> None:
     value = read_json(path)
     value["stage_version"] = "9.9.9"
     write_json(path, value)
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "stage_version")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "stage_version")
 
 
 def test_example_missing_or_cross_stage_check_is_rejected(tmp_path: Path) -> None:
@@ -359,8 +287,7 @@ def test_example_missing_or_cross_stage_check_is_rejected(tmp_path: Path) -> Non
     value = read_json(path)
     value["check_evidence"].pop(next(iter(value["check_evidence"])))
     value["check_evidence"]["cross_stage_check"] = {
-        "result": "pass",
-        "reason": "Invalid cross-Stage key.",
+        "result": "pass", "reason": "Invalid cross-Stage key."
     }
     write_json(path, value)
     outcome = conversational.validate_release_upload_set(root=root)
@@ -381,8 +308,7 @@ def test_canonical_repository_example_inventory_is_valid() -> None:
 def test_missing_contract_returns_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
     (root / conversational.CONTRACT_PATH).unlink()
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "required source is missing")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "required source is missing")
 
 
 def test_contract_directory_returns_structured_invalid(tmp_path: Path) -> None:
@@ -390,97 +316,82 @@ def test_contract_directory_returns_structured_invalid(tmp_path: Path) -> None:
     path = root / conversational.CONTRACT_PATH
     path.unlink()
     path.mkdir()
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "not a regular file")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "not a regular file")
 
 
 def test_invalid_utf8_contract_returns_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
     (root / conversational.CONTRACT_PATH).write_bytes(b"\xff\xfe")
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "not valid UTF-8")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "not valid UTF-8")
 
 
 @pytest.mark.parametrize(
     "source_path",
-    [
-        conversational.BASE_SCHEMA_PATH,
-        conversational.MANIFEST_PATH,
-        conversational.STAGE_RESULT_SCHEMA_PATH,
-    ],
+    [conversational.BASE_SCHEMA_PATH, conversational.MANIFEST_PATH, conversational.STAGE_RESULT_SCHEMA_PATH],
 )
 def test_missing_required_json_source_returns_structured_invalid(
-    tmp_path: Path,
-    source_path: Path,
+    tmp_path: Path, source_path: Path
 ) -> None:
     root = copy_release_tree(tmp_path)
     (root / source_path).unlink()
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, f"{source_path.as_posix()}: required source is missing")
+    assert_structured_invalid(
+        conversational.validate_release_upload_set(root=root),
+        f"{source_path.as_posix()}: required source is missing",
+    )
 
 
 @pytest.mark.parametrize(
     "source_path",
-    [
-        conversational.BASE_SCHEMA_PATH,
-        conversational.MANIFEST_PATH,
-        conversational.STAGE_RESULT_SCHEMA_PATH,
-    ],
+    [conversational.BASE_SCHEMA_PATH, conversational.MANIFEST_PATH, conversational.STAGE_RESULT_SCHEMA_PATH],
 )
 def test_malformed_required_json_source_returns_structured_invalid(
-    tmp_path: Path,
-    source_path: Path,
+    tmp_path: Path, source_path: Path
 ) -> None:
     root = copy_release_tree(tmp_path)
     (root / source_path).write_text("{broken", encoding="utf-8")
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "invalid JSON")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "invalid JSON")
 
 
 def test_base_schema_json_root_must_be_object(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
     write_json(root / conversational.BASE_SCHEMA_PATH, [])
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "JSON root must be an object")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "JSON root must be an object")
 
 
 def test_missing_upload_set_returns_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
     (root / conversational.RELEASE_UPLOAD_SET_PATH).unlink()
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "required source is missing")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "required source is missing")
 
 
 def test_malformed_upload_set_returns_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
-    (root / conversational.RELEASE_UPLOAD_SET_PATH).write_text(
-        "{broken",
-        encoding="utf-8",
-    )
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "invalid JSON")
+    (root / conversational.RELEASE_UPLOAD_SET_PATH).write_text("{broken", encoding="utf-8")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "invalid JSON")
 
 
 def test_upload_set_json_root_must_be_object(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
     write_json(root / conversational.RELEASE_UPLOAD_SET_PATH, [])
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "JSON root must be an object")
+    assert_structured_invalid(conversational.validate_release_upload_set(root=root), "JSON root must be an object")
 
 
 def test_upload_set_required_object_field_type_is_validated(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
     mutate_upload_set(root, lambda value: value.__setitem__("contract", []))
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "contract: required field must be an object")
+    assert_structured_invalid(
+        conversational.validate_release_upload_set(root=root),
+        "contract: required field must be an object",
+    )
 
 
 def test_missing_registered_example_returns_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
-    path = root / canonical_examples()[0]
-    path.unlink()
-    outcome = conversational.validate_release_upload_set(root=root)
-    assert_structured_invalid(outcome, "listed example is missing on disk")
+    (root / canonical_examples()[0]).unlink()
+    assert_structured_invalid(
+        conversational.validate_release_upload_set(root=root),
+        "listed example is missing on disk",
+    )
 
 
 def run_cli(root: Path) -> subprocess.CompletedProcess[str]:
@@ -488,13 +399,9 @@ def run_cli(root: Path) -> subprocess.CompletedProcess[str]:
         [
             sys.executable,
             str(SCRIPTS / "check-architect-conversational-stage-output.py"),
-            "--root",
-            str(root),
+            "--root", str(root),
         ],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
     )
 
 
@@ -513,16 +420,11 @@ def test_actual_cli_missing_contract_is_structured_invalid(tmp_path: Path) -> No
 
 def test_actual_cli_malformed_upload_set_is_structured_invalid(tmp_path: Path) -> None:
     root = copy_release_tree(tmp_path)
-    (root / conversational.RELEASE_UPLOAD_SET_PATH).write_text(
-        "{broken",
-        encoding="utf-8",
-    )
+    (root / conversational.RELEASE_UPLOAD_SET_PATH).write_text("{broken", encoding="utf-8")
     assert_cli_structured_invalid(run_cli(root))
 
 
-def test_unexpected_programming_error_is_not_silenced(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_unexpected_programming_error_is_not_silenced(monkeypatch: pytest.MonkeyPatch) -> None:
     def programming_defect(*, root: Path, errors: list[str]) -> list[str]:
         raise NameError("intentional programming defect")
 
@@ -539,10 +441,7 @@ def test_terminal_runtime_and_core_release_regressions_remain_closed() -> None:
     assert outcome["status"] == "valid", outcome["errors"]
     assert outcome["terminal_runtime_validated"] is True
     assert outcome["stages_visited"][-1] == "/project-gate-export"
-
     release = conversational.validate_release_upload_set(root=REPO_ROOT)
     assert release["status"] == "valid", release["errors"]
     upload_set = read_json(UPLOAD_SET_PATH)
-    assert conversational.CORE_RELEASE_PATHS <= set(
-        upload_set["minimum_upload_paths"]
-    )
+    assert conversational.CORE_RELEASE_PATHS <= set(upload_set["minimum_upload_paths"])
