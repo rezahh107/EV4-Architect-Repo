@@ -1,0 +1,19 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/architectures",
+  "stage_version": "1.1.0",
+  "check_evidence": {
+    "architecture_coverage_complete": {"result": "pass", "reason": "Two viable architecture families cover the required roles."},
+    "recommendation_not_made": {"result": "pass", "reason": "No winner is selected in this Stage."},
+    "unknowns_propagated": {"result": "pass", "reason": "No active Unknown is omitted or resolved."}
+  },
+  "canonical_content": {
+    "candidates": [
+      {"candidate_id": "ARCH-FAM-A", "family": "normal-flow-only", "coverage": ["content"]},
+      {"candidate_id": "ARCH-FAM-C", "family": "relative-stage-contained-overlay", "coverage": ["content", "decorative_connector"]}
+    ]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
