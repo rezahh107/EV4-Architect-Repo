@@ -24,6 +24,7 @@ on:
       - 'schemas/architect-conversational-stage-output-base.v1.schema.json'
       - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
       - 'schemas/ev4-architect-stage-result.v1.schema.json'
+      - 'schemas/ev4-architect-stage-payload.v1.schema.json'
       - 'release/EV4_PROJECT_RELEASE_PACK_v1/**'
       - 'scripts/check-architect-bootstrap.py'
       - 'scripts/check-architect-conversational-stage-output.py'
@@ -33,6 +34,8 @@ on:
       - 'scripts/architect_runtime_errors.py'
       - 'scripts/architect_runtime_project_gate.py'
       - 'scripts/architect_stage_claim_guard.py'
+      - 'scripts/architect_build_tree_validation.py'
+      - 'scripts/architect_payload_derivation_validation.py'
       - 'scripts/architect_runtime_payload_assembler.py'
       - 'scripts/architect_project_gate_exporter/eligibility.py'
       - 'scripts/repository_repair_handoff.py'
@@ -70,6 +73,8 @@ jobs:
             scripts/architect_runtime_errors.py \
             scripts/architect_runtime_project_gate.py \
             scripts/architect_stage_claim_guard.py \
+            scripts/architect_build_tree_validation.py \
+            scripts/architect_payload_derivation_validation.py \
             scripts/architect_runtime_payload_assembler.py \
             scripts/architect_project_gate_exporter/eligibility.py \
             scripts/architect_conversational_stage_output.py \
@@ -78,6 +83,8 @@ jobs:
             scripts/check-architect-bootstrap.py \
             scripts/check-architect-stage-payload.py \
             scripts/repository_repair_handoff.py \
+            tests/test_architect_build_tree_validation.py \
+            tests/test_architect_payload_derivation_validation.py \
             tests/test_architect_quality_runtime.py \
             tests/test_architect_conversational_stage_output.py \
             tests/test_architect_conversational_stage_output_root_complete.py \
@@ -134,13 +141,15 @@ jobs:
         if: steps.bootstrap_semantics.outcome != 'success'
         run: exit 1
 
-      - name: Run Runtime completion, typed failure, and Payload mutation tests
+      - name: Run Runtime, Build Tree, and Payload derivation mutation tests
         id: runtime_completion_payload_tests
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -vv \
+            tests/test_architect_build_tree_validation.py \
+            tests/test_architect_payload_derivation_validation.py \
             tests/test_architect_quality_runtime.py \
             tests/test_architect_runtime_completion_payload_errors.py \
             tests/test_architect_bootstrap_semantics.py \
