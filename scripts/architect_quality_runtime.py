@@ -70,11 +70,14 @@ class GitProvider(Protocol):
 class SubprocessGitProvider:
     """Read producer identity only from the actual checkout."""
 
-    def _git(self, root: Path, *args: str) -> str:
-        completed = subprocess.run(
+    def _run(self, root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
             ["git", "-C", str(root), *args], capture_output=True, text=True,
             encoding="utf-8", check=False,
         )
+
+    def _git(self, root: Path, *args: str) -> str:
+        completed = self._run(root, *args)
         if completed.returncode:
             raise ValueError(
                 completed.stderr.strip() or completed.stdout.strip()
@@ -103,7 +106,8 @@ class SubprocessGitProvider:
                 break
         if (repository or "").lower() != base.REPOSITORY.lower():
             raise ValueError(f"Runtime Git provider expected {base.REPOSITORY}, observed {remote!r}")
-        ref = self._git(root, "symbolic-ref", "--quiet", "--short", "HEAD")
+        symbolic = self._run(root, "symbolic-ref", "--quiet", "--short", "HEAD")
+        ref = symbolic.stdout.strip() if symbolic.returncode == 0 else "detached-exact-head"
         sha = self._git(root, "rev-parse", "HEAD")
         if not base.SHA40.fullmatch(sha):
             raise ValueError("Runtime Git provider requires a full HEAD SHA")
