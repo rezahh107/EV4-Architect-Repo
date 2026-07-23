@@ -3,9 +3,9 @@
   "stage_id": "/score-evidence",
   "stage_version": "1.3.0",
   "check_evidence": {
-    "evidence_scoring_valid": {"result": "pass", "reason": "Every candidate is evaluated against the approved bounded criteria."},
-    "hidden_recommendation_absent": {"result": "pass", "reason": "The Stage records evidence without choosing a winner."},
-    "unknowns_not_numeric": {"result": "pass", "reason": "No Unknown is represented as a numeric score."}
+    "evidence_scoring_valid": {"claim": "Each Candidate has structured evidence coverage.", "reason": "The candidate_scores array contains every prior Candidate with an evidence state."},
+    "hidden_recommendation_absent": {"claim": "No winner is selected during evidence scoring.", "reason": "The Stage records evidence without a selected Candidate."},
+    "unknowns_not_numeric": {"claim": "No Unknown is represented as a numeric score.", "reason": "Evidence states remain qualitative and explicit."}
   },
   "canonical_content": {
     "candidate_scores": [
