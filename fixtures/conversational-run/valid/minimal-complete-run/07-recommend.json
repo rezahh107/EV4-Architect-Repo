@@ -3,8 +3,8 @@
   "stage_id": "/recommend",
   "stage_version": "1.1.0",
   "check_evidence": {
-    "audited_candidate_selected": {"result": "pass", "reason": "The selected Candidate is in the audited eligible set."},
-    "candidate_lock_established": {"result": "pass", "reason": "The decision input establishes one selected Candidate."}
+    "audited_candidate_selected": {"claim": "ARCH-FAM-C is proposed from the audited eligible set.", "reason": "The Candidate exists in both architecture and score-audit outputs."},
+    "candidate_lock_established": {"claim": "One Candidate is proposed for Runtime lock.", "reason": "The decision input identifies ARCH-FAM-C."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
   "canonical_content": {
