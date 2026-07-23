@@ -11,6 +11,7 @@ import importlib
 import json
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -24,19 +25,33 @@ INFRA_BLOCKERS = {
     "VALIDATION_PROFILE_INCOMPLETE", "EXACT_HEAD_CI_UNAVAILABLE",
     "PR_REVIEW_UNAVAILABLE", "REPOSITORY_MAINTENANCE_REQUIRED",
 }
-STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS = {
+STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS = frozenset({
     "run_id", "stage_id", "stage_version", "research_disposition", "final_audit_findings",
-}
-CALLER_AUTHORITY_FIELDS = {
-    "stage_result_schema", "stage_status", "blocking_issues", "carried_unknowns",
-    "quality_checks", "next_stage", "decision_state", "runtime_context",
-    "project_gate_export", "evaluation_mode", "evaluated_stage_output_digest",
-    "status", "checks", "canonical_payload_valid", "legacy_export_substituted",
-    "build_tree_digest", "implementation_digest", "implementation_tree_digest",
-    "continuation_authorized", "official_pass", "official_digest",
-}
+})
+EVALUATOR_DERIVED_NESTED_DEFS = (
+    "decision_state",
+    "runtime_context",
+    "project_gate_export",
+)
+EXPLICIT_LEGACY_AUTHORITY_ALIASES = frozenset({
+    "status",
+    "checks",
+    "implementation_digest",
+    "continuation_authorized",
+    "official_pass",
+    "official_digest",
+})
 CHECK_RESULTS = {"pass", "fail", "not_applicable", "unknown"}
 RESOLUTION_TYPES = {"user_confirmation", "authoritative_source", "validated_artifact", "not_applicable"}
+
+
+@dataclass(frozen=True)
+class StageResultAuthorityClassification:
+    shared_stage_output_fields: frozenset[str]
+    evaluator_owned_top_level_fields: frozenset[str]
+    evaluator_derived_nested_fields: frozenset[str]
+    explicit_legacy_authority_aliases: frozenset[str]
+    forbidden_top_level_stage_output_fields: frozenset[str]
 
 
 def _load(path: Path) -> Any:
@@ -48,23 +63,85 @@ def _digest(value: Any) -> str:
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
-def _validate_caller_authority_classification(schema: dict[str, Any]) -> None:
-    properties = set(schema.get("properties", {}))
-    missing_shared = STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS - properties
-    overlap = STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS & CALLER_AUTHORITY_FIELDS
-    unclassified = properties - STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS - CALLER_AUTHORITY_FIELDS
+def _schema_properties(value: Any, *, location: str) -> frozenset[str]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{location} must be a JSON object")
+    properties = value.get("properties")
+    if not isinstance(properties, dict):
+        raise ValueError(f"{location}.properties must be a JSON object")
+    if any(not isinstance(key, str) or not key for key in properties):
+        raise ValueError(f"{location}.properties keys must be non-empty strings")
+    return frozenset(properties)
+
+
+def derive_stage_result_authority(schema: dict[str, Any]) -> StageResultAuthorityClassification:
+    """Derive the effective caller-authority boundary from the live Stage Result Schema."""
+    top_level = _schema_properties(schema, location="Stage Result Schema")
+    missing_shared = STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS - top_level
     if missing_shared:
-        raise ValueError(f"Stage Result shared Stage Output fields are missing from the Schema: {sorted(missing_shared)}")
+        raise ValueError(
+            "Stage Result shared Stage Output fields are missing from the Schema: "
+            f"{sorted(missing_shared)}"
+        )
+
+    defs = schema.get("$defs")
+    if not isinstance(defs, dict):
+        raise ValueError("Stage Result Schema.$defs must be a JSON object")
+
+    nested_fields: set[str] = set()
+    for definition_name in EVALUATOR_DERIVED_NESTED_DEFS:
+        if definition_name not in defs:
+            raise ValueError(
+                f"Stage Result Schema.$defs.{definition_name} is required for authority classification"
+            )
+        nested_fields.update(
+            _schema_properties(
+                defs[definition_name],
+                location=f"Stage Result Schema.$defs.{definition_name}",
+            )
+        )
+
+    evaluator_top_level = top_level - STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS
+    forbidden = (
+        evaluator_top_level
+        | frozenset(nested_fields)
+        | EXPLICIT_LEGACY_AUTHORITY_ALIASES
+    ) - STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS
+
+    return StageResultAuthorityClassification(
+        shared_stage_output_fields=STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS,
+        evaluator_owned_top_level_fields=frozenset(evaluator_top_level),
+        evaluator_derived_nested_fields=frozenset(nested_fields),
+        explicit_legacy_authority_aliases=EXPLICIT_LEGACY_AUTHORITY_ALIASES,
+        forbidden_top_level_stage_output_fields=frozenset(forbidden),
+    )
+
+
+def _validate_caller_authority_classification(schema: dict[str, Any]) -> None:
+    classification = derive_stage_result_authority(schema)
+    overlap = (
+        classification.shared_stage_output_fields
+        & classification.forbidden_top_level_stage_output_fields
+    )
     if overlap:
-        raise ValueError(f"Stage Result fields cannot be both shared and evaluator-owned: {sorted(overlap)}")
-    if unclassified:
-        raise ValueError(f"Stage Result top-level fields require evaluator-owned or shared classification: {sorted(unclassified)}")
+        raise ValueError(
+            "Stage Result fields cannot be both shared and evaluator-owned: "
+            f"{sorted(overlap)}"
+        )
 
 
-def load_authority(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any]]:
-    manifest = _load(root / MANIFEST_PATH.relative_to(ROOT))
-    schema = _load(root / SCHEMA_PATH.relative_to(ROOT))
+def validate_authority_documents(
+    manifest: dict[str, Any],
+    schema: dict[str, Any],
+) -> StageResultAuthorityClassification:
+    if not isinstance(manifest, dict):
+        raise ValueError("Pipeline Manifest must be a JSON object")
+    if not isinstance(schema, dict):
+        raise ValueError("Stage Result Schema must be a JSON object")
+    Draft202012Validator.check_schema(schema)
     model = manifest.get("normal_run_continuation", {})
+    if not isinstance(model, dict):
+        raise ValueError("normal_run_continuation must be a JSON object")
     if model.get("model") != "quality_driven":
         raise ValueError("quality_driven continuation is required")
     if model.get("serialized_stage_result_authorizes") is not False:
@@ -78,8 +155,21 @@ def load_authority(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any]]:
             raise ValueError(f"normal_run_continuation.{key} must be false")
     if model.get("stage_result_schema") != schema.get("$id"):
         raise ValueError("Stage Result schema identity mismatch")
+    classification = derive_stage_result_authority(schema)
     _validate_caller_authority_classification(schema)
+    return classification
+
+
+def load_authority(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any]]:
+    manifest = _load(root / MANIFEST_PATH.relative_to(ROOT))
+    schema = _load(root / SCHEMA_PATH.relative_to(ROOT))
+    validate_authority_documents(manifest, schema)
     return manifest, schema
+
+
+CALLER_AUTHORITY_FIELDS = derive_stage_result_authority(
+    _load(SCHEMA_PATH)
+).forbidden_top_level_stage_output_fields
 
 
 def _stage_map(manifest: dict[str, Any]) -> tuple[list[str], dict[str, dict[str, Any]]]:
@@ -231,6 +321,7 @@ def _evaluate_project_gate(output: dict[str, Any], state: dict[str, Any], root: 
 def evaluate_stage(stage_id: str, stage_output: dict[str, Any], run_state: dict[str, Any], *, root: Path = ROOT, trusted_context: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     trusted = trusted_context or {}
     manifest, schema = load_authority(root)
+    authority = derive_stage_result_authority(schema)
     order, stages = _stage_map(manifest)
     stage = stages.get(stage_id)
     if not stage or run_state.get("current_stage") != stage_id:
@@ -241,7 +332,7 @@ def evaluate_stage(stage_id: str, stage_output: dict[str, Any], run_state: dict[
         raise ValueError("Stage Output version mismatch")
 
     issues: list[dict[str, Any]] = []
-    for field in sorted(CALLER_AUTHORITY_FIELDS.intersection(stage_output)):
+    for field in sorted(authority.forbidden_top_level_stage_output_fields.intersection(stage_output)):
         issues.append(_issue("RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN", f"Caller-authored authority field is forbidden: {field}", stage_id))
     for item in stage_output.get("blockers", []):
         if item.get("issue_id") not in INFRA_BLOCKERS:
