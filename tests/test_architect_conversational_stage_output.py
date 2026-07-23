@@ -407,7 +407,9 @@ def test_standalone_validator_rejects_caller_terminal_payload(tmp_path: Path) ->
     )
     assert outcome["status"] == "invalid"
     assert outcome["terminal_runtime_validated"] is False
-    assert any("RUNTIME_CALLER_PROJECT_GATE_PAYLOAD_FORBIDDEN" in error for error in outcome["errors"])
+    # The wrapper may reject at the Base Schema before Runtime; either way the
+    # caller-authored terminal Payload must be explicit in the diagnostic.
+    assert any("project_gate_payload" in error for error in outcome["errors"])
 
 
 def test_standalone_validator_rejects_terminal_candidate_mismatch(tmp_path: Path) -> None:
