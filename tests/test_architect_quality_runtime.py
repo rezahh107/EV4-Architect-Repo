@@ -111,18 +111,17 @@ def test_serialized_stage_result_is_informational_only() -> None:
 def test_caller_authority_fields_cannot_grant_pass(field: str) -> None:
     item = copy.deepcopy(outputs()[0])
     item[field] = "pass"
-    result, _ = runtime.evaluate_stage(
-        "/intake",
-        item,
-        runtime.initial_run_state(item["run_id"], root=REPO_ROOT),
-        root=REPO_ROOT,
-        run_context=context(),
-    )
-    assert result["stage_status"] == "blocked"
+    state = runtime.initial_run_state(item["run_id"], root=REPO_ROOT)
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/intake", item, state, root=REPO_ROOT, run_context=context()
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        and diagnostic.path == field
+        for diagnostic in caught.value.diagnostics
     )
+    assert state["completed_stages"] == []
 
 
 def test_unknown_and_missing_stage_checks_fail_closed() -> None:
@@ -142,6 +141,7 @@ def test_unknown_and_missing_stage_checks_fail_closed() -> None:
     ids = {issue["issue_id"] for issue in result["blocking_issues"]}
     assert "RUNTIME_UNKNOWN_CHECK" in ids
     assert "RUNTIME_REQUIRED_CHECK_CLAIM_MISSING" in ids
+    assert "completion_class" not in result
 
 
 def test_model_authored_result_is_ignored() -> None:
@@ -213,6 +213,7 @@ def test_unknown_resolution_requires_explicit_note() -> None:
         "/score-evidence", bad, state, root=REPO_ROOT, run_context=context()
     )
     assert result["stage_status"] == "blocked"
+    assert "completion_class" not in result
     assert any(
         issue["issue_id"] == "RUNTIME_UNKNOWN_RESOLUTION_INVALID"
         for issue in result["blocking_issues"]
@@ -242,6 +243,7 @@ def test_downstream_critical_unknown_rejects_arbitrary_evidence() -> None:
         "/score-evidence", bad, state, root=REPO_ROOT, run_context=context()
     )
     assert result["stage_status"] == "blocked"
+    assert "completion_class" not in result
     assert any(
         issue["issue_id"] == "RUNTIME_CRITICAL_UNKNOWN_EVIDENCE_REQUIRED"
         for issue in result["blocking_issues"]
@@ -257,6 +259,7 @@ def test_candidate_lock_rejects_downstream_substitution() -> None:
         "/build-tree", bad, state, root=REPO_ROOT, run_context=context()
     )
     assert result["stage_status"] == "blocked"
+    assert "completion_class" not in result
     assert any(
         issue["issue_id"] == "RUNTIME_CANDIDATE_DRIFT"
         for issue in result["blocking_issues"]
@@ -277,16 +280,31 @@ def test_build_tree_digest_is_computed_from_real_content() -> None:
 def test_implementation_null_or_fabricated_fidelity_cannot_pass() -> None:
     items = outputs()
     _, state = evaluate_prefix(items, 8)
-    bad = copy.deepcopy(items[8])
-    bad["canonical_content"].pop("approved_build_tree")
-    bad["implementation_tree_digest"] = "sha256:" + "a" * 64
-    result, _ = runtime.evaluate_stage(
-        "/implementation", bad, state, root=REPO_ROOT, run_context=context()
+
+    missing = copy.deepcopy(items[8])
+    missing["canonical_content"].pop("approved_build_tree")
+    result, next_state = runtime.evaluate_stage(
+        "/implementation", missing, state, root=REPO_ROOT, run_context=context()
     )
-    ids = {issue["issue_id"] for issue in result["blocking_issues"]}
     assert result["stage_status"] == "blocked"
-    assert "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN" in ids
-    assert "RUNTIME_STAGE_PREDICATE_FAILED" in ids
+    assert "completion_class" not in result
+    assert any(
+        issue["issue_id"] == "RUNTIME_STAGE_PREDICATE_FAILED"
+        for issue in result["blocking_issues"]
+    )
+    assert next_state == state
+
+    fabricated = copy.deepcopy(items[8])
+    fabricated["implementation_tree_digest"] = "sha256:" + "a" * 64
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/implementation", fabricated, state, root=REPO_ROOT, run_context=context()
+        )
+    assert any(
+        diagnostic.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        and diagnostic.path == "implementation_tree_digest"
+        for diagnostic in caught.value.diagnostics
+    )
 
 
 def test_project_gate_boolean_and_payload_cannot_pass() -> None:
@@ -296,18 +314,18 @@ def test_project_gate_boolean_and_payload_cannot_pass() -> None:
     bad["canonical_payload_valid"] = True
     bad["legacy_export_substituted"] = False
     bad["project_gate_payload"] = {"fabricated": True}
-    result, _ = runtime.evaluate_stage(
-        "/project-gate-export",
-        bad,
-        state,
-        root=REPO_ROOT,
-        run_context=context("fixture"),
-        git_provider=FixtureGitProvider(),
-    )
-    ids = {issue["issue_id"] for issue in result["blocking_issues"]}
-    assert result["stage_status"] == "blocked"
-    assert result["project_gate_export"] is None
-    assert "RUNTIME_CALLER_PROJECT_GATE_PAYLOAD_FORBIDDEN" in ids
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/project-gate-export",
+            bad,
+            state,
+            root=REPO_ROOT,
+            run_context=context("fixture"),
+            git_provider=FixtureGitProvider(),
+        )
+    codes = {diagnostic.code for diagnostic in caught.value.diagnostics}
+    assert "RUNTIME_CALLER_PROJECT_GATE_PAYLOAD_FORBIDDEN" in codes
+    assert "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN" in codes
 
 
 def test_runtime_issued_candidate_matches_run_state() -> None:
