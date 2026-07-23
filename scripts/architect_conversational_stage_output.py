@@ -25,6 +25,15 @@ RELEASE_UPLOAD_SET_PATH = Path(
 CONTRACT_ID = "ev4-architect-conversational-stage-output@1.0.0"
 BASE_SCHEMA_ID = "ev4-architect-conversational-stage-output-base@1.0.0"
 RELEASE_UPLOAD_SET_ID = "ev4-architect-conversational-stage-output-upload-set@1.0.0"
+CORE_RELEASE_PATHS = frozenset(
+    {
+        "release/EV4_PROJECT_RELEASE_PACK_v1/PROJECT_INSTRUCTIONS_FINAL.md",
+        "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CORE_CONTRACTS_BUNDLE.md",
+        "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_STAGE_PROTOCOLS_BUNDLE.md",
+        "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md",
+        "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md",
+    }
+)
 
 
 def _load(path: Path) -> Any:
@@ -203,20 +212,47 @@ def validate_release_upload_set(*, root: Path = ROOT) -> dict[str, Any]:
     if not isinstance(example_paths, list) or not example_paths:
         errors.append("release upload set requires explicit conversational example paths")
         example_paths = []
-    if not isinstance(minimum_paths, list) or len(minimum_paths) != len(set(minimum_paths)):
+    if not isinstance(minimum_paths, list):
         errors.append("release minimum upload paths must be a unique list")
         minimum_paths = []
+    elif any(not isinstance(item, str) or not item for item in minimum_paths):
+        errors.append("release minimum upload paths must contain non-empty strings")
+        minimum_paths = [
+            item for item in minimum_paths if isinstance(item, str) and item
+        ]
+    elif len(minimum_paths) != len(set(minimum_paths)):
+        errors.append("release minimum upload paths must be a unique list")
 
-    required_paths = {
+    minimum_path_set = set(minimum_paths)
+    required_non_core_paths = {
         MANIFEST_PATH.as_posix(),
         CONTRACT_PATH.as_posix(),
         BASE_SCHEMA_PATH.as_posix(),
         *example_paths,
     }
-    missing_paths = sorted(required_paths - set(minimum_paths))
-    if missing_paths:
-        errors.append(f"release minimum upload set omits required sources: {missing_paths}")
-    for item in minimum_paths:
+    missing_core_paths = sorted(CORE_RELEASE_PATHS - minimum_path_set)
+    for item in missing_core_paths:
+        errors.append(
+            f"release minimum upload set omitted required Core release source: {item}"
+        )
+
+    missing_non_core_paths = sorted(required_non_core_paths - minimum_path_set)
+    if missing_non_core_paths:
+        errors.append(
+            f"release minimum upload set omits required sources: {missing_non_core_paths}"
+        )
+
+    expected_minimum_paths = CORE_RELEASE_PATHS | required_non_core_paths
+    unknown_paths = sorted(minimum_path_set - expected_minimum_paths)
+    if unknown_paths:
+        errors.append(
+            f"release minimum upload set contains unknown replacement source: {unknown_paths}"
+        )
+
+    for item in sorted(CORE_RELEASE_PATHS):
+        if not (root / item).is_file():
+            errors.append(f"release required Core source is missing on disk: {item}")
+    for item in sorted(required_non_core_paths):
         if not (root / item).is_file():
             errors.append(f"release minimum upload source is missing: {item}")
 
@@ -274,6 +310,7 @@ def validate_release_upload_set(*, root: Path = ROOT) -> dict[str, Any]:
         "errors": sorted(set(errors)),
         "upload_set_id": upload_set.get("upload_set_id"),
         "minimum_upload_files": len(minimum_paths),
+        "core_release_files": len(CORE_RELEASE_PATHS),
         "stages_exposed": len(stage_reference),
         "stage_reference": stage_reference,
     }
