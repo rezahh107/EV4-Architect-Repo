@@ -29,10 +29,13 @@ on:
       - 'scripts/check-architect-quality-runtime.py'
       - 'scripts/architect_conversational_stage_output.py'
       - 'scripts/architect_quality_runtime.py'
+      - 'scripts/architect_stage_claim_guard.py'
+      - 'scripts/architect_runtime_payload_assembler.py'
       - 'scripts/repository_repair_handoff.py'
       - 'tests/test_architect_bootstrap_semantics.py'
       - 'tests/test_architect_conversational_stage_output.py'
       - 'tests/test_architect_conversational_stage_output_root_complete.py'
+      - 'tests/test_architect_runtime_truth_spine.py'
       - 'tests/test_architect_quality_runtime.py'
       - 'tests/test_repository_repair_recommendation_handoff.py'
       - '.github/workflows/validate-architect-bootstrap.yml'
@@ -73,6 +76,7 @@ jobs:
             tests/test_architect_quality_runtime.py \
             tests/test_architect_conversational_stage_output.py \
             tests/test_architect_conversational_stage_output_root_complete.py \
+            tests/test_architect_runtime_truth_spine.py \
             tests/test_architect_bootstrap_semantics.py \
             tests/test_repository_repair_recommendation_handoff.py
 
@@ -118,6 +122,7 @@ jobs:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -vv \
             tests/test_architect_conversational_stage_output.py \
             tests/test_architect_conversational_stage_output_root_complete.py \
+            tests/test_architect_runtime_truth_spine.py \
             2>&1 | tee architect-conversational-stage-output-tests.log
 
       - name: Upload conversational Stage Output test diagnostics
