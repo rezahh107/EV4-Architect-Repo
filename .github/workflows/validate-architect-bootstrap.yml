@@ -48,7 +48,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     env:
-      PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pycache
+      PYTHONPYCACHEPREFIX: /tmp/ev4-architect-pycache
     steps:
       - name: Checkout exact pull request head
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
