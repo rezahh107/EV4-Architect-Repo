@@ -1,0 +1,15 @@
+{
+  "run_id": "run-example-001",
+  "stage_id": "/handoff-export",
+  "stage_version": "1.0.1",
+  "check_evidence": {
+    "handoff_eligibility": {"result": "pass", "reason": "The accepted Final Audit permits handoff."},
+    "blocking_unknowns_absent": {"result": "pass", "reason": "No downstream-critical Unknown remains active."},
+    "final_audit_preserved": {"result": "pass", "reason": "The handoff preserves the accepted Final Audit."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {"handoff_package": {"selected_candidate_id": "ARCH-FAM-C", "approved_build_tree_ref": "build-tree Stage Output", "implementation_ref": "implementation Stage Output", "final_audit_ref": "final-audit Stage Output"}},
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
