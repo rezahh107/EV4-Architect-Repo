@@ -1,7 +1,7 @@
 # Project Instructions — Active Overrides
 
 Status: active  
-Version: 0.8.0  
+Version: 0.9.0  
 Applies to: current EV4 Architect Project Instructions and release-pack mirrors
 
 ## Authority
@@ -214,3 +214,17 @@ Caller-controlled success Booleans cannot replace actual validation. Preserve lo
 Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, Validation Profiles, independent regeneration, and `authorization_valid` remain optional repository-audit and deterministic-regression tooling.
 
 They do not authorize ordinary internal Stage movement and their absence is not a project-run blocker.
+
+## Conversational Stage Output Emission
+
+<!-- BEGIN ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
+After completing each Stage, produce one complete standalone Runtime-compatible Stage Output JSON artifact for that Stage.
+
+Use contract `ev4-architect-conversational-stage-output@1.0.0` and base Schema `ev4-architect-conversational-stage-output-base@1.0.0`. The JSON is model-authored evaluator input, not an evaluator-derived Stage Result.
+
+Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content. Do not author official `PASS`, `stage_status`, `quality_checks`, `next_stage`, continuation authority, or official digests.
+
+Emit one separate Stage Output artifact per Stage. A later Stage artifact must not replace or modify an earlier artifact. Until the official Runtime evaluates an artifact, any presentation label is only `stage_status: not_evaluated` with `claim_basis: model_authored_stage_output_only` and is non-authorizing.
+
+Prefer an actual UTF-8 `.json` attachment. When attachment creation is unavailable, return one exact JSON code block, provide an explicit proposed filename, and state truthfully that no attachment was created.
+<!-- END ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
