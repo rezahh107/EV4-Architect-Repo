@@ -23,6 +23,13 @@ TERMINAL_PATH = REPO_ROOT / "fixtures/conversational-run/valid/terminal/project-
 EXAMPLES_DIR = REPO_ROOT / "examples/conversational-stage-output"
 RELEASE_UPLOAD_SET_PATH = REPO_ROOT / conversational.RELEASE_UPLOAD_SET_PATH
 STAGE_RESULT_SCHEMA_PATH = REPO_ROOT / "schemas/ev4-architect-stage-result.v1.schema.json"
+EXPECTED_CORE_RELEASE_PATHS = {
+    "release/EV4_PROJECT_RELEASE_PACK_v1/PROJECT_INSTRUCTIONS_FINAL.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CORE_CONTRACTS_BUNDLE.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_STAGE_PROTOCOLS_BUNDLE.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md",
+}
 
 
 def prefinal_outputs() -> list[dict]:
@@ -78,6 +85,11 @@ def copy_release_validation_tree(tmp_path: Path) -> Path:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
     return tmp_path
+
+
+def write_upload_set(root: Path, upload_set: dict) -> None:
+    path = root / conversational.RELEASE_UPLOAD_SET_PATH
+    path.write_text(json.dumps(upload_set, indent=2) + "\n", encoding="utf-8")
 
 
 def test_contract_and_base_schema_identity_and_scope() -> None:
@@ -384,12 +396,15 @@ def test_actual_cli_exits_nonzero_for_terminal_runtime_failure(tmp_path: Path) -
 def test_release_upload_set_exposes_exact_authorities_and_all_stage_keys() -> None:
     outcome = conversational.validate_release_upload_set(root=REPO_ROOT)
     assert outcome["status"] == "valid", outcome["errors"]
+    assert conversational.CORE_RELEASE_PATHS == EXPECTED_CORE_RELEASE_PATHS
+    assert outcome["core_release_files"] == len(EXPECTED_CORE_RELEASE_PATHS)
     manifest = json.loads((REPO_ROOT / conversational.MANIFEST_PATH).read_text(encoding="utf-8"))
     assert outcome["stages_exposed"] == len(manifest["project_execution_stages"])
     upload_set = json.loads(RELEASE_UPLOAD_SET_PATH.read_text(encoding="utf-8"))
     assert upload_set["contract"]["identity"] == conversational.CONTRACT_ID
     assert upload_set["base_schema"]["identity"] == conversational.BASE_SCHEMA_ID
     assert upload_set["manifest_path"] == conversational.MANIFEST_PATH.as_posix()
+    assert EXPECTED_CORE_RELEASE_PATHS <= set(upload_set["minimum_upload_paths"])
     assert set(upload_set["example_paths"]) <= set(upload_set["minimum_upload_paths"])
     for row, exposed in zip(manifest["project_execution_stages"], outcome["stage_reference"]):
         assert exposed == {
@@ -397,6 +412,82 @@ def test_release_upload_set_exposes_exact_authorities_and_all_stage_keys() -> No
             "stage_version": row["stage_version"],
             "required_quality_checks": row["required_quality_checks"],
         }
+
+
+@pytest.mark.parametrize("core_path", sorted(EXPECTED_CORE_RELEASE_PATHS))
+def test_release_upload_set_rejects_each_omitted_core_source(
+    tmp_path: Path,
+    core_path: str,
+) -> None:
+    root = copy_release_validation_tree(tmp_path)
+    upload_set_path = root / conversational.RELEASE_UPLOAD_SET_PATH
+    upload_set = json.loads(upload_set_path.read_text(encoding="utf-8"))
+    upload_set["minimum_upload_paths"].remove(core_path)
+    write_upload_set(root, upload_set)
+
+    outcome = conversational.validate_release_upload_set(root=root)
+
+    assert outcome["status"] == "invalid"
+    assert any(
+        f"omitted required Core release source: {core_path}" in error
+        for error in outcome["errors"]
+    )
+
+
+def test_release_upload_set_rejects_duplicate_core_path(tmp_path: Path) -> None:
+    root = copy_release_validation_tree(tmp_path)
+    upload_set_path = root / conversational.RELEASE_UPLOAD_SET_PATH
+    upload_set = json.loads(upload_set_path.read_text(encoding="utf-8"))
+    core_path = sorted(EXPECTED_CORE_RELEASE_PATHS)[0]
+    upload_set["minimum_upload_paths"].append(core_path)
+    write_upload_set(root, upload_set)
+
+    outcome = conversational.validate_release_upload_set(root=root)
+
+    assert outcome["status"] == "invalid"
+    assert any("minimum upload paths must be a unique list" in error for error in outcome["errors"])
+
+
+def test_release_upload_set_rejects_unknown_core_replacement(tmp_path: Path) -> None:
+    root = copy_release_validation_tree(tmp_path)
+    upload_set_path = root / conversational.RELEASE_UPLOAD_SET_PATH
+    upload_set = json.loads(upload_set_path.read_text(encoding="utf-8"))
+    removed = sorted(EXPECTED_CORE_RELEASE_PATHS)[0]
+    replacement = (
+        "release/EV4_PROJECT_RELEASE_PACK_v1/UNKNOWN_CORE_REPLACEMENT.md"
+    )
+    upload_set["minimum_upload_paths"].remove(removed)
+    upload_set["minimum_upload_paths"].append(replacement)
+    replacement_path = root / replacement
+    replacement_path.parent.mkdir(parents=True, exist_ok=True)
+    replacement_path.write_text("Not a canonical Core release source.\n", encoding="utf-8")
+    write_upload_set(root, upload_set)
+
+    outcome = conversational.validate_release_upload_set(root=root)
+
+    assert outcome["status"] == "invalid"
+    assert any(
+        f"omitted required Core release source: {removed}" in error
+        for error in outcome["errors"]
+    )
+    assert any(
+        "unknown replacement source" in error and replacement in error
+        for error in outcome["errors"]
+    )
+
+
+def test_release_upload_set_rejects_missing_core_file_on_disk(tmp_path: Path) -> None:
+    root = copy_release_validation_tree(tmp_path)
+    missing = sorted(EXPECTED_CORE_RELEASE_PATHS)[0]
+    (root / missing).unlink()
+
+    outcome = conversational.validate_release_upload_set(root=root)
+
+    assert outcome["status"] == "invalid"
+    assert any(
+        f"required Core source is missing on disk: {missing}" in error
+        for error in outcome["errors"]
+    )
 
 
 def test_release_upload_set_detects_manifest_check_drift(tmp_path: Path) -> None:
