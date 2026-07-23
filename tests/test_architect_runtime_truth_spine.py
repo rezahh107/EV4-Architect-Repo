@@ -112,6 +112,7 @@ def test_model_authored_pass_cannot_advance_incomplete_stage(stage_index, mutate
     )
 
     assert result["stage_status"] == "blocked"
+    assert "completion_class" not in result
     assert result["next_stage"] is None
     assert next_state == state
     assert any(
@@ -151,42 +152,41 @@ def test_caller_supplied_terminal_payload_is_rejected() -> None:
         "fabricated_lineage": "CALLER-FABRICATED-LINEAGE",
     }
 
-    result, next_state = runtime.evaluate_stage(
-        "/project-gate-export",
-        terminal,
-        state,
-        root=REPO_ROOT,
-        run_context=context("fixture"),
-        git_provider=FixtureGitProvider(),
-    )
-
-    assert result["stage_status"] == "blocked"
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/project-gate-export",
+            terminal,
+            state,
+            root=REPO_ROOT,
+            run_context=context("fixture"),
+            git_provider=FixtureGitProvider(),
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_CALLER_PROJECT_GATE_PAYLOAD_FORBIDDEN"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_CALLER_PROJECT_GATE_PAYLOAD_FORBIDDEN"
+        for diagnostic in caught.value.diagnostics
     )
-    assert next_state == state
+    assert state["current_stage"] == "/project-gate-export"
 
 
 def test_fixture_context_cannot_be_overridden_by_synthetic_false() -> None:
     items, _, state = evaluate_prefix(11)
     terminal = terminal_output()
     terminal["synthetic"] = False
-    result, next_state = runtime.evaluate_stage(
-        "/project-gate-export",
-        terminal,
-        state,
-        root=REPO_ROOT,
-        run_context=context("fixture"),
-        git_provider=FixtureGitProvider(),
-    )
-    assert result["stage_status"] == "blocked"
-    assert result["project_gate_export"] is None
-    assert next_state == state
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/project-gate-export",
+            terminal,
+            state,
+            root=REPO_ROOT,
+            run_context=context("fixture"),
+            git_provider=FixtureGitProvider(),
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        and diagnostic.path == "synthetic"
+        for diagnostic in caught.value.diagnostics
     )
+    assert state["current_stage"] == "/project-gate-export"
 
 
 def test_fixture_context_would_allow_but_actual_handoff_is_false() -> None:
@@ -214,18 +214,17 @@ def test_live_context_valid_run_can_reach_allowed_handoff() -> None:
 def test_model_cannot_author_run_context_source_kind() -> None:
     item = copy.deepcopy(outputs()[0])
     item["source_kind"] = "live_conversation"
-    result, _ = runtime.evaluate_stage(
-        "/intake",
-        item,
-        runtime.initial_run_state(item["run_id"], root=REPO_ROOT),
-        root=REPO_ROOT,
-        run_context=context("fixture"),
-    )
-    assert result["stage_status"] == "blocked"
+    state = runtime.initial_run_state(item["run_id"], root=REPO_ROOT)
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/intake", item, state, root=REPO_ROOT, run_context=context("fixture")
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        and diagnostic.path == "source_kind"
+        for diagnostic in caught.value.diagnostics
     )
+    assert state["completed_stages"] == []
 
 
 def test_runtime_assembles_terminal_payload_from_actual_lineage() -> None:
@@ -276,21 +275,19 @@ def test_direct_runtime_enforces_conversational_base_schema() -> None:
     item.pop("unknown_introductions")
     item.pop("unknown_resolutions")
     item.pop("blockers")
+    state = runtime.initial_run_state(item["run_id"], root=REPO_ROOT)
 
-    result, next_state = runtime.evaluate_stage(
-        "/intake",
-        item,
-        runtime.initial_run_state(item["run_id"], root=REPO_ROOT),
-        root=REPO_ROOT,
-        run_context=context(),
-    )
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/intake", item, state, root=REPO_ROOT, run_context=context()
+        )
 
-    assert result["stage_status"] == "blocked"
     assert any(
-        issue["issue_id"] == "RUNTIME_STAGE_OUTPUT_SCHEMA_INVALID"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_STAGE_OUTPUT_SCHEMA_INVALID"
+        for diagnostic in caught.value.diagnostics
     )
-    assert next_state["current_stage"] == "/intake"
+    assert state["current_stage"] == "/intake"
+    assert state["completed_stages"] == []
 
 
 def test_malformed_prefinal_fixture_returns_structured_diagnostic(tmp_path: Path) -> None:
@@ -310,18 +307,17 @@ def test_caller_producer_mapping_is_rejected() -> None:
         "ref": "fake",
         "commit_sha": "f" * 40,
     }
-    result, _ = runtime.evaluate_stage(
-        "/intake",
-        item,
-        runtime.initial_run_state(item["run_id"], root=REPO_ROOT),
-        root=REPO_ROOT,
-        run_context=context(),
-    )
-    assert result["stage_status"] == "blocked"
+    state = runtime.initial_run_state(item["run_id"], root=REPO_ROOT)
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/intake", item, state, root=REPO_ROOT, run_context=context()
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        and diagnostic.path == "producer_provenance"
+        for diagnostic in caught.value.diagnostics
     )
+    assert state["completed_stages"] == []
 
 
 def test_subprocess_git_provider_reads_actual_checkout(monkeypatch) -> None:
