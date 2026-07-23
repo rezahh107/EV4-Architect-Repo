@@ -11,6 +11,11 @@ SCRIPTS = Path(__file__).resolve().parent
 PACKAGE_DIR = SCRIPTS / "architect_project_gate_exporter"
 PACKAGE_NAME = "_ev4_architect_project_gate_exporter"
 
+# Some legacy tests load this compatibility entrypoint under the public package
+# name. Publish the real package path so later Runtime submodule imports remain
+# deterministic and do not depend on test/import order.
+__path__ = [str(PACKAGE_DIR)]
+
 if PACKAGE_NAME not in sys.modules:
     package_spec = importlib.util.spec_from_file_location(
         PACKAGE_NAME,
