@@ -40,7 +40,7 @@ tests/test_architect_bootstrap_semantics.py
 
 ```text
 contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md
-schemas/ev4-architect-conversational-stage-output-base.v1.schema.json
+schemas/architect-conversational-stage-output-base.v1.schema.json
 scripts/architect_conversational_stage_output.py
 scripts/check-architect-conversational-stage-output.py
 examples/conversational-stage-output/**
