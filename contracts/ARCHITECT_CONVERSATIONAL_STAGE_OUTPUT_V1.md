@@ -10,30 +10,31 @@ base_schema: ev4-architect-conversational-stage-output-base@1.0.0
 
 ## Purpose
 
-After each Architect Stage, the model emits one complete standalone JSON Stage Output that can be passed directly to the existing official Architect runtime for that Stage.
+After each Architect Stage, the model emits one complete standalone JSON Stage Output that can be passed directly to the existing official Architect Runtime for that Stage.
 
-This contract does not replace `ev4-architect-stage-result@1.0.0`, the Pipeline Manifest, `evaluate_stage`, or Run State. It defines model-authored evaluator input only.
+This contract does not replace `ev4-architect-stage-result@1.0.0`, the Pipeline Manifest, `evaluate_stage`, Run State, the Stage Claim Guard, or the Runtime Payload Assembler. It defines model-authored evaluator input only.
 
 ## Authority chain
 
 ```text
-model-authored domain Stage content
-→ Runtime-compatible Stage Output
-→ current evaluator-owned Run State
-→ scripts/architect_quality_runtime.py#evaluate_stage
-→ evaluator-derived Stage Result
+model-authored Stage content and non-authorizing check claims
+→ conversational Base Schema
+→ Stage Claim Guard deterministic predicates
+→ evaluator-derived Stage Result and completion class
+→ evaluator-owned Run State
 → Manifest-defined legal successor
+→ Runtime-issued terminal Payload
+→ existing Producer Gate exporter
+→ Runtime-derived handoff
 ```
 
-The Pipeline Manifest remains the sole authority for Stage identity, version, ordinal, mandatory status, required quality checks, allowed `not_applicable` checks, evaluation mode, legal successor, and terminal identity.
+The Pipeline Manifest remains the sole authority for Stage identity, version, order, required quality-check keys, evaluation mode, legal successor, and terminal identity.
 
-The official runtime remains the sole authority for Stage status, quality-check derivation, blocking issues, continuation, Candidate lock, Unknown ledger, Build Tree and Implementation digests, fidelity, final-audit blocking, terminal validation, Stage Result, and Run State.
+The official Runtime remains the sole authority for Base-Schema enforcement, check outcomes, completion class, Stage status, blocking issues, continuation, Candidate lock, Unknown ledger, Build Tree and Implementation digests, final-audit acceptance, handoff eligibility, terminal Payload, synthetic status, producer provenance, export validation, and Stage Result.
 
 ## Direct artifact shape
 
 The artifact is the same top-level Stage Output object consumed by the Runtime. Do not add an `envelope` or `stage_output` wrapper.
-
-Common required fields:
 
 ```yaml
 required_common_fields:
@@ -46,93 +47,124 @@ required_common_fields:
   - blockers
 ```
 
-`decision_input`, `canonical_content`, `research_disposition`, `final_audit_findings`, `project_gate_payload`, and other Runtime-supported fields are conditional and Stage-specific. Do not emit meaningless placeholders.
+`decision_input`, `canonical_content`, `research_disposition`, `final_audit_findings`, and other Stage-owned fields are conditional. Do not emit meaningless placeholders.
+
+## Non-authorizing check claims
+
+Every exact Manifest-owned `check_evidence` key carries a model claim, not an official result:
+
+```yaml
+claim: what the model believes was addressed
+reason: why the model believes it was addressed
+evidence_refs: optional Stage-owned references
+limitations: optional explicit limitations
+```
+
+`result` is a deprecated legacy field. It may parse for historical compatibility, but the Runtime ignores it and records the affected keys in `runtime_context.legacy_check_results_ignored`. A model-authored `pass`, a non-empty reason, or a model-authored evidence reference never determines `quality_checks`, `stage_status`, continuation, or handoff.
+
+Every Manifest check is explicitly classified as one of:
+
+```text
+DETERMINISTIC_PREDICATE
+STRUCTURAL_COMPLETENESS
+ATTRIBUTED_REASONING_ONLY
+EXTERNAL_BOUNDARY
+```
+
+No required check is defined as “model supplied pass.”
+
+## Completion classes
+
+The Runtime derives one truthful completion basis:
+
+```yaml
+reasoning_complete:
+  meaning: required structure and deterministic consistency checks passed
+  does_not_mean: the analytical reasoning is objectively proven correct
+
+validated_pass:
+  meaning: consequential Runtime predicates or the external terminal boundary passed
+```
+
+`stage_status` remains compatible, but only the evaluator derives it. `completion_class` does not create a second evaluator or Stage inventory.
 
 ## Stage-specific content
 
-The complete Stage-owned content must be preserved. A summary cannot replace canonical Stage content.
+Complete Stage-owned content must be preserved. A summary cannot replace canonical content.
 
-- `/recommend` carries the actual selected-candidate decision input required by the Runtime.
-- `/build-tree` carries the actual canonical Build Tree content.
-- `/implementation` carries the actual canonical Implementation content and the approved Build Tree representation required by the Runtime.
-- `/final-audit` carries actual final-audit findings.
-- `/handoff-export` carries the actual handoff content required by the active Stage protocol.
-- `/project-gate-export` carries the actual canonical `project_gate_payload` required by the official terminal evaluator.
+- `/recommend` proposes a Candidate; Runtime verifies it against prior architecture and score-audit outputs and establishes the lock.
+- `/build-tree` carries the canonical Build Tree.
+- `/implementation` carries canonical Implementation content and the embedded approved Build Tree.
+- `/final-audit` carries actual findings; Runtime derives acceptance.
+- `/handoff-export` carries presentation/package content; Runtime derives eligibility.
+- `/project-gate-export` carries only a non-authoritative export request or presentation note. It must not carry `project_gate_payload`.
 
-Stage-specific semantics are defined by existing executable Runtime, Stage protocols, contracts, Schemas, and validators. This contract does not duplicate them.
+The Runtime assembles the official `ev4-architect-stage-payload@1.0.0` from evaluated Stage Outputs, derived Stage Results, Run State, and Runtime-owned `RunContext`.
+
+## Runtime Context and terminal truth
+
+`RunContext.source_kind` is created by the host Runtime and is never model-authored:
+
+```text
+live_conversation
+fixture
+example
+test_vector
+```
+
+The Runtime derives:
+
+```python
+synthetic = source_kind != "live_conversation"
+```
+
+Fixture, example, and test-vector contexts may expose `functional_eligibility.would_allow: true`, but actual `handoff_allowed` remains false. A valid live-conversation context may reach an allowed handoff after every functional gate passes.
+
+The model must not author `source_kind`, authoritative `synthetic`, producer Git provenance, terminal Payload lineage, Payload digests, export identity, functional eligibility, or handoff status.
 
 ## Unknown lifecycle
 
-Every Stage Output explicitly emits `unknown_introductions` and `unknown_resolutions`, including empty arrays when no change is proposed.
+Every Stage Output explicitly emits `unknown_introductions` and `unknown_resolutions`, including empty arrays.
 
-Unknown introduction records contain:
-
-```yaml
-unknown_id:
-statement:
-downstream_critical:
-```
-
-Runtime-supported extension fields may be added.
-
-Unknown resolution requests contain:
-
-```yaml
-unknown_id:
-resolution_type:
-note:
-evidence_ref: required when the Runtime requires it
-```
-
-An active Unknown cannot disappear through omission. Resolution uses only Runtime-supported resolution types. Downstream-critical resolution preserves the required resolvable evidence reference. Missing evidence must not be converted into an exact value. This contract does not create a second Unknown ledger.
+An active Unknown cannot disappear through omission. Downstream-critical resolution requires an evidence reference present in `RunContext.verified_evidence_refs`. A model-authored evidence reference is not verified merely because it is non-empty. This contract does not create a second Unknown ledger.
 
 ## Authority boundary
 
 Model-authored:
 
-- Stage Output;
-- structured check-evidence records;
-- complete Stage-specific content;
+- Stage-specific content;
+- non-authorizing check claims and reasons;
 - Unknown introductions;
 - explicit Unknown resolution requests;
-- non-authorizing blockers.
+- non-authorizing blockers;
+- terminal export request/presentation note.
 
 Evaluator-derived:
 
-- Stage Result;
-- `stage_status`;
-- `quality_checks`;
-- `blocking_issues`;
-- `next_stage`;
-- Run State;
-- Candidate lock state;
+- Base-Schema validity;
+- check outcomes and evaluation basis;
+- `completion_class` and `stage_status`;
+- blocking issues and continuation;
+- Run State and Candidate lock;
+- Unknown ledger;
 - Build Tree and Implementation digests;
-- continuation decision;
-- terminal validation result.
+- Final Audit acceptance and handoff eligibility;
+- Runtime-issued terminal Payload;
+- Runtime Context and synthetic status;
+- producer provenance from the actual checkout;
+- Project Gate export and final handoff.
 
-A conversational Stage Output must not author top-level authority fields. The base Schema forbids the live Runtime authority fields and the additional conversational authority aliases documented there.
+A conversational Stage Output must not author top-level authority fields. Runtime and Base Schema use the same Schema-derived forbidden set.
 
 ## Delivery behavior
 
-Preferred delivery is an actual downloadable UTF-8 `.json` file.
+Preferred delivery is an actual downloadable UTF-8 `.json` file. When attachment creation is unavailable, return one exact JSON code block, one proposed filename, and a truthful statement that no attachment was created.
 
-When the environment cannot create an attachment, return:
-
-1. one exact JSON code block;
-2. one explicit proposed filename;
-3. a truthful statement that no attachment was created.
-
-Never claim that a file was attached or saved when it was not.
-
-Recommended filename: `NN-stage-name.json`. The filename is convenience only. `run_id`, `stage_id`, and `stage_version` in file content remain authoritative.
-
-A concise human-readable explanation may accompany the JSON, but it is not Stage Output, Stage Result, or continuation authority and cannot claim official `PASS` without an evaluator-derived Stage Result.
+Recommended filename: `NN-stage-name.json`. Filename is convenience only; identity remains inside the JSON.
 
 ## Multi-Stage continuation
 
-Multiple reasoning-only Stages may continue in one response when the official Runtime permits it, but each Stage emits a separate immutable Stage Output artifact. A later artifact must not retroactively replace or modify an earlier artifact.
-
-Before evaluation, presentation may use only:
+Multiple reasoning Stages may continue when the Runtime permits it, but every Stage emits a separate immutable Stage Output. Before evaluation, presentation may use only:
 
 ```yaml
 stage_status: not_evaluated
@@ -143,14 +175,16 @@ These labels are non-authorizing.
 
 ## Normative instruction mirror
 
-The exact block between the markers below is mirrored in active Project Instructions and active release-pack Stage instructions. Tests fail on drift.
+The exact block between the markers below is mirrored in active Project Instructions and release-pack Stage instructions. Tests fail on drift.
 
 <!-- BEGIN ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
 After completing each Stage, produce one complete standalone Runtime-compatible Stage Output JSON artifact for that Stage.
 
 Use contract `ev4-architect-conversational-stage-output@1.0.0` and base Schema `ev4-architect-conversational-stage-output-base@1.0.0`. The JSON is model-authored evaluator input, not an evaluator-derived Stage Result.
 
-Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content. Do not author official `PASS`, `stage_status`, `quality_checks`, `next_stage`, continuation authority, or official digests.
+Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Each check record carries a non-authorizing `claim` and `reason`; do not author an official check result. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content.
+
+Do not author official `PASS`, `stage_status`, `quality_checks`, `completion_class`, `next_stage`, continuation authority, official digests, `RunContext`, `source_kind`, authoritative `synthetic`, producer provenance, or `project_gate_payload`. At `/project-gate-export`, request export only; the Runtime assembles the official terminal Payload from the evaluated Run.
 
 Emit one separate Stage Output artifact per Stage. A later Stage artifact must not replace or modify an earlier artifact. Until the official Runtime evaluates an artifact, any presentation label is only `stage_status: not_evaluated` with `claim_basis: model_authored_stage_output_only` and is non-authorizing.
 
@@ -161,7 +195,10 @@ Prefer an actual UTF-8 `.json` attachment. When attachment creation is unavailab
 
 ```bash
 python scripts/check-architect-conversational-stage-output.py
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_architect_conversational_stage_output.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
+  tests/test_architect_conversational_stage_output.py \
+  tests/test_architect_conversational_stage_output_root_complete.py \
+  tests/test_architect_runtime_truth_spine.py
 ```
 
-Base-Schema success proves common structure only. It does not prove Stage pass, continuation, fidelity, terminal success, or production readiness.
+Base-Schema success proves common structure only. `reasoning_complete` proves bounded Runtime completeness and consistency only; it does not prove objective analytical correctness, downstream acceptance, or production readiness.
