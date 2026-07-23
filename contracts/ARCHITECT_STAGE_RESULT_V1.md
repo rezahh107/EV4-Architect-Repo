@@ -34,6 +34,8 @@ A serialized Stage Result remains readable as a summary, resume hint, compatibil
 
 ## User-facing Stage claim truth
 
+A Stage heading is not a Stage Result.
+
 Without a valid derived Stage Result, report only:
 
 ```yaml
