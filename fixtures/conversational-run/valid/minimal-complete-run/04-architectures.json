@@ -3,9 +3,9 @@
   "stage_id": "/architectures",
   "stage_version": "1.1.0",
   "check_evidence": {
-    "architecture_coverage_complete": {"result": "pass", "reason": "Two viable architecture families cover the required roles."},
-    "recommendation_not_made": {"result": "pass", "reason": "No winner is selected in this Stage."},
-    "unknowns_propagated": {"result": "pass", "reason": "No active Unknown is omitted or resolved."}
+    "architecture_coverage_complete": {"claim": "The candidate set covers the bounded roles.", "reason": "Two distinct architecture families identify their explicit coverage."},
+    "recommendation_not_made": {"claim": "No winner is selected in this Stage.", "reason": "The Stage contains candidates but no selected Candidate."},
+    "unknowns_propagated": {"claim": "No active Unknown is silently converted or removed.", "reason": "The Stage introduces no exact value from missing evidence."}
   },
   "canonical_content": {
     "candidates": [
