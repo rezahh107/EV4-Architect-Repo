@@ -117,7 +117,7 @@ jobs:
             tests/test_architect_conversational_stage_output.py 2>&1 | tee architect-conversational-stage-output-tests.log
 
       - name: Upload conversational Stage Output test diagnostics
-        if: always()
+        if: always() && steps.conversational_stage_output_tests.outcome != 'skipped'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: architect-conversational-stage-output-tests-${{ github.event.pull_request.head.sha }}
