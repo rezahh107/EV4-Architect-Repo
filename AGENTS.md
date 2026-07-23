@@ -220,3 +220,30 @@ Do not claim repository-wide, chat-runtime, downstream, browser, Elementor, or p
 ## Evidence and Reporting
 
 Use explicit states: `observed`, `implemented`, `validated`, `inferred`, `proposed`, `unverified`, and `insufficient_evidence`. Technical identifiers, paths, Schema IDs, and diagnostics remain in English.
+
+## Temporary Shared UX/UI Policy Adapter
+
+Use `policies/EV4_TEMP_CROSS_REPO_UX_UI_STANDARDS_POLICY_r002.md` only as a supplemental policy below repository authority.
+
+```yaml
+policy_id: EV4-TEMP-CROSS-REPO-UX-UI-STANDARDS-POLICY-r002
+revision: r002
+filename: EV4_TEMP_CROSS_REPO_UX_UI_STANDARDS_POLICY_r002.md
+sha256: f09b6978e10833c1ab3c3e35a9128db894684c5ed9cd876fa87699016b6def95
+repository_role: architect
+local_consumption_scope: decomposition, candidate generation, scoring, recommendation, approved-tree preparation, and final audit
+role_must:
+  - identify materially applicable shared rules
+  - express architecture intent and constraints
+  - transfer runtime-only proof as downstream obligations
+  - preserve semantic, source-order, responsive and content-resilience intent
+role_must_not:
+  - claim constructability
+  - claim runtime validation
+  - invent exact target-project controls
+  - promote heuristics into hard gates
+```
+
+Keep nonmaterial routing internal. Represent material failures, exceptions, unresolved requirements, evidence gaps, and downstream obligations through existing repository-supported fields or a concise visible status when continuation or owner action is affected. Do not add unsupported fields or hidden-storage claims.
+
+`r001` remains an immutable historical revision. A filename, ID, revision, byte, or digest mismatch is `TEMP_UX_UI_POLICY_IDENTITY_MISMATCH`. This adapter does not create Kernel adoption, a new Stage, or a parallel approval path.
