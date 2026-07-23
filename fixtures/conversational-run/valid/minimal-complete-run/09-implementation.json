@@ -4,7 +4,7 @@
   "stage_version": "1.0.1",
   "check_evidence": {
     "selected_candidate_preserved": {"claim": "The Implementation preserves ARCH-FAM-C.", "reason": "The decision input identifies the Runtime-locked Candidate."},
-    "canonical_implementation_present": {"claim": "Structured Implementation content is present.", "reason": "The Stage includes the approved tree, element mapping, and class intent."},
+    "canonical_implementation_present": {"claim": "Structured Implementation content is present.", "reason": "The Stage includes the approved tree, element mapping, class intent, and explicit project intent decisions."},
     "approved_build_tree_preserved": {"claim": "The prior approved Build Tree is embedded.", "reason": "Runtime can digest and compare the embedded structure against the prior Build Tree."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
@@ -25,7 +25,43 @@
       {"node_id": "node-content", "element": "text_widget"},
       {"node_id": "node-connector", "element": "svg_widget"}
     ],
-    "class_intent": ["section-root", "section-content", "section-connector"]
+    "class_intent": ["section-root", "section-content", "section-connector"],
+    "class_application_map": [
+      {"class_name": "section-root", "target_node_ids": ["node-root"], "scope": "section"},
+      {"class_name": "section-content", "target_node_ids": ["node-content"], "scope": "widget"},
+      {"class_name": "section-connector", "target_node_ids": ["node-connector"], "scope": "widget"}
+    ],
+    "asset_intent": {
+      "decision": "none_required",
+      "asset_requirements": [],
+      "reason": "The approved implementation uses editable text and an inline SVG widget; no external project asset is required."
+    },
+    "scoped_css_intent": {
+      "decision": "not_required",
+      "css_need_map": [],
+      "reason": "The implementation is expressible through the selected native elements and class application map."
+    },
+    "dynamic_loop_intent": {
+      "status": "not_applicable",
+      "reason": "The approved structure contains no repeated data-driven content."
+    },
+    "responsive_risk_seeds": [
+      {
+        "risk_id": "responsive-connector-scale",
+        "risk_type": "connector_behavior_not_proven",
+        "state": "proposed",
+        "description": "The connector decoration must be validated across downstream responsive breakpoints.",
+        "downstream_owner": "responsive"
+      }
+    ],
+    "media_decision": {
+      "selected_option": "editable text with inline SVG decoration",
+      "rejected_options": ["flattened screenshot asset", "invented external media"]
+    },
+    "styling_decision": {
+      "selected_option": "native controls with explicit class application and no custom CSS",
+      "rejected_options": ["global CSS", "CSS-created meaningful content"]
+    }
   },
   "unknown_introductions": [],
   "unknown_resolutions": [],
