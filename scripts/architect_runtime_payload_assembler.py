@@ -8,8 +8,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 from typing import Any
 
+from architect_build_tree_validation import validate_canonical_build_tree
+from architect_payload_derivation_validation import (
+    validate_payload_derivation_authority,
+    validate_payload_derivation_rules,
+)
 from architect_runtime_errors import PayloadDerivationError, RuntimeDiagnostic
 
 POLICY_CONSTANT = "POLICY_CONSTANT"
@@ -47,24 +53,25 @@ FORBIDDEN_WORK = [
 ]
 VALIDATION_RULES = [f"A-R{index:02d}" for index in range(1, 13)]
 
-PAYLOAD_DERIVATION_RULES: dict[str, str] = {
+REQUIRED_PAYLOAD_DERIVATION_RULES: dict[str, str] = {
     "schema_id": POLICY_CONSTANT,
     "schema_version": POLICY_CONSTANT,
     "owner_repository": POLICY_CONSTANT,
     "payload_status": RUNTIME_DERIVED,
     "synthetic": RUNTIME_DERIVED,
     "payload_identity": RUNTIME_DERIVED,
+    "payload_identity.producer": POLICY_CONSTANT,
+    "payload_identity.stage": POLICY_CONSTANT,
+    "payload_identity.contract_purpose": POLICY_CONSTANT,
+    "payload_identity.created_by": POLICY_CONSTANT,
+    "payload_identity.synthetic_fixture_notice": RUNTIME_DERIVED,
     "source_stage_lineage": RUNTIME_DERIVED,
+    "source_stage_lineage[].stage": RUNTIME_DERIVED,
+    "source_stage_lineage[].payload_name": RUNTIME_DERIVED,
+    "source_stage_lineage[].schema_id": POLICY_CONSTANT,
+    "source_stage_lineage[].state": RUNTIME_DERIVED,
+    "source_stage_lineage[].evidence_refs": RUNTIME_DERIVED,
     "architecture_identity": RUNTIME_DERIVED,
-    "approved_structure_model": STAGE_DERIVED,
-    "architect_intent": STAGE_DERIVED,
-    "kernel_decision_records": STAGE_DERIVED,
-    "evidence_register": RUNTIME_DERIVED,
-    "unresolved_evidence": RUNTIME_DERIVED,
-    "forbidden_work": POLICY_CONSTANT,
-    "boundary_assertions": POLICY_CONSTANT,
-    "validation_contract": POLICY_CONSTANT,
-    "extension_records": RUNTIME_DERIVED,
     "architecture_identity.selected_candidate_id": RUNTIME_DERIVED,
     "architecture_identity.selected_candidate_locked": RUNTIME_DERIVED,
     "architecture_identity.architecture_family": STAGE_DERIVED,
@@ -83,6 +90,7 @@ PAYLOAD_DERIVATION_RULES: dict[str, str] = {
     "architecture_identity.semantic_lock.requires_locked_decision_refs": POLICY_CONSTANT,
     "architecture_identity.semantic_lock.requires_approved_structure_ref": POLICY_CONSTANT,
     "architecture_identity.semantic_lock.requires_source_evidence_refs": POLICY_CONSTANT,
+    "approved_structure_model": STAGE_DERIVED,
     "approved_structure_model.structure_schema_version": POLICY_CONSTANT,
     "approved_structure_model.root_node_id": STAGE_DERIVED,
     "approved_structure_model.structure_nodes": STAGE_DERIVED,
@@ -94,6 +102,7 @@ PAYLOAD_DERIVATION_RULES: dict[str, str] = {
     "approved_structure_model.structure_nodes[].evidence_refs": RUNTIME_DERIVED,
     "approved_structure_model.structure_nodes[].intent_refs": RUNTIME_DERIVED,
     "approved_structure_model.structure_nodes[].children": STAGE_DERIVED,
+    "architect_intent": STAGE_DERIVED,
     "architect_intent.normal_flow_intent": RUNTIME_DERIVED,
     "architect_intent.normal_flow_intent.intent_id": POLICY_CONSTANT,
     "architect_intent.normal_flow_intent.state": RUNTIME_DERIVED,
@@ -149,13 +158,59 @@ PAYLOAD_DERIVATION_RULES: dict[str, str] = {
     "architect_intent.dynamic_loop_intent.status": STAGE_DERIVED,
     "architect_intent.dynamic_loop_intent.evidence_refs": RUNTIME_DERIVED,
     "architect_intent.dynamic_loop_intent.reason": STAGE_DERIVED,
+    "kernel_decision_records": STAGE_DERIVED,
     "kernel_decision_records[].decision_family": STAGE_DERIVED,
     "kernel_decision_records[].decision_card_ref": POLICY_CONSTANT,
     "kernel_decision_records[].selected_option": STAGE_DERIVED,
     "kernel_decision_records[].rejected_options": STAGE_DERIVED,
     "kernel_decision_records[].evidence_refs": RUNTIME_DERIVED,
     "kernel_decision_records[].evidence_state": RUNTIME_DERIVED,
+    "evidence_register": RUNTIME_DERIVED,
+    "evidence_register[].evidence_id": RUNTIME_DERIVED,
+    "evidence_register[].state": RUNTIME_DERIVED,
+    "evidence_register[].source_ref": RUNTIME_DERIVED,
+    "evidence_register[].source_ref.source_type": RUNTIME_DERIVED,
+    "evidence_register[].source_ref.reference": RUNTIME_DERIVED,
+    "evidence_register[].claim": RUNTIME_DERIVED,
+    "evidence_register[].fact_class": RUNTIME_DERIVED,
+    "unresolved_evidence": RUNTIME_DERIVED,
+    "unresolved_evidence[].unresolved_id": RUNTIME_DERIVED,
+    "unresolved_evidence[].state": RUNTIME_DERIVED,
+    "unresolved_evidence[].owner": RUNTIME_DERIVED,
+    "unresolved_evidence[].reason": RUNTIME_DERIVED,
+    "unresolved_evidence[].blocks": RUNTIME_DERIVED,
+    "unresolved_evidence[].required_before": RUNTIME_DERIVED,
+    "unresolved_evidence[].evidence_refs": RUNTIME_DERIVED,
+    "forbidden_work": POLICY_CONSTANT,
+    "boundary_assertions": POLICY_CONSTANT,
+    "boundary_assertions.constructability_proven": POLICY_CONSTANT,
+    "boundary_assertions.ce_approved": POLICY_CONSTANT,
+    "boundary_assertions.ce_review_required": POLICY_CONSTANT,
+    "boundary_assertions.builder_ready": POLICY_CONSTANT,
+    "boundary_assertions.builder_executable": POLICY_CONSTANT,
+    "boundary_assertions.builder_runtime_intake_authorized": POLICY_CONSTANT,
+    "boundary_assertions.responsive_complete": POLICY_CONSTANT,
+    "boundary_assertions.production_ready": POLICY_CONSTANT,
+    "boundary_assertions.live_elementor_validated": POLICY_CONSTANT,
+    "boundary_assertions.real_export_json_validated": POLICY_CONSTANT,
+    "boundary_assertions.exact_pixel_match_validated": POLICY_CONSTANT,
+    "boundary_assertions.project_gate_may_invent_architect_facts": POLICY_CONSTANT,
+    "validation_contract": POLICY_CONSTANT,
+    "validation_contract.schema_validation_required": POLICY_CONSTANT,
+    "validation_contract.semantic_validation_required": POLICY_CONSTANT,
+    "validation_contract.additional_properties_allowed_in_core": POLICY_CONSTANT,
+    "validation_contract.rules": POLICY_CONSTANT,
+    "extension_records": RUNTIME_DERIVED,
+    "extension_records[].extension_id": POLICY_CONSTANT,
+    "extension_records[].owner": POLICY_CONSTANT,
+    "extension_records[].evidence_state": RUNTIME_DERIVED,
+    "extension_records[].evidence_refs": RUNTIME_DERIVED,
+    "extension_records[].allowed_consumer": POLICY_CONSTANT,
+    "extension_records[].cannot_override_core_fields": POLICY_CONSTANT,
+    "extension_records[].downstream_readiness_claims_allowed": POLICY_CONSTANT,
+    "extension_records[].data": RUNTIME_DERIVED,
 }
+PAYLOAD_DERIVATION_RULES = REQUIRED_PAYLOAD_DERIVATION_RULES
 
 
 def _diagnostic(
@@ -177,6 +232,25 @@ def _fail(
 ) -> None:
     raise PayloadDerivationError(
         _diagnostic(code, message, path=path, stage_id=stage_id)
+    )
+
+
+def validate_derivation_authority(root: Path) -> frozenset[str]:
+    return validate_payload_derivation_authority(
+        root,
+        REQUIRED_PAYLOAD_DERIVATION_RULES,
+        DERIVATION_KINDS,
+    )
+
+
+def validate_derivation_schema(
+    schema: dict[str, Any],
+    rules: dict[str, str] | None = None,
+) -> frozenset[str]:
+    return validate_payload_derivation_rules(
+        schema,
+        rules or REQUIRED_PAYLOAD_DERIVATION_RULES,
+        DERIVATION_KINDS,
     )
 
 
@@ -345,125 +419,27 @@ def _architecture(state: dict[str, Any]) -> tuple[str, str, list[str]]:
 
 
 def _structure(state: dict[str, Any]) -> dict[str, Any]:
-    tree = _content(state, "/build-tree")
-    root = tree.get("root")
-    nodes = tree.get("nodes")
-    if not isinstance(root, str) or not isinstance(nodes, list) or not nodes:
-        _fail(
-            "PAYLOAD_BUILD_TREE_REQUIRED",
-            "A canonical Build Tree is required",
-            stage_id="/build-tree",
-        )
-    node_map: dict[str, dict[str, Any]] = {}
-    for node in nodes:
-        if not isinstance(node, dict):
-            _fail(
-                "PAYLOAD_BUILD_TREE_NODE_INVALID",
-                "Build Tree nodes must be objects",
-                stage_id="/build-tree",
-            )
-        node_id = node.get("id")
-        if not isinstance(node_id, str) or not node_id.strip() or node_id in node_map:
-            _fail(
-                "PAYLOAD_BUILD_TREE_NODE_ID_REQUIRED",
-                "Build Tree node identities must be unique non-empty strings",
-                stage_id="/build-tree",
-            )
-        node_map[node_id] = node
-    if root not in node_map:
-        _fail(
-            "PAYLOAD_BUILD_TREE_ROOT_INVALID",
-            "Build Tree root must identify one node",
-        )
-
-    parent_by_child: dict[str, str] = {}
-    for parent, node in node_map.items():
-        children = node.get("children")
-        if (
-            not isinstance(children, list)
-            or any(not isinstance(item, str) for item in children)
-            or len(children) != len(set(children))
-        ):
-            _fail(
-                "PAYLOAD_BUILD_TREE_CHILDREN_INVALID",
-                "Build Tree children must be unique string identities",
-                path=parent,
-            )
-        for child in children:
-            if child not in node_map:
-                _fail(
-                    "PAYLOAD_BUILD_TREE_CHILD_UNKNOWN",
-                    "Build Tree child must identify an existing node",
-                    path=child,
-                )
-            if child in parent_by_child:
-                _fail(
-                    "PAYLOAD_BUILD_TREE_MULTIPLE_PARENTS",
-                    "Build Tree node cannot have multiple parents",
-                    path=child,
-                )
-            parent_by_child[child] = parent
-
-    def hierarchy_path(node_id: str) -> list[str]:
-        path: list[str] = []
-        current = node_id
-        seen: set[str] = set()
-        while True:
-            if current in seen:
-                _fail(
-                    "PAYLOAD_BUILD_TREE_CYCLE",
-                    "Build Tree hierarchy contains a cycle",
-                    path=node_id,
-                )
-            seen.add(current)
-            path.append(current)
-            if current == root:
-                return list(reversed(path))
-            parent = parent_by_child.get(current)
-            if parent is None:
-                _fail(
-                    "PAYLOAD_BUILD_TREE_DISCONNECTED",
-                    "Every non-root node must connect to the root",
-                    path=node_id,
-                )
-            current = parent
-
-    kind_by_role = {
-        "section_root": "section_root",
-        "normal_flow_group": "structural_container",
-        "editable_content": "content_group",
-        "contained_decoration_layer": "decoration_layer",
-    }
+    canonical = validate_canonical_build_tree(
+        _content(state, "/build-tree"),
+        stage_id="/build-tree",
+    )
     converted: list[dict[str, Any]] = []
-    for node_id, node in node_map.items():
-        role = node.get("role")
-        if not isinstance(role, str) or not role.strip():
-            _fail(
-                "PAYLOAD_BUILD_TREE_ROLE_REQUIRED",
-                "Build Tree node role is required",
-                path=node_id,
-            )
-        if role not in kind_by_role:
-            _fail(
-                "PAYLOAD_BUILD_TREE_ROLE_UNCLASSIFIED",
-                "Build Tree role has no deterministic node-kind mapping",
-                path=node_id,
-            )
+    for node_id, node in canonical.node_by_id.items():
         converted.append(
             {
                 "node_id": node_id,
-                "parent_node_id": parent_by_child.get(node_id),
-                "node_kind": kind_by_role[role],
-                "role": role,
-                "hierarchy_path": hierarchy_path(node_id),
+                "parent_node_id": canonical.parent_by_child.get(node_id),
+                "node_kind": canonical.node_kind_by_id[node_id],
+                "role": node["role"],
+                "hierarchy_path": list(canonical.hierarchy_paths[node_id]),
                 "evidence_refs": [_evidence_id("/build-tree")],
                 "intent_refs": [],
-                "children": node["children"],
+                "children": list(node["children"]),
             }
         )
     return {
         "structure_schema_version": "architect-structure-model.v1",
-        "root_node_id": root,
+        "root_node_id": canonical.root_id,
         "structure_nodes": converted,
     }
 
