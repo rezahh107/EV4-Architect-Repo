@@ -1,0 +1,19 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/final-audit",
+  "stage_version": "1.0.1",
+  "check_evidence": {
+    "final_audit_acceptance": {"result": "pass", "reason": "No blocker or high-severity architecture finding remains."},
+    "candidate_lock_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
+    "implementation_fidelity_confirmed": {"result": "pass", "reason": "The Implementation preserves the approved Build Tree."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {
+    "audit_scope": ["candidate_lock", "build_tree_fidelity", "implementation_fidelity", "handoff_safety"],
+    "accepted": true
+  },
+  "final_audit_findings": [],
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
