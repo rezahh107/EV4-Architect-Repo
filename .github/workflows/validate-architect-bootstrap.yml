@@ -10,21 +10,28 @@ on:
       - '02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md'
       - 'contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md'
       - 'contracts/ARCHITECT_STAGE_RESULT_V1.md'
+      - 'contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md'
       - 'contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md'
       - 'diagnostics/LLM_DEBUG_TRACE_CONTRACT.md'
+      - 'examples/conversational-stage-output/**'
       - 'fixtures/architect-quality-runtime/**'
+      - 'fixtures/conversational-run/**'
       - 'fixtures/repository-repair-recommendation-handoff/**'
       - 'manifests/architect-conversation-bootstrap.v1.json'
       - 'manifests/architect-pipeline-manifest.v1.json'
       - 'schemas/architect-conversation-bootstrap.v1.schema.json'
+      - 'schemas/ev4-architect-conversational-stage-output-base.v1.schema.json'
       - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
       - 'schemas/ev4-architect-stage-result.v1.schema.json'
       - 'release/EV4_PROJECT_RELEASE_PACK_v1/**'
       - 'scripts/check-architect-bootstrap.py'
+      - 'scripts/check-architect-conversational-stage-output.py'
       - 'scripts/check-architect-quality-runtime.py'
+      - 'scripts/architect_conversational_stage_output.py'
       - 'scripts/architect_quality_runtime.py'
       - 'scripts/repository_repair_handoff.py'
       - 'tests/test_architect_bootstrap_semantics.py'
+      - 'tests/test_architect_conversational_stage_output.py'
       - 'tests/test_architect_quality_runtime.py'
       - 'tests/test_repository_repair_recommendation_handoff.py'
       - '.github/workflows/validate-architect-bootstrap.yml'
@@ -57,15 +64,21 @@ jobs:
         run: |
           python -m py_compile \
             scripts/architect_quality_runtime.py \
+            scripts/architect_conversational_stage_output.py \
             scripts/check-architect-quality-runtime.py \
+            scripts/check-architect-conversational-stage-output.py \
             scripts/check-architect-bootstrap.py \
             scripts/repository_repair_handoff.py \
             tests/test_architect_quality_runtime.py \
+            tests/test_architect_conversational_stage_output.py \
             tests/test_architect_bootstrap_semantics.py \
             tests/test_repository_repair_recommendation_handoff.py
 
       - name: Validate quality-first full pipeline regression
         run: python scripts/check-architect-quality-runtime.py
+
+      - name: Validate conversational Stage Output examples and fixtures
+        run: python scripts/check-architect-conversational-stage-output.py
 
       - name: Validate Architect bootstrap semantics
         id: bootstrap_semantics
@@ -88,10 +101,11 @@ jobs:
         if: steps.bootstrap_semantics.outcome != 'success'
         run: exit 1
 
-      - name: Run quality runtime and bootstrap mutation tests
+      - name: Run quality runtime, conversational output, and bootstrap mutation tests
         run: |
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
             tests/test_architect_quality_runtime.py \
+            tests/test_architect_conversational_stage_output.py \
             tests/test_architect_bootstrap_semantics.py
 
       - name: Run repository repair handoff tests
