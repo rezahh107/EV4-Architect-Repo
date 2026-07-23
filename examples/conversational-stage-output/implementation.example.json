@@ -4,13 +4,24 @@
   "stage_version": "1.0.1",
   "check_evidence": {
     "selected_candidate_preserved": {"claim": "The Implementation preserves ARCH-FAM-C.", "reason": "The decision input identifies the locked Candidate."},
-    "canonical_implementation_present": {"claim": "Structured Implementation content is present.", "reason": "The Stage contains the approved tree and element mapping."},
+    "canonical_implementation_present": {"claim": "Structured Implementation content is present.", "reason": "The Stage contains the approved tree, element mapping, class intent, and explicit project decisions."},
     "approved_build_tree_preserved": {"claim": "The approved Build Tree is embedded.", "reason": "Runtime can compare the embedded tree with the prior canonical tree."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
   "canonical_content": {
     "approved_build_tree": {"candidate_id": "ARCH-FAM-C", "root": "node-root", "nodes": [{"id": "node-root", "role": "section_root", "children": ["node-content"]}, {"id": "node-content", "role": "editable_content", "children": []}]},
-    "element_mapping": [{"node_id": "node-root", "element": "container"}, {"node_id": "node-content", "element": "text_widget"}]
+    "element_mapping": [{"node_id": "node-root", "element": "container"}, {"node_id": "node-content", "element": "text_widget"}],
+    "class_intent": ["section-root", "section-content"],
+    "class_application_map": [
+      {"class_name": "section-root", "target_node_ids": ["node-root"], "scope": "section"},
+      {"class_name": "section-content", "target_node_ids": ["node-content"], "scope": "widget"}
+    ],
+    "asset_intent": {"decision": "none_required", "asset_requirements": [], "reason": "No external asset is required for this editable-content example."},
+    "scoped_css_intent": {"decision": "not_required", "css_need_map": [], "reason": "Native controls and the explicit class map are sufficient."},
+    "dynamic_loop_intent": {"status": "not_applicable", "reason": "The example contains no repeated dynamic content."},
+    "responsive_risk_seeds": [{"risk_id": "responsive-example-content", "risk_type": "content_wrapping_not_proven", "state": "proposed", "description": "Text wrapping remains for downstream responsive validation.", "downstream_owner": "responsive"}],
+    "media_decision": {"selected_option": "editable text only", "rejected_options": ["flattened screenshot"]},
+    "styling_decision": {"selected_option": "native controls with explicit classes", "rejected_options": ["global CSS"]}
   },
   "unknown_introductions": [],
   "unknown_resolutions": [],
