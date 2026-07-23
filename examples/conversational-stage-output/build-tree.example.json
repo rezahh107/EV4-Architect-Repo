@@ -3,9 +3,9 @@
   "stage_id": "/build-tree",
   "stage_version": "1.0.0",
   "check_evidence": {
-    "selected_candidate_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
-    "canonical_build_tree_present": {"result": "pass", "reason": "The complete structured Build Tree is present."},
-    "architecture_drift_absent": {"result": "pass", "reason": "No redesign occurs."}
+    "selected_candidate_preserved": {"claim": "The Build Tree preserves ARCH-FAM-C.", "reason": "The Stage content and decision input identify the locked Candidate."},
+    "canonical_build_tree_present": {"claim": "A complete structured Build Tree is present.", "reason": "The tree has a root and structured nodes."},
+    "architecture_drift_absent": {"claim": "No redesign is introduced.", "reason": "The Stage represents the locked architecture family."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
   "canonical_content": {"candidate_id": "ARCH-FAM-C", "root": "node-root", "nodes": [{"id": "node-root", "role": "section_root", "children": ["node-content"]}, {"id": "node-content", "role": "editable_content", "children": []}]},
