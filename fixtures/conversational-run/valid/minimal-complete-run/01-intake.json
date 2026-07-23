@@ -1,0 +1,17 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/intake",
+  "stage_version": "1.0.0",
+  "check_evidence": {
+    "required_input_captured": {"result": "pass", "reason": "A bounded section description and constraints are captured."},
+    "architecture_not_selected": {"result": "pass", "reason": "No architecture is selected during intake."},
+    "exact_values_not_invented": {"result": "pass", "reason": "Unprovided exact values remain unspecified."}
+  },
+  "canonical_content": {
+    "input_basis": {"section_description": "A content section with one normal-flow group and a contained decorative connector."},
+    "constraints": ["meaningful content remains editable", "primary content remains in normal flow"]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
