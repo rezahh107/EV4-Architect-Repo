@@ -209,15 +209,16 @@ def test_unknown_resolution_requires_explicit_note() -> None:
             "note": "",
         }
     ]
-    result, _ = runtime.evaluate_stage(
-        "/score-evidence", bad, state, root=REPO_ROOT, run_context=context()
-    )
-    assert result["stage_status"] == "blocked"
-    assert "completion_class" not in result
+    with pytest.raises(runtime.StageOutputValidationError) as caught:
+        runtime.evaluate_stage(
+            "/score-evidence", bad, state, root=REPO_ROOT, run_context=context()
+        )
     assert any(
-        issue["issue_id"] == "RUNTIME_UNKNOWN_RESOLUTION_INVALID"
-        for issue in result["blocking_issues"]
+        diagnostic.code == "RUNTIME_STAGE_OUTPUT_SCHEMA_INVALID"
+        and diagnostic.path == "unknown_resolutions.0.note"
+        for diagnostic in caught.value.diagnostics
     )
+    assert state["current_stage"] == "/score-evidence"
 
 
 def test_downstream_critical_unknown_rejects_arbitrary_evidence() -> None:
