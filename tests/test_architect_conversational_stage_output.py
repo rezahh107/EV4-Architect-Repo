@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,8 @@ import architect_quality_runtime as runtime
 PREFINAL_DIR = REPO_ROOT / "fixtures/conversational-run/valid/minimal-complete-run"
 TERMINAL_PATH = REPO_ROOT / "fixtures/conversational-run/valid/terminal/project-gate-export.json"
 EXAMPLES_DIR = REPO_ROOT / "examples/conversational-stage-output"
+RELEASE_UPLOAD_SET_PATH = REPO_ROOT / conversational.RELEASE_UPLOAD_SET_PATH
+STAGE_RESULT_SCHEMA_PATH = REPO_ROOT / "schemas/ev4-architect-stage-result.v1.schema.json"
 
 
 def prefinal_outputs() -> list[dict]:
@@ -56,11 +59,32 @@ def evaluate_prefix(items: list[dict], count: int):
     return results, state
 
 
+def write_terminal(tmp_path: Path, value: dict, name: str = "terminal.json") -> Path:
+    path = tmp_path / name
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def copy_release_validation_tree(tmp_path: Path) -> Path:
+    upload_set = json.loads(RELEASE_UPLOAD_SET_PATH.read_text(encoding="utf-8"))
+    paths = {
+        *upload_set["minimum_upload_paths"],
+        conversational.RELEASE_UPLOAD_SET_PATH.as_posix(),
+        "schemas/ev4-architect-stage-result.v1.schema.json",
+    }
+    for relative in paths:
+        source = REPO_ROOT / relative
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    return tmp_path
+
+
 def test_contract_and_base_schema_identity_and_scope() -> None:
     _, schema = conversational.load_authority(REPO_ROOT)
     assert conversational.CONTRACT_ID == "ev4-architect-conversational-stage-output@1.0.0"
     assert schema["$id"] == "ev4-architect-conversational-stage-output-base@1.0.0"
-    assert "forbidden_authority_fields" not in json.dumps(schema)
+    assert set(schema["$defs"]["caller_authority_field"]["enum"]) == runtime.CALLER_AUTHORITY_FIELDS
     sample = copy.deepcopy(prefinal_outputs()[0])
     sample["stage_specific_extension"] = {"allowed": True}
     assert conversational.validate_base_structure(sample, root=REPO_ROOT) == []
@@ -75,6 +99,24 @@ def test_base_schema_rejects_missing_type_and_caller_authority() -> None:
     assert any("run_id" in error for error in errors)
     assert any("unknown_introductions" in error for error in errors)
     assert any("not valid" in error or "should not" in error or "must not" in error for error in errors)
+
+
+def test_stage_result_authority_classification_is_complete() -> None:
+    schema = json.loads(STAGE_RESULT_SCHEMA_PATH.read_text(encoding="utf-8"))
+    properties = set(schema["properties"])
+    assert runtime.STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS <= properties
+    assert properties - runtime.STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS <= runtime.CALLER_AUTHORITY_FIELDS
+    runtime._validate_caller_authority_classification(schema)
+
+
+def test_new_stage_result_property_requires_classification(tmp_path: Path) -> None:
+    root = copy_release_validation_tree(tmp_path)
+    schema_path = root / "schemas/ev4-architect-stage-result.v1.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    schema["properties"]["new_evaluator_claim"] = {"type": "boolean"}
+    schema_path.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="require evaluator-owned or shared classification"):
+        conversational.load_authority(root)
 
 
 def test_every_example_and_fixture_is_manifest_consistent() -> None:
@@ -110,6 +152,15 @@ def test_terminal_fixture_passes_official_evaluator_and_exporter() -> None:
     assert terminal["legacy_export_substituted"] is False
     assert terminal["source_payload_digest"].startswith("sha256:")
     assert terminal["export_digest"].startswith("sha256:")
+
+
+def test_repository_vectors_require_full_terminal_runtime_validation() -> None:
+    outcome = conversational.validate_repository_vectors(root=REPO_ROOT)
+    assert outcome["status"] == "valid", outcome["errors"]
+    assert outcome["terminal_runtime_validated"] is True
+    assert outcome["release_upload_set_validated"] is True
+    assert "terminal_structure_checked" not in outcome
+    assert outcome["stages_visited"][-1] == "/project-gate-export"
 
 
 def test_instruction_mirrors_use_one_exact_normative_block() -> None:
@@ -167,7 +218,7 @@ def test_missing_unknown_and_invalid_checks_fail_closed() -> None:
     assert conversational.validate_base_structure(invalid, root=REPO_ROOT)
 
 
-def test_forbidden_not_applicable_and_caller_authority_are_rejected() -> None:
+def test_forbidden_not_applicable_is_rejected() -> None:
     item = copy.deepcopy(prefinal_outputs()[0])
     item["check_evidence"]["required_input_captured"]["result"] = "not_applicable"
     result, _ = runtime.evaluate_stage(
@@ -178,16 +229,22 @@ def test_forbidden_not_applicable_and_caller_authority_are_rejected() -> None:
     )
     assert any(issue["issue_id"] == "RUNTIME_NOT_APPLICABLE_FORBIDDEN" for issue in result["blocking_issues"])
 
-    authority = copy.deepcopy(prefinal_outputs()[0])
-    authority["next_stage"] = "/research"
-    assert conversational.validate_base_structure(authority, root=REPO_ROOT)
+
+@pytest.mark.parametrize("field", sorted(runtime.CALLER_AUTHORITY_FIELDS))
+def test_every_evaluator_authority_field_is_rejected_by_schema_and_runtime(field: str) -> None:
+    item = copy.deepcopy(prefinal_outputs()[0])
+    item[field] = True
+    assert conversational.validate_base_structure(item, root=REPO_ROOT)
     result, _ = runtime.evaluate_stage(
         "/intake",
-        authority,
-        runtime.initial_run_state(authority["run_id"], root=REPO_ROOT),
+        item,
+        runtime.initial_run_state(item["run_id"], root=REPO_ROOT),
         root=REPO_ROOT,
     )
-    assert any(issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN" for issue in result["blocking_issues"])
+    assert any(
+        issue["issue_id"] == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN" and field in issue["reason"]
+        for issue in result["blocking_issues"]
+    )
 
 
 def test_candidate_and_build_implementation_mutations_use_runtime_outcomes() -> None:
@@ -256,23 +313,98 @@ def test_active_critical_unknown_and_high_final_audit_finding_block_handoff() ->
     assert any(issue["issue_id"] == "RUNTIME_FINAL_AUDIT_SEVERE" for issue in result["blocking_issues"])
 
 
-def test_terminal_missing_payload_and_candidate_mismatch_are_rejected() -> None:
-    items = prefinal_outputs()
-    _, state = evaluate_prefix(items, 11)
-
+def test_standalone_validator_rejects_missing_terminal_payload(tmp_path: Path) -> None:
     missing = terminal_output()
     missing.pop("project_gate_payload")
-    result, _ = runtime.evaluate_stage("/project-gate-export", missing, state, root=REPO_ROOT, trusted_context=trusted_context())
-    assert any(issue["issue_id"] == "RUNTIME_PROJECT_GATE_PAYLOAD_REQUIRED" for issue in result["blocking_issues"])
+    outcome = conversational.validate_repository_vectors(
+        root=REPO_ROOT,
+        terminal_path=write_terminal(tmp_path, missing, "missing-payload.json"),
+    )
+    assert outcome["status"] == "invalid"
+    assert outcome["terminal_runtime_validated"] is False
+    assert any("RUNTIME_PROJECT_GATE_PAYLOAD_REQUIRED" in error for error in outcome["errors"])
 
+
+def test_standalone_validator_rejects_terminal_candidate_mismatch(tmp_path: Path) -> None:
     mismatch = terminal_output()
     mismatch["project_gate_payload"]["architecture_identity"]["selected_candidate_id"] = "OTHER"
-    result, _ = runtime.evaluate_stage("/project-gate-export", mismatch, state, root=REPO_ROOT, trusted_context=trusted_context())
-    assert any(issue["issue_id"] == "RUNTIME_PROJECT_GATE_CANDIDATE_MISMATCH" for issue in result["blocking_issues"])
+    outcome = conversational.validate_repository_vectors(
+        root=REPO_ROOT,
+        terminal_path=write_terminal(tmp_path, mismatch, "candidate-mismatch.json"),
+    )
+    assert outcome["status"] == "invalid"
+    assert any("RUNTIME_PROJECT_GATE_CANDIDATE_MISMATCH" in error for error in outcome["errors"])
 
 
-@pytest.mark.parametrize("field", ["status", "stage_status", "checks", "quality_checks", "next_stage", "canonical_payload_valid", "legacy_export_substituted", "build_tree_digest", "implementation_digest", "implementation_tree_digest", "continuation_authorized", "official_pass", "official_digest"])
-def test_every_conversational_authority_alias_is_forbidden(field: str) -> None:
-    item = copy.deepcopy(prefinal_outputs()[0])
-    item[field] = True
-    assert conversational.validate_base_structure(item, root=REPO_ROOT)
+def test_standalone_validator_rejects_invalid_canonical_payload(tmp_path: Path) -> None:
+    invalid = terminal_output()
+    invalid["project_gate_payload"].pop("payload_status")
+    outcome = conversational.validate_repository_vectors(
+        root=REPO_ROOT,
+        terminal_path=write_terminal(tmp_path, invalid, "invalid-payload.json"),
+    )
+    assert outcome["status"] == "invalid"
+    assert any("RUNTIME_PROJECT_GATE_VALIDATION_FAILED" in error for error in outcome["errors"])
+
+
+def test_terminal_export_hash_failure_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    import architect_project_gate_exporter.contracts as contracts
+
+    def fail_hash_verification(*_args, **_kwargs):
+        raise ValueError("adversarial export hash mismatch")
+
+    monkeypatch.setattr(contracts, "verify_hashes", fail_hash_verification)
+    outcome = conversational.validate_run_outputs(
+        [*prefinal_outputs(), terminal_output()],
+        root=REPO_ROOT,
+        require_terminal=True,
+        trusted_context=trusted_context(),
+    )
+    assert outcome["status"] == "invalid"
+    assert any("RUNTIME_PROJECT_GATE_VALIDATION_FAILED" in error for error in outcome["errors"])
+
+
+def test_actual_cli_exits_nonzero_for_terminal_runtime_failure(tmp_path: Path) -> None:
+    missing = terminal_output()
+    missing.pop("project_gate_payload")
+    path = write_terminal(tmp_path, missing, "cli-missing-payload.json")
+    completed = subprocess.run(
+        [sys.executable, str(SCRIPTS / "check-architect-conversational-stage-output.py"), "--terminal", str(path)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode != 0
+    result = json.loads(completed.stdout)
+    assert result["status"] == "invalid"
+    assert result["terminal_runtime_validated"] is False
+
+
+def test_release_upload_set_exposes_exact_authorities_and_all_stage_keys() -> None:
+    outcome = conversational.validate_release_upload_set(root=REPO_ROOT)
+    assert outcome["status"] == "valid", outcome["errors"]
+    manifest = json.loads((REPO_ROOT / conversational.MANIFEST_PATH).read_text(encoding="utf-8"))
+    assert outcome["stages_exposed"] == len(manifest["project_execution_stages"])
+    upload_set = json.loads(RELEASE_UPLOAD_SET_PATH.read_text(encoding="utf-8"))
+    assert upload_set["contract"]["identity"] == conversational.CONTRACT_ID
+    assert upload_set["base_schema"]["identity"] == conversational.BASE_SCHEMA_ID
+    assert upload_set["manifest_path"] == conversational.MANIFEST_PATH.as_posix()
+    assert set(upload_set["example_paths"]) <= set(upload_set["minimum_upload_paths"])
+    for row, exposed in zip(manifest["project_execution_stages"], outcome["stage_reference"]):
+        assert exposed == {
+            "stage_id": row["stage_id"],
+            "stage_version": row["stage_version"],
+            "required_quality_checks": row["required_quality_checks"],
+        }
+
+
+def test_release_upload_set_detects_manifest_check_drift(tmp_path: Path) -> None:
+    root = copy_release_validation_tree(tmp_path)
+    manifest_path = root / conversational.MANIFEST_PATH
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["project_execution_stages"][0]["required_quality_checks"][0] = "mutated_required_input"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    outcome = conversational.validate_release_upload_set(root=root)
+    assert outcome["status"] == "invalid"
+    assert any("release example" in error and "check_evidence" in error for error in outcome["errors"])
