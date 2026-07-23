@@ -160,12 +160,12 @@ def test_renamed_required_nested_field_reports_sorted_missing_and_stale() -> Non
     target["required"][index] = "creator"
     assert diagnostics(value) == [
         (
-            "PAYLOAD_DERIVATION_CLASSIFICATION_PATH_UNKNOWN",
-            "payload_identity.created_by",
-        ),
-        (
             "PAYLOAD_DERIVATION_REQUIRED_PATH_UNCLASSIFIED",
             "payload_identity.creator",
+        ),
+        (
+            "PAYLOAD_DERIVATION_CLASSIFICATION_PATH_UNKNOWN",
+            "payload_identity.created_by",
         ),
     ]
 
