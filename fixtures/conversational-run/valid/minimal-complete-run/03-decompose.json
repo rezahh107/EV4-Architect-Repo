@@ -3,9 +3,9 @@
   "stage_id": "/decompose",
   "stage_version": "1.0.0",
   "check_evidence": {
-    "observation_inference_separated": {"result": "pass", "reason": "Observed roles and bounded inferences are stored separately."},
-    "implementation_not_selected": {"result": "pass", "reason": "No Elementor implementation is selected."},
-    "unknowns_recorded": {"result": "pass", "reason": "The fixture has no material unknown to introduce."}
+    "observation_inference_separated": {"claim": "Observed roles and bounded inferences are separate.", "reason": "The canonical content uses distinct observations and inferences arrays."},
+    "implementation_not_selected": {"claim": "No Elementor implementation is selected.", "reason": "The Stage describes roles without implementation mapping."},
+    "unknowns_recorded": {"claim": "No material unknown is omitted.", "reason": "The explicit unknowns array is present and empty for this bounded fixture."}
   },
   "canonical_content": {
     "observations": ["one normal-flow content group", "one decorative connector role"],
