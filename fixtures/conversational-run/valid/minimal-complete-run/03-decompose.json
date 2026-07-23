@@ -1,0 +1,18 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/decompose",
+  "stage_version": "1.0.0",
+  "check_evidence": {
+    "observation_inference_separated": {"result": "pass", "reason": "Observed roles and bounded inferences are stored separately."},
+    "implementation_not_selected": {"result": "pass", "reason": "No Elementor implementation is selected."},
+    "unknowns_recorded": {"result": "pass", "reason": "The fixture has no material unknown to introduce."}
+  },
+  "canonical_content": {
+    "observations": ["one normal-flow content group", "one decorative connector role"],
+    "inferences": ["a contained overlay layer may be viable"],
+    "unknowns": []
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
