@@ -3,9 +3,9 @@
   "stage_id": "/handoff-export",
   "stage_version": "1.0.1",
   "check_evidence": {
-    "handoff_eligibility": {"result": "pass", "reason": "The accepted Final Audit permits handoff."},
-    "blocking_unknowns_absent": {"result": "pass", "reason": "No active downstream-critical Unknown remains."},
-    "final_audit_preserved": {"result": "pass", "reason": "The handoff preserves the accepted Final Audit boundary."}
+    "handoff_eligibility": {"claim": "The evaluated Run appears eligible for handoff.", "reason": "The package references the accepted Final Audit and required prior outputs."},
+    "blocking_unknowns_absent": {"claim": "No active downstream-critical Unknown remains.", "reason": "The Runtime Unknown ledger is the authority for this condition."},
+    "final_audit_preserved": {"claim": "The handoff preserves the Final Audit boundary.", "reason": "The package includes an explicit final-audit reference without overriding its result."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
   "canonical_content": {
