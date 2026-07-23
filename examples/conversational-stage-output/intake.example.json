@@ -3,9 +3,9 @@
   "stage_id": "/intake",
   "stage_version": "1.0.0",
   "check_evidence": {
-    "required_input_captured": {"result": "pass", "reason": "The section description and constraints are captured."},
-    "architecture_not_selected": {"result": "pass", "reason": "No architecture is selected during intake."},
-    "exact_values_not_invented": {"result": "pass", "reason": "Missing exact values remain unspecified."}
+    "required_input_captured": {"claim": "The bounded input is represented.", "reason": "The section description and constraints are captured."},
+    "architecture_not_selected": {"claim": "No architecture is selected during intake.", "reason": "The Stage records input only."},
+    "exact_values_not_invented": {"claim": "Missing exact values remain unknown.", "reason": "No unavailable exact value is supplied."}
   },
   "canonical_content": {"input_basis": {"section_description": "A bounded section description."}, "constraints": []},
   "unknown_introductions": [{"unknown_id": "U-EXAMPLE-ASSET", "statement": "The final visual asset is not supplied.", "downstream_critical": false}],
