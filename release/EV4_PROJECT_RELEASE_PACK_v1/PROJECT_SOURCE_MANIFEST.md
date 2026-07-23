@@ -1,7 +1,7 @@
 # Project Source Manifest — EV4 Release Pack v1
 
 Status: release_candidate_quality_first_runtime  
-Version: 1.2.0  
+Version: 1.3.0  
 Date: 2026-07-23
 
 ## Core Release Files
@@ -47,6 +47,7 @@ examples/conversational-stage-output/**
 fixtures/conversational-run/valid/minimal-complete-run/**
 fixtures/conversational-run/valid/terminal/project-gate-export.json
 tests/test_architect_conversational_stage_output.py
+release/EV4_PROJECT_RELEASE_PACK_v1/CONVERSATIONAL_STAGE_OUTPUT_UPLOAD_SET.v1.json
 ```
 
 These sources define and validate direct model-authored Stage Output input. They do not add a Pipeline, Stage inventory, evaluator, Run State, continuation authority, or per-Stage Schema family.
@@ -74,9 +75,11 @@ Conversational Stage Output structural precheck:
 
 ```text
 ev4-architect-conversational-stage-output-base@1.0.0
-→ common structure and caller-authority-field rejection only
+→ common structure and complete evaluator-owned top-level field rejection
 → no Stage pass or continuation claim
 ```
+
+The Runtime classifies every top-level `ev4-architect-stage-result@1.0.0` property as either an explicitly shared Stage Output field or evaluator-owned. The conversational Base Schema carries the exact mechanically verified evaluator-owned set; any drift fails validation.
 
 ## Existing Detailed Sources Retained
 
@@ -115,11 +118,13 @@ quality_first_full_pipeline_fixture:
 bootstrap_quality_runtime_alignment:
   status: authored_pending_exact_head_ci
 conversational_stage_output_contract:
-  status: authored_pending_exact_head_ci
+  status: repaired_pending_exact_head_ci_and_fresh_rereview
 conversational_prefinal_run_fixture:
   status: authored_pending_exact_head_ci
 conversational_terminal_fixture:
-  status: derived_from_existing_canonical_payload_pending_exact_head_ci
+  status: full_runtime_validation_authored_pending_exact_head_ci
+conversational_release_upload_set:
+  status: deterministic_manifest_and_schema_validation_authored_pending_exact_head_ci
 optional_transaction_segment:
   status: preserved
 final_project_gate_export:
@@ -138,16 +143,22 @@ production_readiness:
 
 ## Recommended Upload Set
 
-Minimum:
+The exact minimum set is machine-readable at:
 
 ```text
-PROJECT_INSTRUCTIONS_FINAL.md
-EV4_CORE_CONTRACTS_BUNDLE.md
-EV4_STAGE_PROTOCOLS_BUNDLE.md
-EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md
-EV4_FIRST_RUN_GUIDE.md
+release/EV4_PROJECT_RELEASE_PACK_v1/CONVERSATIONAL_STAGE_OUTPUT_UPLOAD_SET.v1.json#minimum_upload_paths
 ```
 
-Repository-backed conversational Stage Output validation additionally depends on the registered Contract, base Schema, examples, fixtures, and test/check sources above.
+It contains:
+
+```text
+the five core release files
+manifests/architect-pipeline-manifest.v1.json
+contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md
+schemas/architect-conversational-stage-output-base.v1.schema.json
+all registered examples/conversational-stage-output/*.json files
+```
+
+The release validator derives every Stage ID, exact Stage version, and exact required `check_evidence` key from the live Pipeline Manifest, verifies the Contract and Base Schema identities, checks every registered example, and proves that a structurally valid common Stage Output can be constructed for every Manifest Stage. It does not manually duplicate the Manifest inventory.
 
 Optional add-ons remain available according to the intended workflow.
