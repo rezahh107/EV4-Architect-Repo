@@ -1,8 +1,8 @@
-"""Deterministic completion predicates for the single Architect runtime.
+"""Deterministic Stage predicates for the single Architect Runtime.
 
 Model-authored check claims are explanatory input only. This module derives
-quality-check outcomes and the truthful completion class from Stage content,
-Run State, and prior evaluator results.
+quality-check outcomes; the official Runtime derives completion semantics only
+after the final Stage status is known.
 """
 from __future__ import annotations
 
@@ -86,7 +86,6 @@ CHECK_EVALUATION_BASIS: dict[str, dict[str, str]] = {
 
 @dataclass(frozen=True)
 class ClaimGuardResult:
-    completion_class: str
     quality_checks: dict[str, str]
     issues: tuple[dict[str, Any], ...]
     evaluation_basis: dict[str, str]
@@ -122,24 +121,21 @@ def _history_result(state: dict[str, Any], stage_id: str) -> dict[str, Any] | No
 
 
 def _candidate_ids_from_architectures(state: dict[str, Any]) -> set[str]:
-    prior = _history_output(state, "/architectures") or {}
-    candidates = _content(prior).get("candidates", [])
+    rows = _content(_history_output(state, "/architectures") or {}).get("candidates", [])
     return {
         str(item.get("candidate_id"))
-        for item in candidates
+        for item in rows
         if isinstance(item, dict) and str(item.get("candidate_id", "")).strip()
     }
 
 
 def _eligible_candidate_ids(state: dict[str, Any]) -> set[str]:
-    prior = _history_output(state, "/score-audit") or {}
-    values = _content(prior).get("eligible_candidates", [])
+    values = _content(_history_output(state, "/score-audit") or {}).get("eligible_candidates", [])
     return {str(item) for item in values if isinstance(item, str) and item.strip()}
 
 
 def _score_candidate_ids(state: dict[str, Any]) -> set[str]:
-    prior = _history_output(state, "/score-evidence") or {}
-    rows = _content(prior).get("candidate_scores", [])
+    rows = _content(_history_output(state, "/score-evidence") or {}).get("candidate_scores", [])
     return {
         str(item.get("candidate_id"))
         for item in rows
@@ -149,8 +145,7 @@ def _score_candidate_ids(state: dict[str, Any]) -> set[str]:
 
 def _active_critical_unknowns(state: dict[str, Any]) -> list[dict[str, Any]]:
     return [
-        item
-        for item in state.get("unknown_ledger", [])
+        item for item in state.get("unknown_ledger", [])
         if isinstance(item, dict)
         and item.get("status") == "active"
         and item.get("downstream_critical") is True
@@ -162,8 +157,6 @@ def _valid_check_claim(record: Any) -> bool:
         return False
     reason = record.get("reason")
     claim = record.get("claim")
-    # Legacy records may omit claim during migration. Their result is ignored;
-    # the Stage predicate below remains the only source of official pass/fail.
     return (
         isinstance(reason, str)
         and bool(reason.strip())
@@ -193,14 +186,10 @@ def _research(check: str, output: dict[str, Any], state: dict[str, Any]) -> bool
     decision = _decision(output)
     if check == "research_scope_resolved":
         return disposition in {
-            "active_lookup_completed",
-            "existing_evidence_sufficient",
-            "no_platform_question",
+            "active_lookup_completed", "existing_evidence_sufficient", "no_platform_question"
         }
     if check == "platform_project_boundary_preserved":
-        return not decision.get("selected_candidate_id") and decision.get(
-            "hidden_recommendation"
-        ) is not True
+        return not decision.get("selected_candidate_id") and decision.get("hidden_recommendation") is not True
     if check == "unsupported_claims_remain_unknown":
         return decision.get("unknown_converted_to_exact") is not True
     return False
@@ -225,15 +214,11 @@ def _architectures(check: str, output: dict[str, Any], state: dict[str, Any]) ->
     content, decision = _content(output), _decision(output)
     rows = content.get("candidates")
     valid_rows = [
-        item
-        for item in rows or []
+        item for item in rows or []
         if isinstance(item, dict)
-        and isinstance(item.get("candidate_id"), str)
-        and item["candidate_id"].strip()
-        and isinstance(item.get("family"), str)
-        and item["family"].strip()
-        and isinstance(item.get("coverage"), list)
-        and item["coverage"]
+        and isinstance(item.get("candidate_id"), str) and item["candidate_id"].strip()
+        and isinstance(item.get("family"), str) and item["family"].strip()
+        and isinstance(item.get("coverage"), list) and item["coverage"]
     ]
     if check == "architecture_coverage_complete":
         ids = [item["candidate_id"] for item in valid_rows]
@@ -258,13 +243,11 @@ def _score_evidence(check: str, output: dict[str, Any], state: dict[str, Any]) -
         "unverified", "insufficient_evidence",
     }
     valid_rows = [
-        item
-        for item in rows or []
+        item for item in rows or []
         if isinstance(item, dict)
         and isinstance(item.get("candidate_id"), str)
         and item.get("candidate_id") in architecture_ids
-        and isinstance(item.get("coverage"), str)
-        and item["coverage"].strip()
+        and isinstance(item.get("coverage"), str) and item["coverage"].strip()
         and item.get("evidence_state") in valid_states
     ]
     if check == "evidence_scoring_valid":
@@ -336,7 +319,15 @@ def _implementation(check: str, output: dict[str, Any], state: dict[str, Any]) -
     if check == "selected_candidate_preserved":
         return bool(state.get("selected_candidate_locked")) and decision.get("selected_candidate_id", selected) == selected
     if check == "canonical_implementation_present":
-        return isinstance(content.get("approved_build_tree"), dict) and any(key != "approved_build_tree" for key in content)
+        classes = content.get("class_intent")
+        class_map = content.get("class_application_map")
+        element_map = content.get("element_mapping")
+        return (
+            isinstance(content.get("approved_build_tree"), dict)
+            and isinstance(classes, list) and bool(classes)
+            and isinstance(class_map, list) and bool(class_map)
+            and isinstance(element_map, list) and bool(element_map)
+        )
     if check == "approved_build_tree_preserved":
         digest_fn = state.get("_digest_function")
         approved = content.get("approved_build_tree")
@@ -444,15 +435,11 @@ def evaluate_claims(
         if isinstance(record, dict) and "result" in record:
             ignored.append(key)
         if not _valid_check_claim(record):
-            issues.append(
-                _issue(
-                    "RUNTIME_REQUIRED_CHECK_CLAIM_MISSING",
-                    f"Missing or invalid non-authorizing check claim: {key}",
-                    stage_id,
-                )
-            )
+            issues.append(_issue(
+                "RUNTIME_REQUIRED_CHECK_CLAIM_MISSING",
+                f"Missing or invalid non-authorizing check claim: {key}", stage_id,
+            ))
 
-    completion_class = REASONING_COMPLETE if stage_id in REASONING_STAGES else VALIDATED_PASS
     checks: dict[str, str] = {}
     basis = dict(CHECK_EVALUATION_BASIS[stage_id])
     if stage_id == "/project-gate-export":
@@ -463,15 +450,11 @@ def evaluate_claims(
             passed = evaluator(key, stage_output, run_state)
             checks[key] = "pass" if passed else "fail"
             if not passed:
-                issues.append(
-                    _issue(
-                        "RUNTIME_STAGE_PREDICATE_FAILED",
-                        f"Derived predicate failed for {stage_id}:{key}",
-                        stage_id,
-                    )
-                )
+                issues.append(_issue(
+                    "RUNTIME_STAGE_PREDICATE_FAILED",
+                    f"Derived predicate failed for {stage_id}:{key}", stage_id,
+                ))
     return ClaimGuardResult(
-        completion_class=completion_class,
         quality_checks=checks,
         issues=tuple(issues),
         evaluation_basis=basis,
