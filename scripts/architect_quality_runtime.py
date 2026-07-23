@@ -24,10 +24,16 @@ INFRA_BLOCKERS = {
     "VALIDATION_PROFILE_INCOMPLETE", "EXACT_HEAD_CI_UNAVAILABLE",
     "PR_REVIEW_UNAVAILABLE", "REPOSITORY_MAINTENANCE_REQUIRED",
 }
+STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS = {
+    "run_id", "stage_id", "stage_version", "research_disposition", "final_audit_findings",
+}
 CALLER_AUTHORITY_FIELDS = {
-    "status", "stage_status", "checks", "quality_checks", "next_stage",
-    "canonical_payload_valid", "legacy_export_substituted",
+    "stage_result_schema", "stage_status", "blocking_issues", "carried_unknowns",
+    "quality_checks", "next_stage", "decision_state", "runtime_context",
+    "project_gate_export", "evaluation_mode", "evaluated_stage_output_digest",
+    "status", "checks", "canonical_payload_valid", "legacy_export_substituted",
     "build_tree_digest", "implementation_digest", "implementation_tree_digest",
+    "continuation_authorized", "official_pass", "official_digest",
 }
 CHECK_RESULTS = {"pass", "fail", "not_applicable", "unknown"}
 RESOLUTION_TYPES = {"user_confirmation", "authoritative_source", "validated_artifact", "not_applicable"}
@@ -40,6 +46,19 @@ def _load(path: Path) -> Any:
 def _digest(value: Any) -> str:
     raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     return "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
+def _validate_caller_authority_classification(schema: dict[str, Any]) -> None:
+    properties = set(schema.get("properties", {}))
+    missing_shared = STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS - properties
+    overlap = STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS & CALLER_AUTHORITY_FIELDS
+    unclassified = properties - STAGE_OUTPUT_SHARED_STAGE_RESULT_FIELDS - CALLER_AUTHORITY_FIELDS
+    if missing_shared:
+        raise ValueError(f"Stage Result shared Stage Output fields are missing from the Schema: {sorted(missing_shared)}")
+    if overlap:
+        raise ValueError(f"Stage Result fields cannot be both shared and evaluator-owned: {sorted(overlap)}")
+    if unclassified:
+        raise ValueError(f"Stage Result top-level fields require evaluator-owned or shared classification: {sorted(unclassified)}")
 
 
 def load_authority(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -59,6 +78,7 @@ def load_authority(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any]]:
             raise ValueError(f"normal_run_continuation.{key} must be false")
     if model.get("stage_result_schema") != schema.get("$id"):
         raise ValueError("Stage Result schema identity mismatch")
+    _validate_caller_authority_classification(schema)
     return manifest, schema
 
 
