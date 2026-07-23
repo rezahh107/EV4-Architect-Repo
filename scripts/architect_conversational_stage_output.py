@@ -11,7 +11,7 @@ from architect_quality_runtime import evaluate_run
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = Path("manifests/architect-pipeline-manifest.v1.json")
-BASE_SCHEMA_PATH = Path("schemas/ev4-architect-conversational-stage-output-base.v1.schema.json")
+BASE_SCHEMA_PATH = Path("schemas/architect-conversational-stage-output-base.v1.schema.json")
 CONTRACT_ID = "ev4-architect-conversational-stage-output@1.0.0"
 BASE_SCHEMA_ID = "ev4-architect-conversational-stage-output-base@1.0.0"
 
