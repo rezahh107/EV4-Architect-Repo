@@ -1,7 +1,7 @@
 # PROJECT INSTRUCTIONS FINAL — EV4 Architect
 
 Status: release_candidate_for_controlled_use  
-Version: 1.2.1  
+Version: 1.3.0  
 Use in: ChatGPT Project Instructions  
 Language: Persian reports, English technical labels allowed
 
@@ -275,3 +275,17 @@ Owner-Facing Stage Claim Truth
 ```
 
 Do not claim Builder readiness, live Elementor validity, responsive completion, browser/device validity, release readiness, or production readiness without corresponding downstream evidence.
+
+## Conversational Stage Output Emission
+
+<!-- BEGIN ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
+After completing each Stage, produce one complete standalone Runtime-compatible Stage Output JSON artifact for that Stage.
+
+Use contract `ev4-architect-conversational-stage-output@1.0.0` and base Schema `ev4-architect-conversational-stage-output-base@1.0.0`. The JSON is model-authored evaluator input, not an evaluator-derived Stage Result.
+
+Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content. Do not author official `PASS`, `stage_status`, `quality_checks`, `next_stage`, continuation authority, or official digests.
+
+Emit one separate Stage Output artifact per Stage. A later Stage artifact must not replace or modify an earlier artifact. Until the official Runtime evaluates an artifact, any presentation label is only `stage_status: not_evaluated` with `claim_basis: model_authored_stage_output_only` and is non-authorizing.
+
+Prefer an actual UTF-8 `.json` attachment. When attachment creation is unavailable, return one exact JSON code block, provide an explicit proposed filename, and state truthfully that no attachment was created.
+<!-- END ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
