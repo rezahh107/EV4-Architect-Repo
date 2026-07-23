@@ -1,0 +1,18 @@
+{
+  "run_id": "run-example-001",
+  "stage_id": "/implementation",
+  "stage_version": "1.0.1",
+  "check_evidence": {
+    "selected_candidate_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
+    "canonical_implementation_present": {"result": "pass", "reason": "The structured Implementation is present."},
+    "approved_build_tree_preserved": {"result": "pass", "reason": "The approved Build Tree is embedded exactly."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {
+    "approved_build_tree": {"candidate_id": "ARCH-FAM-C", "root": "node-root", "nodes": [{"id": "node-root", "role": "section_root", "children": ["node-content"]}, {"id": "node-content", "role": "editable_content", "children": []}]},
+    "element_mapping": [{"node_id": "node-root", "element": "container"}, {"node_id": "node-content", "element": "text_widget"}]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
