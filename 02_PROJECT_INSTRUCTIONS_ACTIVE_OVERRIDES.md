@@ -68,6 +68,8 @@ The Stage Claim Guard owns this distinction inside the existing evaluator. It is
 
 A Stage heading is not a Stage Result. Before using `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or an equivalent Persian execution claim:
 
+A same-context self-audit is not independent review.
+
 1. obtain the evaluator-derived Stage Result;
 2. display `stage_status`;
 3. display `completion_class`;
