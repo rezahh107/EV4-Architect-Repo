@@ -235,8 +235,8 @@ def test_fixture_complete_run_is_functionally_eligible_but_never_handoff_allowed
 def test_payload_derivation_rules_cover_governed_required_surfaces() -> None:
     schema = json.loads((REPO_ROOT / "schemas/ev4-architect-stage-payload.v1.schema.json").read_text(encoding="utf-8"))
     required = set(schema["required"])
-    required.update(f"architecture_identity.{item}" for item in schema["properties"]["architecture_identity"]["required"])
-    required.update(f"approved_structure_model.{item}" for item in schema["properties"]["approved_structure_model"]["required"])
-    required.update(f"architect_intent.{item}" for item in schema["properties"]["architect_intent"]["required"])
+    required.update(f"architecture_identity.{item}" for item in schema["$defs"]["architecture_identity"]["required"])
+    required.update(f"approved_structure_model.{item}" for item in schema["$defs"]["approved_structure_model"]["required"])
+    required.update(f"architect_intent.{item}" for item in schema["$defs"]["architect_intent"]["required"])
     assert required <= set(assembler.PAYLOAD_DERIVATION_RULES)
     assert set(assembler.PAYLOAD_DERIVATION_RULES.values()) <= assembler.DERIVATION_KINDS
