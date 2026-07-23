@@ -1,8 +1,8 @@
 # Project Source Manifest — EV4 Release Pack v1
 
 Status: release_candidate_quality_first_runtime  
-Version: 1.1.0  
-Date: 2026-07-22
+Version: 1.2.0  
+Date: 2026-07-23
 
 ## Core Release Files
 
@@ -36,6 +36,21 @@ scripts/check-architect-bootstrap.py
 tests/test_architect_bootstrap_semantics.py
 ```
 
+## Conversational Stage Output Sources
+
+```text
+contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md
+schemas/ev4-architect-conversational-stage-output-base.v1.schema.json
+scripts/architect_conversational_stage_output.py
+scripts/check-architect-conversational-stage-output.py
+examples/conversational-stage-output/**
+fixtures/conversational-run/valid/minimal-complete-run/**
+fixtures/conversational-run/valid/terminal/project-gate-export.json
+tests/test_architect_conversational_stage_output.py
+```
+
+These sources define and validate direct model-authored Stage Output input. They do not add a Pipeline, Stage inventory, evaluator, Run State, continuation authority, or per-Stage Schema family.
+
 ## Runtime Authority Model
 
 ```text
@@ -53,6 +68,14 @@ Optional deterministic transaction capability
 
 Final Architect handoff
 → ev4-architect-stage-payload@1.0.0 and Producer Gate Export contracts
+```
+
+Conversational Stage Output structural precheck:
+
+```text
+ev4-architect-conversational-stage-output-base@1.0.0
+→ common structure and caller-authority-field rejection only
+→ no Stage pass or continuation claim
 ```
 
 ## Existing Detailed Sources Retained
@@ -91,6 +114,12 @@ quality_first_full_pipeline_fixture:
   status: authored_pending_exact_head_ci
 bootstrap_quality_runtime_alignment:
   status: authored_pending_exact_head_ci
+conversational_stage_output_contract:
+  status: authored_pending_exact_head_ci
+conversational_prefinal_run_fixture:
+  status: authored_pending_exact_head_ci
+conversational_terminal_fixture:
+  status: derived_from_existing_canonical_payload_pending_exact_head_ci
 optional_transaction_segment:
   status: preserved
 final_project_gate_export:
@@ -118,5 +147,7 @@ EV4_STAGE_PROTOCOLS_BUNDLE.md
 EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md
 EV4_FIRST_RUN_GUIDE.md
 ```
+
+Repository-backed conversational Stage Output validation additionally depends on the registered Contract, base Schema, examples, fixtures, and test/check sources above.
 
 Optional add-ons remain available according to the intended workflow.
