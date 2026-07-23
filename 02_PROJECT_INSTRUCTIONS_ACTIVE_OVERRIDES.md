@@ -1,7 +1,7 @@
 # Project Instructions — Active Overrides
 
 Status: active  
-Version: 0.9.0  
+Version: 0.10.0  
 Applies to: current EV4 Architect Project Instructions and release-pack mirrors
 
 ## Authority
@@ -11,91 +11,81 @@ Read and apply first:
 ```text
 contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
 contracts/ARCHITECT_STAGE_RESULT_V1.md
+contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md
 manifests/architect-pipeline-manifest.v1.json
 scripts/architect_quality_runtime.py#evaluate_stage
+scripts/architect_stage_claim_guard.py
 ```
 
-This file supersedes only authorization-driven continuation clauses in `01_PROJECT_INSTRUCTIONS.md`, active Stage documents, hardening patches, source-access references, contracts, and release-pack mirrors. All non-conflicting quality controls remain active.
+This file supersedes only authorization-driven continuation clauses in older instructions and mirrors. All non-conflicting quality controls remain active.
 
 ## Normal Run Continuation
 
-Every Stage produces domain-specific Stage Output. One canonical evaluator combines it with current Run State and the finite Stage checks in the Pipeline Manifest:
-
 ```text
-Stage Output + Run State + fixed Stage rules
-→ evaluate_stage
+model-authored Stage content and check claims
++ evaluator-owned Run State
++ Runtime-owned RunContext
+→ conversational Base Schema
+→ Stage Claim Guard
 → evaluator-derived Stage Result
+→ exact Manifest successor, minimum input, or repair route
 ```
 
-The derived result is compatible with:
+`ev4-architect-stage-result@1.0.0` remains the active result identity. The Runtime derives `stage_status`, `completion_class`, check outcomes, blocking issues, Candidate lock, Unknown ledger, digests, continuation, terminal Payload, synthetic status, and handoff.
 
-```text
-ev4-architect-stage-result@1.0.0
-```
+A model-authored or serialized Stage Result is readable but non-authorizing. Resume recomputes from Stage Output and Run State. Do not create a persistent store, receipt chain, or second Pipeline for resume.
+
+A Stage must not stop solely because an Anchor, Validation Bundle, independent regeneration, exact-head CI, PR review, Merge evidence, or repository maintenance is absent.
+
+## Completion truth
 
 ```yaml
-pass:
-  meaning: all Stage quality criteria are satisfied
-  next_stage: exact Manifest successor
+reasoning_complete:
+  applies_to:
+    - /intake
+    - /research
+    - /decompose
+    - /architectures
+    - /score-evidence
+  meaning: required structure and deterministic consistency passed
+  not_claimed: objective correctness of model reasoning
 
-needs_input:
-  meaning: minimum architecture-changing or required-evidence input remains
-  next_stage: null
-
-blocked:
-  meaning: a genuine quality, evidence, fidelity, or final-handoff defect remains
-  next_stage: null
+validated_pass:
+  applies_to:
+    - /score-audit
+    - /recommend
+    - /build-tree
+    - /implementation
+    - /final-audit
+    - /handoff-export
+    - /project-gate-export
+  meaning: consequential Runtime predicates or the external boundary passed
 ```
 
-A producer-authored or serialized Stage Result is readable but non-authorizing. Resume must resolve the smallest available corresponding Stage Output and Run State and recompute. Do not create a persistent store, immutable receipt, or Artifact registry solely for resume.
-
-A Stage must not stop solely because:
-
-```text
-Stage Anchor is absent
-Validation Bundle is absent
-independent regeneration was not executed
-Validation Profile is not full_transaction_implemented
-exact-head CI is unavailable
-PR review or Merge evidence is unavailable
-repository maintenance is pending
-```
-
-The Pipeline Manifest remains authoritative for Stage order, legal successor, evaluation mode, and finite required checks. Stage quality determines continuation.
+The Stage Claim Guard owns this distinction inside the existing evaluator. It is not a second evaluator or Stage inventory.
 
 ## User-Facing Stage Claim Truth
 
-A Stage heading is not a Stage Result. Narrative output is not a canonical Artifact, and a same-context self-audit is not independent review.
-
-Before using `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or an equivalent Persian execution claim:
+A Stage heading is not a Stage Result. Before using `PASS`, `COMPLETE`, `LOCKED`, `VALIDATED`, `HANDOFF READY`, or an equivalent Persian execution claim:
 
 1. obtain the evaluator-derived Stage Result;
-2. display its canonical `stage_status`;
-3. display its `evaluation_mode`;
-4. display its `evaluated_stage_output_digest`.
+2. display `stage_status`;
+3. display `completion_class`;
+4. display `evaluation_mode`;
+5. display `evaluated_stage_output_digest`.
 
-If no valid evaluator-derived Stage Result exists, report:
+Without a derived result, report only:
 
 ```yaml
 stage_status: not_evaluated
 claim_basis: reasoning_output_only
 ```
 
-`not_evaluated` is presentation-only and cannot authorize continuation.
-
-Interpret `evaluation_mode` precisely:
-
-- `model_assessed`: structured runtime assessment, not independent or deterministic repository proof;
-- `validator_backed`: active runtime invariants were checked, but an optional full Validation Transaction, Receipt, or independent regeneration is not implied;
-- `external_boundary_verified`: a pass may be reported only when actual `project_gate_export` evidence exists, including source payload digest, export digest, validator identity, validation result, and export identity.
-
-Multiple reasoning-only or model-assessed Stages may continue in one response when the Manifest and evaluator permit it. This reporting rule does not add a Stage, approval layer, turn boundary, or parallel orchestration system.
+`reasoning_complete` is honest bounded completion, not machine proof of analytical quality. `external_boundary_verified` requires actual Runtime-issued Payload and Project Gate export evidence.
 
 ## Research Requirement
 
-`/research` remains mandatory. Do not use `/intake → /decompose`.
-
-Record exactly one disposition:
+`/research` remains mandatory. Record exactly one disposition:
 
 ```text
 active_lookup_completed
@@ -104,47 +94,32 @@ no_platform_question
 blocked_by_missing_required_source
 ```
 
-`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. Do not require external citations, URLs, retrieval metadata, or source receipts when no platform-capability claim requires active lookup.
-
-Only `blocked_by_missing_required_source` blocks, and only when a downstream decision genuinely depends on evidence that cannot be obtained.
-
-Research continues to enforce:
-
-- platform capability is not project-specific behavior;
-- official documentation does not decide visual interpretation;
-- research does not score or recommend architecture;
-- unsupported and version-sensitive claims remain unknown.
+`existing_evidence_sufficient` and `no_platform_question` are valid. Research does not recommend architecture, convert unknown evidence into fact, or treat platform capability as project-specific behavior.
 
 ## Finite Stage Checks
 
-The evaluator rejects:
+The Pipeline Manifest owns the exact required check keys. Every required key has one explicit evaluation basis:
 
-- a missing required check;
-- an unknown or cross-Stage check;
-- a failed or unresolved required check;
-- forbidden `not_applicable`;
-- an unresolved blocker;
-- a non-successor continuation.
+```text
+DETERMINISTIC_PREDICATE
+STRUCTURAL_COMPLETENESS
+ATTRIBUTED_REASONING_ONLY
+EXTERNAL_BOUNDARY
+```
 
-Conversational Stage checks may be supported by structured model assessment. This is not independent or deterministic repository proof.
+Model-facing `check_evidence` contains a non-authorizing `claim` and `reason`. Legacy `result` may parse but is ignored and reported in `legacy_check_results_ignored`.
+
+The Runtime rejects missing or unknown check claims, Base-Schema defects, failed derived predicates, unresolved blockers, non-successor continuation, hidden recommendation, Candidate drift, invented exact values, and invalid terminal evidence.
 
 ## Partial Rerun
 
-Use the latest valid Stage Output and current Run State.
+Use the latest valid Stage Output and current Run State. Start at the earliest affected Stage, invalidate dependent outputs and results, reactivate affected Unknowns, and invalidate Candidate lock only when rerun reaches `/recommend` or earlier.
 
-Identify the earliest affected Stage, invalidate dependent downstream results, preserve unaffected state, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
-
-Do not require Anchor, Bundle, independent rerun authorization, cryptographic rerun receipts, or a general rerun-event ledger.
+Do not require an Anchor, Bundle, cryptographic rerun receipt, or event ledger.
 
 ## Unknown Lifecycle
 
-An active unknown cannot disappear because a later Stage omits it.
-
-Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
-
-An arbitrary non-empty string cannot close a downstream-critical unknown.
-
-Do not convert absent evidence into an exact value or numeric confidence.
+An active Unknown cannot disappear by omission. Ordinary resolution requires an explicit type and note. A downstream-critical resolution also requires an evidence reference present in `RunContext.verified_evidence_refs`; a caller string alone is not verified evidence.
 
 ## Mandatory Pipeline
 
@@ -167,53 +142,39 @@ No visual-to-Build-Tree shortcut or non-successor continuation is allowed.
 
 ## Scoring and Recommendation
 
-`/score-evidence` uses the approved rubric, `?` for missing evidence, and `N/A` only when truly non-applicable. It must not hide a recommendation.
-
-`/recommend` may run only after accepted `/score-audit` status equivalent to `pass` or `pass_with_minor_flags`, with no material defect.
-
-After recommendation, `selected_candidate_id` is immutable unless a legitimate rerun reaches `/recommend` or earlier.
+`/score-evidence` preserves evidence state and must not hide a recommendation. `/score-audit` must recompute internal consistency. `/recommend` proposes a Candidate only after accepted audit; Runtime verifies that Candidate against prior architecture and audit outputs and establishes the lock.
 
 ## Fidelity and Final Audit
 
-For `/build-tree` and `/implementation`, canonical content means the existing structured Stage Output. Do not create a wrapper Artifact solely to compute a digest.
+For `/build-tree` and `/implementation`, canonical content is the existing structured Stage Output. Runtime derives Build Tree and Implementation digests and compares the embedded approved Build Tree.
 
-The evaluator computes digests from actual content and rejects missing content, fabricated SHA-like strings, `null == null`, candidate drift, and approved-tree mismatch.
+`/final-audit` acceptance is derived from actual findings, required audit scope, Candidate lock, Implementation fidelity, and active critical Unknowns. A model-authored acceptance string or check result cannot grant pass.
 
-Conversational Stage output does not require cryptographic identity.
+## Handoff and Project Gate Boundary
 
-`/final-audit` blocks handoff for at least:
+`/handoff-export` carries presentation/package content; Runtime derives eligibility from accepted Final Audit, Candidate lock, required outputs, fidelity, and Unknown ledger.
 
-```text
-blocker finding
-high-severity architecture drift
-candidate-lock violation
-unsupported exact value
-missing required content
-invalid responsive strategy
-unresolved downstream-critical unknown
-implementation/tree mismatch
-```
-
-## Final Project Gate Boundary
-
-The terminal `/project-gate-export` pass result must be derived from:
+`/project-gate-export` must not contain `project_gate_payload`. The official path is:
 
 ```text
-actual canonical Architect Stage Payload
+evaluated Stage Outputs
++ derived Stage Results
++ Run State
++ Runtime-owned RunContext
+→ Runtime Payload Assembler
+→ ev4-architect-stage-payload@1.0.0
 → existing Schema and semantic validation
-→ selected-candidate consistency
+→ actual checkout provenance
 → existing Producer Gate exporter
-→ actual canonical export
 → contract and digest verification
+→ Runtime-derived handoff
 ```
 
-Caller-controlled success Booleans cannot replace actual validation. Preserve locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
+`RunContext.source_kind` is one of `live_conversation`, `fixture`, `example`, or `test_vector`. Runtime derives `synthetic = source_kind != live_conversation`. Synthetic contexts may report `functional_eligibility.would_allow`, but actual handoff remains denied. The model cannot author `RunContext`, producer provenance, terminal Payload, synthetic status, or handoff status.
 
 ## Optional Audit Tooling
 
-Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, Validation Profiles, independent regeneration, and `authorization_valid` remain optional repository-audit and deterministic-regression tooling.
-
-They do not authorize ordinary internal Stage movement and their absence is not a project-run blocker.
+Stage Anchors, Receipts, Boundary Records, Failure Events, Validation Bundles, Validation Profiles, independent regeneration, and `authorization_valid` remain optional repository-audit tooling. They do not authorize ordinary Stage movement.
 
 ## Conversational Stage Output Emission
 
@@ -222,7 +183,9 @@ After completing each Stage, produce one complete standalone Runtime-compatible 
 
 Use contract `ev4-architect-conversational-stage-output@1.0.0` and base Schema `ev4-architect-conversational-stage-output-base@1.0.0`. The JSON is model-authored evaluator input, not an evaluator-derived Stage Result.
 
-Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content. Do not author official `PASS`, `stage_status`, `quality_checks`, `next_stage`, continuation authority, or official digests.
+Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Each check record carries a non-authorizing `claim` and `reason`; do not author an official check result. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content.
+
+Do not author official `PASS`, `stage_status`, `quality_checks`, `completion_class`, `next_stage`, continuation authority, official digests, `RunContext`, `source_kind`, authoritative `synthetic`, producer provenance, or `project_gate_payload`. At `/project-gate-export`, request export only; the Runtime assembles the official terminal Payload from the evaluated Run.
 
 Emit one separate Stage Output artifact per Stage. A later Stage artifact must not replace or modify an earlier artifact. Until the official Runtime evaluates an artifact, any presentation label is only `stage_status: not_evaluated` with `claim_basis: model_authored_stage_output_only` and is non-authorizing.
 
