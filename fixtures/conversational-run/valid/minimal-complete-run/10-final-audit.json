@@ -3,9 +3,9 @@
   "stage_id": "/final-audit",
   "stage_version": "1.0.1",
   "check_evidence": {
-    "final_audit_acceptance": {"result": "pass", "reason": "No blocker or high-severity architecture finding remains."},
-    "candidate_lock_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
-    "implementation_fidelity_confirmed": {"result": "pass", "reason": "The Implementation preserves the approved Build Tree."}
+    "final_audit_acceptance": {"claim": "No blocker or high-severity architecture finding remains.", "reason": "The findings array is explicit and the required audit scope is present."},
+    "candidate_lock_preserved": {"claim": "The final audit preserves ARCH-FAM-C.", "reason": "The decision input matches the Runtime-locked Candidate."},
+    "implementation_fidelity_confirmed": {"claim": "The Implementation preserves the approved Build Tree.", "reason": "The preceding Implementation Stage passed Runtime fidelity checks."}
   },
   "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
   "canonical_content": {
