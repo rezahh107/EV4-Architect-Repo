@@ -1,0 +1,33 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/implementation",
+  "stage_version": "1.0.1",
+  "check_evidence": {
+    "selected_candidate_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
+    "canonical_implementation_present": {"result": "pass", "reason": "The structured Implementation content is present."},
+    "approved_build_tree_preserved": {"result": "pass", "reason": "The exact approved Build Tree representation is embedded."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {
+    "approved_build_tree": {
+      "candidate_id": "ARCH-FAM-C",
+      "root": "node-root",
+      "nodes": [
+        {"id": "node-root", "role": "section_root", "children": ["node-wrapper", "node-connector"]},
+        {"id": "node-wrapper", "role": "normal_flow_group", "children": ["node-content"]},
+        {"id": "node-content", "role": "editable_content", "children": []},
+        {"id": "node-connector", "role": "contained_decoration_layer", "children": []}
+      ]
+    },
+    "element_mapping": [
+      {"node_id": "node-root", "element": "container"},
+      {"node_id": "node-wrapper", "element": "container"},
+      {"node_id": "node-content", "element": "text_widget"},
+      {"node_id": "node-connector", "element": "svg_widget"}
+    ],
+    "class_intent": ["section-root", "section-content", "section-connector"]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
