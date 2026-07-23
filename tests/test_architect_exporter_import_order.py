@@ -23,7 +23,7 @@ module = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 eligibility = importlib.import_module("architect_project_gate_exporter.eligibility")
-assert callable(eligibility.derive_functional_eligibility)
+assert callable(eligibility.derive_handoff_eligibility)
 """
     completed = subprocess.run(
         [sys.executable, "-c", script, str(REPO_ROOT)],
