@@ -101,12 +101,33 @@ jobs:
         if: steps.bootstrap_semantics.outcome != 'success'
         run: exit 1
 
-      - name: Run quality runtime, conversational output, and bootstrap mutation tests
+      - name: Run existing quality runtime and bootstrap mutation tests
         run: |
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
             tests/test_architect_quality_runtime.py \
-            tests/test_architect_conversational_stage_output.py \
             tests/test_architect_bootstrap_semantics.py
+
+      - name: Run conversational Stage Output mutation tests
+        id: conversational_stage_output_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -vv \
+            tests/test_architect_conversational_stage_output.py 2>&1 | tee architect-conversational-stage-output-tests.log
+
+      - name: Upload conversational Stage Output test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-conversational-stage-output-tests-${{ github.event.pull_request.head.sha }}
+          path: architect-conversational-stage-output-tests.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce conversational Stage Output test result
+        if: steps.conversational_stage_output_tests.outcome != 'success'
+        run: exit 1
 
       - name: Run repository repair handoff tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_repository_repair_recommendation_handoff.py
