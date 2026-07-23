@@ -14,99 +14,199 @@
     "blockers"
   ],
   "properties": {
-    "run_id": {"type": "string", "minLength": 1},
-    "stage_id": {"type": "string", "pattern": "^/[a-z0-9-]+$"},
-    "stage_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_id": {
+      "type": "string",
+      "pattern": "^/[a-z0-9-]+$"
+    },
+    "stage_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
     "check_evidence": {
       "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/check_record"}
+      "additionalProperties": {
+        "$ref": "#/$defs/check_record"
+      }
     },
     "unknown_introductions": {
       "type": "array",
-      "items": {"$ref": "#/$defs/unknown_introduction"}
+      "items": {
+        "$ref": "#/$defs/unknown_introduction"
+      }
     },
     "unknown_resolutions": {
       "type": "array",
-      "items": {"$ref": "#/$defs/unknown_resolution"}
+      "items": {
+        "$ref": "#/$defs/unknown_resolution"
+      }
     },
     "blockers": {
       "type": "array",
-      "items": {"$ref": "#/$defs/blocker"}
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
     }
   },
   "additionalProperties": true,
   "propertyNames": {
-    "not": {"$ref": "#/$defs/caller_authority_field"}
+    "not": {
+      "$ref": "#/$defs/caller_authority_field"
+    }
   },
   "$defs": {
     "caller_authority_field": {
       "enum": [
-        "stage_result_schema",
-        "stage_status",
+        "anchor_present",
+        "approved_build_tree_digest",
+        "architecture_drift",
         "blocking_issues",
-        "carried_unknowns",
-        "quality_checks",
-        "next_stage",
-        "decision_state",
-        "runtime_context",
-        "project_gate_export",
-        "evaluation_mode",
-        "evaluated_stage_output_digest",
-        "status",
-        "checks",
-        "canonical_payload_valid",
-        "legacy_export_substituted",
         "build_tree_digest",
+        "canonical_payload_valid",
+        "carried_unknowns",
+        "checks",
+        "continuation_authorized",
+        "decision_state",
+        "evaluated_stage_output_digest",
+        "evaluation_mode",
+        "exact_head_ci_available",
+        "export_digest",
+        "export_id",
+        "hidden_recommendation",
         "implementation_digest",
         "implementation_tree_digest",
-        "continuation_authorized",
+        "independent_regeneration_executed",
+        "legacy_export_substituted",
+        "next_stage",
+        "official_digest",
         "official_pass",
-        "official_digest"
+        "pr_review_available",
+        "project_gate_export",
+        "quality_checks",
+        "recommendation_made",
+        "repository_maintenance_required",
+        "runtime_context",
+        "selected_candidate_id",
+        "selected_candidate_locked",
+        "source_payload_digest",
+        "stage_result_schema",
+        "stage_status",
+        "status",
+        "unknown_converted_to_exact",
+        "validation_bundle_present",
+        "validation_profile_status",
+        "validation_result",
+        "validator_identity"
       ]
     },
     "check_record": {
       "type": "object",
-      "required": ["result", "reason"],
+      "required": [
+        "result",
+        "reason"
+      ],
       "properties": {
-        "result": {"enum": ["pass", "fail", "not_applicable", "unknown"]},
-        "reason": {"type": "string", "minLength": 1}
+        "result": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_applicable",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": true
     },
     "unknown_introduction": {
       "type": "object",
-      "required": ["unknown_id", "statement", "downstream_critical"],
+      "required": [
+        "unknown_id",
+        "statement",
+        "downstream_critical"
+      ],
       "properties": {
-        "unknown_id": {"type": "string", "minLength": 1},
-        "statement": {"type": "string", "minLength": 1},
-        "downstream_critical": {"type": "boolean"}
+        "unknown_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "downstream_critical": {
+          "type": "boolean"
+        }
       },
       "additionalProperties": true
     },
     "unknown_resolution": {
       "type": "object",
-      "required": ["unknown_id", "resolution_type", "note"],
+      "required": [
+        "unknown_id",
+        "resolution_type",
+        "note"
+      ],
       "properties": {
-        "unknown_id": {"type": "string", "minLength": 1},
-        "resolution_type": {"enum": ["user_confirmation", "authoritative_source", "validated_artifact", "not_applicable"]},
-        "note": {"type": "string", "minLength": 1},
-        "evidence_ref": {"type": "string", "minLength": 1}
+        "unknown_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution_type": {
+          "enum": [
+            "user_confirmation",
+            "authoritative_source",
+            "validated_artifact",
+            "not_applicable"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": true
     },
     "blocker": {
       "type": "object",
-      "required": ["issue_id", "reason"],
+      "required": [
+        "issue_id",
+        "reason"
+      ],
       "properties": {
-        "issue_id": {"type": "string", "minLength": 1},
-        "reason": {"type": "string", "minLength": 1},
+        "issue_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
         "repair_stage": {
           "anyOf": [
-            {"type": "string", "pattern": "^/[a-z0-9-]+$"},
-            {"type": "null"}
+            {
+              "type": "string",
+              "pattern": "^/[a-z0-9-]+$"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
-        "kind": {"type": "string", "minLength": 1}
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": true
     }
