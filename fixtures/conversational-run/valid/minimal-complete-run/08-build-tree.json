@@ -1,0 +1,24 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/build-tree",
+  "stage_version": "1.0.0",
+  "check_evidence": {
+    "selected_candidate_preserved": {"result": "pass", "reason": "The locked Candidate remains ARCH-FAM-C."},
+    "canonical_build_tree_present": {"result": "pass", "reason": "The complete structured Build Tree is present."},
+    "architecture_drift_absent": {"result": "pass", "reason": "The Build Tree implements the locked architecture family without redesign."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {
+    "candidate_id": "ARCH-FAM-C",
+    "root": "node-root",
+    "nodes": [
+      {"id": "node-root", "role": "section_root", "children": ["node-wrapper", "node-connector"]},
+      {"id": "node-wrapper", "role": "normal_flow_group", "children": ["node-content"]},
+      {"id": "node-content", "role": "editable_content", "children": []},
+      {"id": "node-connector", "role": "contained_decoration_layer", "children": []}
+    ]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
