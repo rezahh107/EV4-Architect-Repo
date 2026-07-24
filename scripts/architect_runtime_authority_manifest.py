@@ -207,6 +207,46 @@ def _probe_error(code: str, entrypoint_path: str, message: str) -> RuntimeAuthor
     return RuntimeAuthorityManifestError(f"{code}: {entrypoint_path}: {message}")
 
 
+def _validate_reported_python_closure(
+    entrypoint_path: str,
+    reported_paths: Any,
+    declared_python_paths: list[str],
+) -> None:
+    if (
+        not isinstance(reported_paths, list)
+        or any(not isinstance(item, str) for item in reported_paths)
+        or reported_paths != sorted(reported_paths)
+        or len(reported_paths) != len(set(reported_paths))
+    ):
+        raise _probe_error(
+            "RUNTIME_AUTHORITY_ENTRYPOINT_RESULT_MALFORMED",
+            entrypoint_path,
+            "Fresh interpreter returned a malformed module-closure field",
+        )
+    for value in reported_paths:
+        try:
+            _validate_relative_path(value, "loaded_repository_python_paths")
+        except RuntimeAuthorityManifestError as exc:
+            raise _probe_error(
+                "RUNTIME_AUTHORITY_ENTRYPOINT_RESULT_MALFORMED",
+                entrypoint_path,
+                "Fresh interpreter returned a non-canonical module-closure path",
+            ) from exc
+        if not value.endswith(".py"):
+            raise _probe_error(
+                "RUNTIME_AUTHORITY_ENTRYPOINT_RESULT_MALFORMED",
+                entrypoint_path,
+                "Fresh interpreter returned a non-Python module-closure path",
+            )
+    undeclared = sorted(set(reported_paths) - set(declared_python_paths))
+    if undeclared:
+        raise _probe_error(
+            "RUNTIME_AUTHORITY_ENTRYPOINT_CLOSURE_UNDECLARED",
+            entrypoint_path,
+            f"Fresh interpreter reported undeclared repository Python paths: {undeclared}",
+        )
+
+
 def _run_entrypoint_probe(
     root: Path,
     entry: dict[str, Any],
@@ -304,18 +344,33 @@ def _run_entrypoint_probe(
             entrypoint_path,
             "Fresh interpreter executed a different file",
         )
-    if result["missing_symbols"]:
+    missing_symbols = result["missing_symbols"]
+    if not isinstance(missing_symbols, list) or any(
+        not isinstance(item, str) for item in missing_symbols
+    ):
+        raise _probe_error(
+            "RUNTIME_AUTHORITY_ENTRYPOINT_RESULT_MALFORMED",
+            entrypoint_path,
+            "Fresh interpreter returned an invalid missing-symbols field",
+        )
+    if missing_symbols:
         raise _probe_error(
             "RUNTIME_AUTHORITY_ENTRYPOINT_SYMBOL_MISSING",
             entrypoint_path,
             "Fresh interpreter reported missing manifest-declared symbols",
         )
-    if not isinstance(result["loaded_repository_python_paths"], list):
+    process_id = result["process_id"]
+    if isinstance(process_id, bool) or not isinstance(process_id, int) or process_id <= 0:
         raise _probe_error(
             "RUNTIME_AUTHORITY_ENTRYPOINT_RESULT_MALFORMED",
             entrypoint_path,
-            "Fresh interpreter returned an invalid module-closure field",
+            "Fresh interpreter returned an invalid process identity",
         )
+    _validate_reported_python_closure(
+        entrypoint_path,
+        result["loaded_repository_python_paths"],
+        declared_python_paths,
+    )
     return result
 
 
@@ -407,10 +462,6 @@ def validate_manifest_document(
         entry_paths.append(path)
     if entry_paths != sorted(entry_paths) or len(entry_paths) != len(set(entry_paths)):
         raise RuntimeAuthorityManifestError("public_entry_points must be sorted and unique")
-    if not any("RUNTIME_INTERFACE_ID" in entry["symbols"] for entry in entries):
-        raise RuntimeAuthorityManifestError(
-            "At least one public entrypoint must declare RUNTIME_INTERFACE_ID"
-        )
 
     if check_public_symbols:
         probe_manifest_entrypoints(document, root)
