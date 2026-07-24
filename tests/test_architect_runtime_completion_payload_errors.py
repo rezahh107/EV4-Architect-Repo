@@ -97,7 +97,7 @@ for _name in dir(_legacy):
         ),
     ],
 )
-def test_missing_conditional_intent_uses_handoff_boundary_semantics(
+def test_missing_conditional_intent_never_creates_a_false_complete_payload(
     field: str,
     unresolved_id: str,
     payload_status: str,
