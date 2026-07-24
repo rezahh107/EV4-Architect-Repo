@@ -15,6 +15,30 @@ from architect_project_gate_finalization import (
     publish_project_gate_execution,
 )
 
+_CALLER_AUTHORITY_FIELDS = frozenset(
+    {
+        "artifact",
+        "capability",
+        "ce_transition_authorized",
+        "digests",
+        "eligibility",
+        "functional_eligibility",
+        "handoff_allowed",
+        "payload",
+        "payload_path",
+        "producer_provenance",
+        "project_gate_accepted",
+        "project_gate_payload",
+        "provenance",
+        "receipt",
+        "run_state",
+        "runtime_capability",
+        "stage_results",
+        "validation_result",
+        "validator_result",
+    }
+)
+
 
 def _install_terminal_execution_bridge() -> None:
     """Install the explicit terminal execution return path on the loaded Runtime core."""
@@ -28,6 +52,25 @@ def _install_terminal_execution_bridge() -> None:
 
 
 _install_terminal_execution_bridge()
+
+
+def _caller_authority_diagnostics(outputs: list[Any]) -> list[dict[str, Any]]:
+    diagnostics: list[dict[str, Any]] = []
+    for index, item in enumerate(outputs):
+        if not isinstance(item, dict):
+            continue
+        for field in sorted(set(item) & _CALLER_AUTHORITY_FIELDS):
+            diagnostics.append(
+                {
+                    "code": "RUNTIME_CALLER_FINALIZATION_AUTHORITY_FIELD_FORBIDDEN",
+                    "message": (
+                        f"Stage Output cannot supply Runtime finalization authority field {field!r}."
+                    ),
+                    "path": f"history[{index}].{field}",
+                    "stage_id": item.get("stage_id"),
+                }
+            )
+    return diagnostics
 
 
 def finalize_project_gate(
@@ -51,6 +94,13 @@ def finalize_project_gate(
         if outputs and isinstance(outputs[0], dict)
         else None
     )
+    caller_diagnostics = _caller_authority_diagnostics(outputs)
+    if caller_diagnostics:
+        return failed_result(
+            run_id=run_id,
+            source_kind=run_context.source_kind,
+            diagnostics=caller_diagnostics,
+        )
     try:
         replay = _runtime._replay_outcome(
             outputs,
