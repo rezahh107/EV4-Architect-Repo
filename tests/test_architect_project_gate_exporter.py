@@ -55,6 +55,14 @@ def direct_build(payload: dict) -> None:
     )
 
 
+def live_runtime_outcome() -> dict:
+    return runtime.evaluate_run(
+        _legacy.full_outputs(),
+        root=ROOT,
+        run_context=_legacy.context("live_conversation"),
+    )
+
+
 def test_payload_cli_and_compatibility_entrypoint_are_absent(tmp_path: Path) -> None:
     assert not DIRECT_EXPORT_SCRIPT.exists()
     completed = subprocess.run(
@@ -148,7 +156,7 @@ def test_copied_or_mutated_runtime_payload_cannot_recreate_capability() -> None:
 
 
 def test_canonical_live_runtime_transaction_can_authorize_handoff() -> None:
-    outcome = _legacy.run(source_kind="live_conversation")
+    outcome = live_runtime_outcome()
     assert outcome["status"] == "valid", outcome["errors"]
     terminal = outcome["results"][-1]["project_gate_export"]
     assert terminal["canonical_payload_valid"] is True
@@ -188,7 +196,10 @@ def test_pipeline_and_stage_output_contract_identity_are_unchanged() -> None:
         "/handoff-export",
         "/project-gate-export",
     ]
-    assert all(output["run_id"] == _legacy.outputs()[0]["run_id"] for output in _legacy.full_outputs())
+    assert all(
+        output["run_id"] == _legacy.outputs()[0]["run_id"]
+        for output in _legacy.full_outputs()
+    )
 
 
 def test_active_docs_and_release_do_not_restore_direct_payload_export() -> None:

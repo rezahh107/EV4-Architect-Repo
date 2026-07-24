@@ -12,6 +12,7 @@ SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import architect_quality_runtime as runtime
 from architect_handoff_classification import partition_unresolved_evidence
 from architect_project_gate_exporter import base, contracts, eligibility
 from check_architect_stage_payload_core import ArchitectPayloadValidator
@@ -142,7 +143,11 @@ def test_canonical_runtime_preserves_downstream_and_synthetic_separation() -> No
     assert fixture_terminal["functional_eligibility"]["would_allow"] is True
     assert fixture_terminal["handoff_allowed"] is False
 
-    live_outcome = _legacy.run(source_kind="live_conversation")
+    live_outcome = runtime.evaluate_run(
+        _legacy.full_outputs(),
+        root=ROOT,
+        run_context=_legacy.context("live_conversation"),
+    )
     assert live_outcome["status"] == "valid", live_outcome["errors"]
     live_terminal = live_outcome["results"][-1]["project_gate_export"]
     assert live_terminal["functional_eligibility"]["would_allow"] is True
