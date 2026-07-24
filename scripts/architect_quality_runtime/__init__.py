@@ -1,9 +1,8 @@
 """Canonical history-replay interface for the single Architect Runtime.
 
-The existing ``scripts/architect_quality_runtime.py`` module remains the one
-internal Stage evaluator implementation.  This package is the supported public
-interface: ordered model-authored Stage Outputs are persistent truth; all Run
-State and Stage Results are reconstructed by the internal evaluator.
+The existing evaluator core remains the only Stage evaluation implementation.
+Ordered model-authored Stage Outputs are persistent truth; all Run State and
+Stage Results are reconstructed by the Runtime.
 """
 from __future__ import annotations
 
@@ -23,9 +22,6 @@ if _spec is None or _spec.loader is None:
 _core = importlib.util.module_from_spec(_spec)
 sys.modules[_CORE_NAME] = _core
 _spec.loader.exec_module(_core)
-
-# Preserve existing public constants, types, helpers, and diagnostics while
-# replacing the caller-owned state execution boundary below.
 for _name in dir(_core):
     if not _name.startswith("__"):
         globals()[_name] = getattr(_core, _name)
@@ -33,7 +29,6 @@ for _name in dir(_core):
 INTERNAL_EVALUATOR = _core
 ROOT = _core.ROOT
 RUNTIME_INTERFACE_ID = _core.RUNTIME_INTERFACE_ID
-
 _ACTIVE_RUN_CONTEXT: ContextVar[Any | None] = ContextVar(
     "architect_active_run_context", default=None
 )
@@ -43,14 +38,10 @@ _ACTIVE_GIT_PROVIDER: ContextVar[Any | None] = ContextVar(
 
 
 def current_run_context() -> Any | None:
-    """Return the Runtime-owned context during one internal Stage evaluation."""
-
     return _ACTIVE_RUN_CONTEXT.get()
 
 
 def current_git_provider() -> Any | None:
-    """Return the synthetic-only provider during one internal evaluation."""
-
     return _ACTIVE_GIT_PROVIDER.get()
 
 
@@ -60,6 +51,27 @@ def _copy(value: Any) -> Any:
 
 def _render_diagnostics(exc: Any) -> list[str]:
     return [item.render() for item in getattr(exc, "diagnostics", [])]
+
+
+def _diagnostics_from_strings(values: Iterable[str], *, stage_id: str | None = None) -> list[Any]:
+    diagnostics: list[Any] = []
+    for value in values:
+        text = str(value)
+        code, _, message = text.partition(":")
+        diagnostics.append(
+            _core.RuntimeDiagnostic(
+                code.strip() or "RUNTIME_STAGE_EVALUATION_FAILED",
+                message.strip() or text,
+                stage_id=stage_id,
+            )
+        )
+    return diagnostics or [
+        _core.RuntimeDiagnostic(
+            "RUNTIME_STAGE_EVALUATION_FAILED",
+            "Stage evaluation failed",
+            stage_id=stage_id,
+        )
+    ]
 
 
 def _provider_for_context(run_context: Any, git_provider: Any | None) -> Any | None:
@@ -95,10 +107,9 @@ def _sequence_diagnostics(
         stage_ids.append(item.get("stage_id"))
         run_ids.append(item.get("run_id"))
 
-    unknown = sorted(
-        {stage for stage in stage_ids if isinstance(stage, str) and stage not in order}
-    )
-    for stage in unknown:
+    for stage in sorted(
+        {value for value in stage_ids if isinstance(value, str) and value not in order}
+    ):
         diagnostics.append(
             _core.RuntimeDiagnostic(
                 "RUNTIME_STAGE_ID_UNKNOWN",
@@ -197,8 +208,6 @@ def _replay_history(
     require_terminal: bool = False,
     git_provider: Any | None = None,
 ) -> dict[str, Any]:
-    """Replay one exact Manifest prefix through the existing Stage evaluator."""
-
     root = Path(repository_root).resolve()
     provider = _provider_for_context(run_context, git_provider)
     manifest, _ = _core.load_authority(root)
@@ -206,7 +215,9 @@ def _replay_history(
     outputs = [_copy(item) for item in prior_stage_outputs]
     if not outputs:
         if require_terminal:
-            return _invalid_run(["RUNTIME_RUN_EMPTY: Stage Output history is empty"], [], None, order)
+            return _invalid_run(
+                ["RUNTIME_RUN_EMPTY: Stage Output history is empty"], [], None, order
+            )
         return {
             "status": "valid",
             "errors": [],
@@ -221,8 +232,7 @@ def _replay_history(
     if sequence:
         return _invalid_run([item.render() for item in sequence], [], None, order)
 
-    run_id = outputs[0].get("run_id")
-    state = _core.initial_run_state(run_id, root=root)
+    state = _core.initial_run_state(outputs[0].get("run_id"), root=root)
     results: list[dict[str, Any]] = []
     try:
         for output in outputs:
@@ -273,8 +283,6 @@ class SessionProjection:
 
 
 class RuntimeSession:
-    """Runtime-owned incremental session reconstructed from Stage Output history."""
-
     __slots__ = (
         "_root",
         "_run_context",
@@ -342,7 +350,6 @@ class RuntimeSession:
                     stage_id=observed if isinstance(observed, str) else None,
                 )
             )
-
         if self._state is None:
             self._state = _core.initial_run_state(candidate.get("run_id"), root=self._root)
 
@@ -362,7 +369,7 @@ class RuntimeSession:
                     "diagnostics": list(replay["errors"]),
                     "run_state": _copy(self._state),
                 }
-            self._outputs = [*self._outputs, candidate]
+            self._outputs.append(candidate)
             self._results = replay["results"]
             self._state = replay["run_state"]
             return {
@@ -400,13 +407,10 @@ class RuntimeSession:
         }
 
     def advance(self, stage_output: dict[str, Any]) -> dict[str, Any]:
-        """Evaluate one successor without exposing mutable derived state."""
-
         before = self.projection
         try:
             return self._advance_strict(stage_output)
         except _core.ArchitectRuntimeExpectedError as exc:
-            # The internal evaluator is fail-closed; restore the last valid projection.
             self._outputs = [*before.accepted_stage_outputs]
             self._results = [*before.derived_stage_results]
             self._state = _copy(before.run_state)
@@ -418,8 +422,6 @@ class RuntimeSession:
             }
 
     def finalize(self) -> dict[str, Any]:
-        """Full-replay the complete accepted history before terminal use."""
-
         return _replay_history(
             self._outputs,
             run_context=self._run_context,
@@ -437,9 +439,8 @@ class RuntimeSession:
                     stage_id=earliest_stage,
                 )
             )
-        retained = self._outputs[: self._order.index(earliest_stage)]
         return resume_run(
-            retained,
+            self._outputs[: self._order.index(earliest_stage)],
             run_context=self._run_context,
             repository_root=self._root,
             git_provider=self._git_provider,
@@ -453,8 +454,6 @@ def resume_run(
     repository_root: Path = ROOT,
     git_provider: Any | None = None,
 ) -> RuntimeSession:
-    """Reconstruct canonical state solely from an ordered Stage Output prefix."""
-
     outputs = [_copy(item) for item in prior_stage_outputs]
     replay = _replay_history(
         outputs,
@@ -492,8 +491,6 @@ def evaluate_run(
     require_terminal: bool = True,
     git_provider: Any | None = None,
 ) -> dict[str, Any]:
-    """Compatibility result envelope backed only by canonical history replay."""
-
     try:
         return _replay_history(
             outputs,
@@ -517,14 +514,8 @@ def evaluate_stage(
     run_context: Any | None = None,
     git_provider: Any | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Legacy-shaped call that ignores caller-derived state and replays history.
-
-    Only ``run_state.evaluated_stage_outputs`` is read, because those are the
-    model-authored persistent inputs. Every other supplied field is discarded.
-    """
-
     context = run_context or _core.RunContext(source_kind="live_conversation")
-    history = []
+    history: list[dict[str, Any]] = []
     if isinstance(run_state, dict):
         values = run_state.get("evaluated_stage_outputs", [])
         if isinstance(values, list):
@@ -545,13 +536,9 @@ def evaluate_stage(
         )
     outcome = session._advance_strict(stage_output)
     result = outcome.get("stage_result")
-    if not isinstance(result, dict):
-        raise _core.RunSequenceValidationError(
-            _core.RuntimeDiagnostic(
-                "RUNTIME_STAGE_EVALUATION_FAILED",
-                "; ".join(outcome.get("diagnostics", [])) or "Stage evaluation failed",
-                stage_id=stage_id,
-            )
+    if not isinstance(result, dict) or result.get("stage_id") != stage_id:
+        raise _core.StageOutputValidationError(
+            _diagnostics_from_strings(outcome.get("diagnostics", []), stage_id=stage_id)
         )
     return result, session.run_state or _core.initial_run_state(
         stage_output.get("run_id"), root=root
@@ -566,8 +553,6 @@ def apply_partial_rerun(
     run_context: Any | None = None,
     git_provider: Any | None = None,
 ) -> dict[str, Any]:
-    """Truncate Stage Output history and replay; never manually mutate state."""
-
     context = run_context or _core.RunContext(source_kind="fixture")
     if isinstance(run_state_or_outputs, list):
         history = [item for item in run_state_or_outputs if isinstance(item, dict)]
@@ -626,8 +611,6 @@ def apply_partial_rerun(
     }
 
 
-# Explicit supported API. Existing constants and diagnostic types remain
-# accessible for compatibility, but caller-owned state is not execution truth.
 __all__ = [
     "RunContext",
     "RuntimeSession",
