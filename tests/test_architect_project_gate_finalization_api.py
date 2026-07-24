@@ -103,6 +103,19 @@ def test_caller_authority_fields_never_publish(tmp_path: Path) -> None:
         assert_not_published(finalize(directory, items=items), directory)
 
 
+def test_invalid_build_tree_and_terminal_output_never_publish(tmp_path: Path) -> None:
+    invalid_tree = legacy.full_outputs()
+    invalid_tree[7]["canonical_content"]["nodes"][0]["parent_node_id"] = "missing-node"
+    assert_not_published(finalize(tmp_path / "tree", items=invalid_tree), tmp_path / "tree")
+
+    invalid_terminal = legacy.full_outputs()
+    invalid_terminal[-1]["canonical_content"] = {}
+    assert_not_published(
+        finalize(tmp_path / "terminal", items=invalid_terminal),
+        tmp_path / "terminal",
+    )
+
+
 def test_public_stage_result_contains_only_existing_summary() -> None:
     outcome = runtime.evaluate_run(
         legacy.full_outputs(),
@@ -141,6 +154,26 @@ def test_single_replay_assembly_issue_and_consumption(
     result = finalize(tmp_path)
     assert result.finalization_succeeded is True
     assert counts == {"stage": 12, "assemble": 1, "issue": 1, "consume": 1}
+
+
+def test_one_shot_capability_cannot_be_consumed_twice() -> None:
+    replay = runtime_internal._replay_outcome(
+        legacy.full_outputs(),
+        run_context=legacy.context("fixture"),
+        repository_root=ROOT,
+        require_terminal=True,
+        git_provider=legacy.FixtureGitProvider(),
+    )
+    assert replay.status == "valid"
+    execution = replay.results[-1]["project_gate_export"]
+    with pytest.raises(contracts.ExportError) as caught:
+        contracts.build_export(
+            execution.runtime_issued_payload,
+            execution.producer_provenance,
+            replay.run_state["run_id"],
+            "quality_runtime:runtime_issued_payload",
+        )
+    assert caught.value.code == "ARCH_EXPORT_RUNTIME_PAYLOAD_AUTHORITY_REQUIRED"
 
 
 def test_live_and_synthetic_publication_semantics(tmp_path: Path) -> None:
