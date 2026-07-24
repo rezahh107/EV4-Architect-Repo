@@ -4,6 +4,8 @@ from __future__ import annotations
 import copy
 import importlib
 
+import pytest
+
 _legacy = importlib.import_module("_legacy_architect_runtime_completion_payload_errors")
 
 
@@ -64,3 +66,55 @@ _legacy.test_payload_lineage_rejects_failed_stage_with_success_completion = (
 for _name in dir(_legacy):
     if _name.startswith("test_"):
         globals()[_name] = getattr(_legacy, _name)
+
+
+@pytest.mark.parametrize(
+    "field, unresolved_id, payload_status, would_allow, handoff_allowed",
+    [
+        ("asset_intent", "U-payload-asset-intent", "insufficient_evidence", False, False),
+        ("scoped_css_intent", "U-payload-css-intent", "insufficient_evidence", False, False),
+        (
+            "dynamic_loop_intent",
+            "U-payload-dynamic-loop-intent",
+            "insufficient_evidence",
+            False,
+            False,
+        ),
+        (
+            "responsive_risk_seeds",
+            "U-payload-project-responsive-risk",
+            "complete",
+            True,
+            True,
+        ),
+        ("media_decision", "U-payload-media-decision", "insufficient_evidence", False, False),
+        (
+            "styling_decision",
+            "U-payload-styling-decision",
+            "insufficient_evidence",
+            False,
+            False,
+        ),
+    ],
+)
+def test_missing_conditional_intent_uses_handoff_boundary_semantics(
+    field: str,
+    unresolved_id: str,
+    payload_status: str,
+    would_allow: bool,
+    handoff_allowed: bool,
+) -> None:
+    items = _legacy.all_outputs()
+    items[8]["canonical_content"].pop(field)
+    outcome = _evaluate_full(items, kind="live_conversation")
+    assert outcome["status"] == "valid", outcome["errors"]
+    export = outcome["results"][-1]["project_gate_export"]
+    payload = export["runtime_issued_payload"]
+    assert payload["payload_status"] == payload_status
+    assert any(
+        item["unresolved_id"] == unresolved_id
+        for item in payload["unresolved_evidence"]
+    )
+    assert export["functional_eligibility"]["would_allow"] is would_allow
+    assert export["handoff_allowed"] is handoff_allowed
+    assert "architect-section" not in _legacy.json.dumps(payload)
