@@ -144,9 +144,16 @@ def test_external_history_replay_payload_is_non_authorizing() -> None:
 
 
 def test_copied_or_mutated_runtime_payload_cannot_recreate_capability() -> None:
-    outcome = _legacy.run(source_kind="fixture")
-    assert outcome["status"] == "valid", outcome["errors"]
-    issued = outcome["results"][-1]["project_gate_export"]["runtime_issued_payload"]
+    replay = runtime._replay_outcome(
+        _legacy.full_outputs(),
+        run_context=_legacy.context("fixture"),
+        repository_root=ROOT,
+        require_terminal=True,
+        git_provider=_legacy.FixtureGitProvider(),
+    )
+    assert replay.status == "valid"
+    execution = replay.results[-1]["project_gate_export"]
+    issued = execution.runtime_issued_payload
     copied = copy.deepcopy(issued)
     copied["synthetic"] = False
     copied["unresolved_evidence"] = []
@@ -160,7 +167,11 @@ def test_canonical_live_runtime_transaction_can_authorize_handoff() -> None:
     assert outcome["status"] == "valid", outcome["errors"]
     terminal = outcome["results"][-1]["project_gate_export"]
     assert terminal["canonical_payload_valid"] is True
-    assert terminal["runtime_issued_payload"]["synthetic"] is False
+    assert terminal["execution_context"] == {
+        "source_kind": "live_conversation",
+        "synthetic": False,
+    }
+    assert "runtime_issued_payload" not in terminal
     assert terminal["functional_eligibility"]["would_allow"] is True
     assert terminal["handoff_allowed"] is True
 
@@ -169,7 +180,11 @@ def test_canonical_synthetic_runtime_transaction_remains_blocked() -> None:
     outcome = _legacy.run(source_kind="fixture")
     assert outcome["status"] == "valid", outcome["errors"]
     terminal = outcome["results"][-1]["project_gate_export"]
-    assert terminal["runtime_issued_payload"]["synthetic"] is True
+    assert terminal["execution_context"] == {
+        "source_kind": "fixture",
+        "synthetic": True,
+    }
+    assert "runtime_issued_payload" not in terminal
     assert terminal["functional_eligibility"]["would_allow"] is True
     assert terminal["handoff_allowed"] is False
 
