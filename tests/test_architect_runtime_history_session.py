@@ -101,7 +101,7 @@ def test_session_failure_does_not_corrupt_prior_state() -> None:
     "mutator, code",
     [
         (lambda items: items.pop(4), "RUNTIME_STAGE_ORDER_MISMATCH"),
-        (lambda items: items.insert(2, copy.deepcopy(items[1])), "RUNTIME_STAGE_DUPLIATE"),
+        (lambda items: items.insert(2, copy.deepcopy(items[1])), "RUNTIME_STAGE_DUPLICATE"),
         (lambda items: items.__setitem__(slice(1, 3), [items[2], items[1]]), "RUNTIME_STAGE_ORDER_MISMATCH"),
         (lambda items: items[2].__setitem__("stage_id", "/unknown"), "RUNTIME_STAGE_ID_UNKNOWN"),
         (lambda items: items[2].__setitem__("run_id", "another-run"), "RUNTIME_RUN_HISTORY_MIXED"),
