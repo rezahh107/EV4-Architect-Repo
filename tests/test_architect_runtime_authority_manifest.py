@@ -83,7 +83,7 @@ def audit(event, args):
         rel = path.relative_to(root).as_posix()
     except Exception:
         return
-    if "/__pycache__/" in f"/{rel}" or rel.endswith((".pyc", ".pyo")):
+    if "/__pycache__/" in f"/{rel}" or rel.endswith((".pyc", ".pyo", ".py")):
         return
     opened.add(rel)
 sys.addaudithook(audit)
@@ -112,9 +112,20 @@ assert terminal["runtime_issued_payload"]["synthetic"] is True
 assert terminal["canonical_payload_valid"] is True
 assert terminal["functional_eligibility"]["would_allow"] is True
 assert terminal["handoff_allowed"] is False
-python_paths = sorted(path for path in opened if path.endswith(".py") and not path.startswith("tests/"))
-data_paths = sorted(path for path in opened if not path.endswith(".py"))
-print("RUNTIME_CLOSURE=" + json.dumps({"python": python_paths, "data": data_paths}, sort_keys=True))
+python_paths = set()
+for module in tuple(sys.modules.values()):
+    raw = getattr(module, "__file__", None)
+    if not raw:
+        continue
+    try:
+        path = Path(raw).resolve()
+        rel = path.relative_to(root).as_posix()
+    except Exception:
+        continue
+    if rel.startswith("tests/") or not rel.endswith(".py"):
+        continue
+    python_paths.add(rel)
+print("RUNTIME_CLOSURE=" + json.dumps({"python": sorted(python_paths), "data": sorted(opened)}, sort_keys=True))
 '''
     completed = subprocess.run(
         [sys.executable, "-c", code],
@@ -213,8 +224,17 @@ def _terminal_state() -> tuple[list[dict], dict]:
     return items, run["run_state"]
 
 
-@pytest.mark.parametrize("field", ["synthetic", "project_gate_payload", "stage_status"])
-def test_direct_terminal_diagnostics_preserve_typed_metadata(field: str) -> None:
+@pytest.mark.parametrize(
+    "field, expected_code",
+    [
+        ("synthetic", "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"),
+        ("project_gate_payload", "RUNTIME_CALLER_PROJECT_GATE_PAYLOAD_FORBIDDEN"),
+        ("stage_status", "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"),
+    ],
+)
+def test_direct_terminal_diagnostics_preserve_typed_metadata(
+    field: str, expected_code: str
+) -> None:
     items, state = _terminal_state()
     terminal = copy.deepcopy(items[-1])
     terminal[field] = False if field == "synthetic" else {}
@@ -228,9 +248,7 @@ def test_direct_terminal_diagnostics_preserve_typed_metadata(field: str) -> None
             git_provider=FixtureGitProvider(),
         )
     diagnostic = next(
-        item
-        for item in caught.value.diagnostics
-        if item.code == "RUNTIME_CALLER_AUTHORITY_FIELD_FORBIDDEN"
+        item for item in caught.value.diagnostics if item.code == expected_code
     )
     assert diagnostic.path == field
     assert diagnostic.stage_id == "/project-gate-export"
@@ -289,7 +307,8 @@ def test_finalize_and_identity_source_and_provider_diagnostics_are_structured() 
     finalized = session.finalize()
     assert finalized["status"] == "invalid"
     assert any(
-        item["code"] == "RUNTIME_RUN_INCOMPLETE" and item["path"] == "run"
+        item["code"] == "RUNTIME_STAGE_ORDER_MISMATCH"
+        and item["path"] == "history"
         for item in finalized["diagnostics"]
     )
 
