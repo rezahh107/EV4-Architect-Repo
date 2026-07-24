@@ -7,20 +7,36 @@ from typing import Any
 from architect_runtime_errors import RuntimeDiagnostic
 
 
-def _as_dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _as_list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
+def _inspectable_surfaces(payload: Any) -> tuple[dict[str, Any], list[Any]] | None:
+    if not isinstance(payload, dict):
+        return None
+    structure = payload.get("approved_structure_model")
+    intent = payload.get("architect_intent")
+    if not isinstance(structure, dict) or not isinstance(intent, dict):
+        return None
+    rows = structure.get("structure_nodes")
+    root_id = structure.get("root_node_id")
+    scoped = intent.get("scoped_css_intent")
+    if (
+        not isinstance(rows, list)
+        or not isinstance(root_id, str)
+        or not root_id
+        or not isinstance(scoped, dict)
+        or not isinstance(scoped.get("css_need_map"), list)
+    ):
+        return None
+    return structure, scoped["css_need_map"]
 
 
 def approved_reachable_node_ids(payload: dict[str, Any]) -> frozenset[str]:
     """Return only approved structure nodes reachable from the declared root."""
 
-    structure = _as_dict(payload.get("approved_structure_model"))
-    root_id = structure.get("root_node_id")
-    rows = _as_list(structure.get("structure_nodes"))
+    inspected = _inspectable_surfaces(payload)
+    if inspected is None:
+        return frozenset()
+    structure, _ = inspected
+    root_id = structure["root_node_id"]
+    rows = structure["structure_nodes"]
     by_id = {
         row.get("node_id"): row
         for row in rows
@@ -28,7 +44,7 @@ def approved_reachable_node_ids(payload: dict[str, Any]) -> frozenset[str]:
         and isinstance(row.get("node_id"), str)
         and row.get("node_id")
     }
-    if not isinstance(root_id, str) or not root_id or root_id not in by_id:
+    if root_id not in by_id:
         return frozenset()
     reachable: set[str] = set()
     queue: deque[str] = deque([root_id])
@@ -50,13 +66,17 @@ def approved_reachable_node_ids(payload: dict[str, Any]) -> frozenset[str]:
 
 
 def validate_css_target_references(payload: Any) -> list[RuntimeDiagnostic]:
-    """Validate every CSS target against the reachable approved Build Tree."""
+    """Validate every CSS target against the reachable approved Build Tree.
 
-    if not isinstance(payload, dict):
+    Container-shape failures remain owned by JSON Schema. Referential checks run
+    only when the approved structure and CSS need collection are inspectable.
+    """
+
+    inspected = _inspectable_surfaces(payload)
+    if inspected is None:
         return []
+    _, needs = inspected
     approved = approved_reachable_node_ids(payload)
-    css = _as_dict(_as_dict(payload.get("architect_intent")).get("scoped_css_intent"))
-    needs = _as_list(css.get("css_need_map"))
     diagnostics: list[RuntimeDiagnostic] = []
     for index, item in enumerate(needs):
         if not isinstance(item, dict):
