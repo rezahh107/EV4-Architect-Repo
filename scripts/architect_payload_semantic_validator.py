@@ -23,10 +23,16 @@ class ArchitectPayloadValidator(_base.ArchitectPayloadValidator):
 
     def validate_value(self, value: Any):
         result = super().validate_value(value)
+        diagnostics = list(result.get("diagnostics", []))
+        if any(
+            item.get("code") in {"INPUT_NOT_OBJECT", "SCHEMA_VALIDATION_FAILED"}
+            for item in diagnostics
+            if isinstance(item, dict)
+        ):
+            return result
         extra = validate_css_target_references(value)
         if not extra:
             return result
-        diagnostics = list(result.get("diagnostics", []))
         diagnostics.extend(
             {
                 "code": item.code,
