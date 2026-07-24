@@ -1,0 +1,24 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/build-tree",
+  "stage_version": "1.0.0",
+  "check_evidence": {
+    "selected_candidate_preserved": {"claim": "The Build Tree preserves ARCH-FAM-C.", "reason": "Both decision input and canonical content identify the locked Candidate."},
+    "canonical_build_tree_present": {"claim": "A complete structured Build Tree is present.", "reason": "The canonical content has a valid root and connected nodes."},
+    "architecture_drift_absent": {"claim": "The Build Tree does not redesign the selected architecture.", "reason": "It represents the locked family and contained decorative connector."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {
+    "candidate_id": "ARCH-FAM-C",
+    "root": "node-root",
+    "nodes": [
+      {"id": "node-root", "role": "section_root", "children": ["node-wrapper", "node-connector"]},
+      {"id": "node-wrapper", "role": "normal_flow_group", "children": ["node-content"]},
+      {"id": "node-content", "role": "editable_content", "children": []},
+      {"id": "node-connector", "role": "contained_decoration_layer", "children": []}
+    ]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}

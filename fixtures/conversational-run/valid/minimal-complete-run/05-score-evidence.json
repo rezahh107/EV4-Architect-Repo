@@ -1,0 +1,19 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/score-evidence",
+  "stage_version": "1.3.0",
+  "check_evidence": {
+    "evidence_scoring_valid": {"claim": "Each Candidate has structured evidence coverage.", "reason": "The candidate_scores array contains every prior Candidate with an evidence state."},
+    "hidden_recommendation_absent": {"claim": "No winner is selected during evidence scoring.", "reason": "The Stage records evidence without a selected Candidate."},
+    "unknowns_not_numeric": {"claim": "No Unknown is represented as a numeric score.", "reason": "Evidence states remain qualitative and explicit."}
+  },
+  "canonical_content": {
+    "candidate_scores": [
+      {"candidate_id": "ARCH-FAM-A", "coverage": "partial", "evidence_state": "observed"},
+      {"candidate_id": "ARCH-FAM-C", "coverage": "complete", "evidence_state": "observed"}
+    ]
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}

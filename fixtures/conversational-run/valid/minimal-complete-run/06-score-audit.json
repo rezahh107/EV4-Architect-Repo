@@ -1,0 +1,18 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/score-audit",
+  "stage_version": "1.2.0",
+  "check_evidence": {
+    "score_audit_acceptance": {"claim": "The score set is internally consistent.", "reason": "The audit status is accepted, eligible Candidates exist, and no material defect is listed."},
+    "rubric_integrity": {"claim": "Eligible Candidate identities preserve the scored set.", "reason": "Every eligible Candidate appears in prior score evidence without duplicates."},
+    "unknowns_not_numeric": {"claim": "No Unknown is converted into a number.", "reason": "The audited output contains no numeric unknown substitution."}
+  },
+  "canonical_content": {
+    "audit_status": "pass",
+    "eligible_candidates": ["ARCH-FAM-A", "ARCH-FAM-C"],
+    "material_defects": []
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}

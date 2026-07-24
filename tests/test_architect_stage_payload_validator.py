@@ -100,6 +100,29 @@ def test_insufficient_evidence_fixture_classified_distinctly():
     assert payload["diagnostics"] == []
 
 
+def test_complete_payload_with_transition_blocker_is_insufficient_evidence():
+    validator = validator_module.ArchitectPayloadValidator(ROOT)
+    payload = load_minimal_payload()
+    payload["unresolved_evidence"] = [
+        {
+            "unresolved_id": "U-test-transition-blocker",
+            "state": "insufficient_evidence",
+            "owner": "architect",
+            "reason": "Architect transition evidence is still missing.",
+            "blocks": ["architect_stage_payload_acceptance"],
+            "required_before": "project_gate_acceptance",
+            "evidence_refs": [],
+        }
+    ]
+
+    result = validator.validate_value(payload)
+
+    assert result["status"] == "insufficient_evidence"
+    assert [item["code"] for item in result["diagnostics"]] == [
+        "A_R05_TRANSITION_BLOCKER_STATUS_MISMATCH"
+    ]
+
+
 def test_missing_file_returns_structured_invalid_without_traceback():
     completed = run_validator_cli("--file", "fixtures/architect-stage-payload/invalid/missing-file.json", "--format", "json")
     assert completed.returncode == 1

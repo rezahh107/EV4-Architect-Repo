@@ -1,0 +1,23 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/handoff-export",
+  "stage_version": "1.0.1",
+  "check_evidence": {
+    "handoff_eligibility": {"claim": "The evaluated Run appears eligible for handoff.", "reason": "The package references the accepted Final Audit and required prior outputs."},
+    "blocking_unknowns_absent": {"claim": "No active downstream-critical Unknown remains.", "reason": "The Runtime Unknown ledger is the authority for this condition."},
+    "final_audit_preserved": {"claim": "The handoff preserves the Final Audit boundary.", "reason": "The package includes an explicit final-audit reference without overriding its result."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {
+    "handoff_package": {
+      "selected_candidate_id": "ARCH-FAM-C",
+      "approved_build_tree_ref": "08-build-tree.json#canonical_content",
+      "implementation_ref": "09-implementation.json#canonical_content",
+      "final_audit_ref": "10-final-audit.json#canonical_content",
+      "forbidden_work": ["no redesign", "no invented exact values", "no legacy export substitution"]
+    }
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
