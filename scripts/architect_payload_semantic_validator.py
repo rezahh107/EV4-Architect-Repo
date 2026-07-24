@@ -25,7 +25,7 @@ class ArchitectPayloadValidator(_base.ArchitectPayloadValidator):
         result = super().validate_value(value)
         diagnostics = list(result.get("diagnostics", []))
         if any(
-            item.get("code") in {"INPUT_NOT_OBJECT", "SCHEMA_VALIDATION_FAILED"}
+            item.get("code") == "INPUT_NOT_OBJECT"
             for item in diagnostics
             if isinstance(item, dict)
         ):
