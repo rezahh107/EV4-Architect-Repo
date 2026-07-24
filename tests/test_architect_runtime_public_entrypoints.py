@@ -160,7 +160,7 @@ def test_missing_symbol_fails_for_every_entrypoint(
         ),
         (
             "scripts/architect_runtime_payload_assembler.py",
-            "from architect_runtime_payload_assembler import EXTRA_EXPORT\n",
+            "EXTRA_EXPORT = True\n",
         ),
         (
             "scripts/architect_runtime_project_gate.py",
