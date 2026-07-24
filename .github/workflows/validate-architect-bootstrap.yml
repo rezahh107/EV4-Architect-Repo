@@ -21,6 +21,7 @@ on:
       - 'fixtures/repository-repair-recommendation-handoff/**'
       - 'manifests/architect-conversation-bootstrap.v1.json'
       - 'manifests/architect-pipeline-manifest.v1.json'
+      - 'manifests/architect-runtime-authority-manifest.v1.json'
       - 'schemas/architect-conversation-bootstrap.v1.schema.json'
       - 'schemas/architect-conversational-stage-output-base.v1.schema.json'
       - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
@@ -30,12 +31,14 @@ on:
       - 'scripts/check-architect-bootstrap.py'
       - 'scripts/check-architect-conversational-stage-output.py'
       - 'scripts/check-architect-quality-runtime.py'
+      - 'scripts/check-architect-runtime-authority-manifest.py'
       - 'scripts/check-architect-stage-payload.py'
       - 'scripts/check_architect_stage_payload_core.py'
       - 'scripts/architect_conversational_stage_output.py'
       - 'scripts/architect_quality_runtime.py'
       - 'scripts/architect_quality_runtime_core.py'
       - 'scripts/architect_quality_runtime/**'
+      - 'scripts/architect_runtime_authority_manifest.py'
       - 'scripts/architect_runtime_errors.py'
       - 'scripts/architect_runtime_project_gate.py'
       - 'scripts/architect_runtime_project_gate_core.py'
@@ -77,12 +80,14 @@ jobs:
       - name: Install validation dependencies
         run: python -m pip install 'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'
 
-      - name: Compile Runtime history, Payload, and repository repair implementation
+      - name: Compile Runtime history, authority, Payload, and repository repair implementation
         run: |
           python -m py_compile \
             scripts/architect_quality_runtime.py \
             scripts/architect_quality_runtime_core.py \
             scripts/architect_quality_runtime/__init__.py \
+            scripts/architect_runtime_authority_manifest.py \
+            scripts/check-architect-runtime-authority-manifest.py \
             scripts/architect_runtime_errors.py \
             scripts/architect_runtime_project_gate.py \
             scripts/architect_runtime_project_gate_core.py \
@@ -103,6 +108,9 @@ jobs:
             scripts/check-architect-stage-payload.py \
             scripts/check_architect_stage_payload_core.py \
             scripts/repository_repair_handoff.py \
+            tests/test_architect_runtime_authority_manifest.py \
+            tests/test_architect_runtime_public_entrypoints.py \
+            tests/test_architect_runtime_authority_probe_protocol.py \
             tests/test_architect_build_tree_validation.py \
             tests/test_architect_payload_derivation_validation.py \
             tests/test_architect_quality_runtime.py \
@@ -114,6 +122,9 @@ jobs:
             tests/test_architect_runtime_completion_payload_errors.py \
             tests/test_architect_bootstrap_semantics.py \
             tests/test_repository_repair_recommendation_handoff.py
+
+      - name: Validate Runtime authority manifest
+        run: python scripts/check-architect-runtime-authority-manifest.py
 
       - name: Validate quality-first full pipeline regression
         id: quality_runtime
@@ -167,13 +178,16 @@ jobs:
         shell: bash
         run: find . -type d -name __pycache__ -prune -exec rm -rf {} +
 
-      - name: Run Runtime history, session, provenance, CSS, Build Tree, and derivation tests
+      - name: Run Runtime authority, history, session, provenance, CSS, Build Tree, and derivation tests
         id: runtime_history_tests
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -vv \
+            tests/test_architect_runtime_authority_manifest.py \
+            tests/test_architect_runtime_public_entrypoints.py \
+            tests/test_architect_runtime_authority_probe_protocol.py \
             tests/test_architect_runtime_history_session.py \
             tests/test_architect_css_target_referential_integrity.py \
             tests/test_architect_build_tree_validation.py \
