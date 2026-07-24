@@ -86,5 +86,10 @@ def atomic_write(*args, **kwargs):
     return _implementation.atomic_write(*args, **kwargs)
 
 
+def main(argv=None):
+    _sync_test_overrides()
+    return _implementation.main(argv)
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
