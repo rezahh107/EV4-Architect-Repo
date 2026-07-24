@@ -71,6 +71,7 @@ def test_manifest_symbols_fully_own_interface_exports(tmp_path: Path) -> None:
         ["scripts/entry.py", "scripts/entry.py"],
         ["scripts/z.py", "scripts/entry.py"],
         ["scripts/../entry.py"],
+        ["scripts\\entry.py"],
         ["scripts/data.json"],
     ],
 )

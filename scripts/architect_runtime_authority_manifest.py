@@ -64,7 +64,13 @@ def _path_list(document: dict[str, Any], key: str) -> list[str]:
 
 def _validate_relative_path(value: str, key: str) -> None:
     path = PurePosixPath(value)
-    if not value or path.is_absolute() or ".." in path.parts or str(path) != value:
+    if (
+        not value
+        or "\\" in value
+        or path.is_absolute()
+        or ".." in path.parts
+        or str(path) != value
+    ):
         raise RuntimeAuthorityManifestError(
             f"{key} contains a non-canonical repository-relative path: {value!r}"
         )
