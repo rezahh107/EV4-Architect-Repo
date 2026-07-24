@@ -11,6 +11,11 @@ SCRIPTS = Path(__file__).resolve().parent
 PACKAGE_DIR = SCRIPTS / "architect_project_gate_exporter"
 PACKAGE_NAME = "_ev4_architect_project_gate_exporter"
 
+# The compatibility entrypoint loads its package by exact file path. Publish the
+# sibling scripts directory so package modules can import shared Runtime helpers.
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
 # Some legacy tests load this compatibility entrypoint under the public package
 # name. Publish the real package path so later Runtime submodule imports remain
 # deterministic and do not depend on test/import order.
@@ -79,11 +84,6 @@ _RUN_EXPORT_PROXY = run_export
 def atomic_write(*args, **kwargs):
     _sync_test_overrides()
     return _implementation.atomic_write(*args, **kwargs)
-
-
-def main(argv=None):
-    _sync_test_overrides()
-    return _implementation.main(argv)
 
 
 if __name__ == "__main__":
