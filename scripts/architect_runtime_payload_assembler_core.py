@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from architect_build_tree_validation import validate_canonical_build_tree
+from architect_handoff_classification import partition_unresolved_evidence
 from architect_payload_derivation_validation import (
     validate_payload_derivation_authority,
     validate_payload_derivation_rules,
@@ -1025,7 +1026,12 @@ def assemble_architect_stage_payload(
     else:
         decisions.append(styling)
     synthetic = source_kind != "live_conversation"
-    payload_status = "insufficient_evidence" if unresolved else "complete"
+    classification = partition_unresolved_evidence(unresolved)
+    payload_status = (
+        "insufficient_evidence"
+        if classification.transition_blockers
+        else "complete"
+    )
     output_digests = {
         item["stage_id"]: _digest(item)
         for item in run_state.get("evaluated_stage_outputs", [])
