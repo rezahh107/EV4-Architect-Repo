@@ -9,6 +9,8 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+from architect_handoff_classification import partition_unresolved_evidence
+
 from .base import *
 
 
@@ -123,16 +125,6 @@ def _evidence(payload: dict[str, Any], payload_hash: str, input_ref: str) -> lis
     return output
 
 
-def _transition_blockers(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    boundaries = {"architect_stage_payload_acceptance", "ce_transition"}
-    return [
-        item
-        for item in items
-        if boundaries.intersection(item.get("blocks", []))
-        or item.get("required_before") in {"project_gate_acceptance", "ce_transition"}
-    ]
-
-
 def build_export(
     payload: dict[str, Any], git: GitProvenance, run_id: str, input_ref: str
 ) -> tuple[dict[str, Any], dict[str, str]]:
@@ -145,10 +137,9 @@ def build_export(
             "operator",
         )
     payload_hash = digest(payload)
-    unresolved = [
-        item for item in payload.get("unresolved_evidence", []) if isinstance(item, dict)
-    ]
-    blockers = _transition_blockers(unresolved)
+    unresolved = payload.get("unresolved_evidence", [])
+    classification = partition_unresolved_evidence(unresolved)
+    blockers = list(classification.transition_blockers)
     insufficient = payload.get("payload_status") == "insufficient_evidence"
     synthetic = payload.get("synthetic") is True
     allowed = not insufficient and not synthetic and not blockers
