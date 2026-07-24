@@ -63,6 +63,31 @@ def test_manifest_symbols_fully_own_interface_exports(tmp_path: Path) -> None:
     assert authority.validate_manifest_document(document, root) is document
 
 
+def test_authority_path_resolution_cannot_escape_repository(
+    tmp_path: Path,
+) -> None:
+    root, _ = _write_root(tmp_path)
+    (tmp_path / "outside.py").write_text("SYMBOL = 1\n", encoding="utf-8")
+    with pytest.raises(
+        authority.RuntimeAuthorityManifestError,
+        match="RUNTIME_AUTHORITY_PATH_OUTSIDE_REPOSITORY",
+    ):
+        authority._native_repository_path(root, "../outside.py")
+
+
+def test_child_rejects_resolved_entrypoint_outside_repository(
+    tmp_path: Path,
+) -> None:
+    root, document = _write_root(tmp_path)
+    (tmp_path / "outside.py").write_text("SYMBOL = 1\n", encoding="utf-8")
+    document["public_entry_points"][0]["path"] = "../outside.py"
+    with pytest.raises(
+        authority.RuntimeAuthorityManifestError,
+        match="RUNTIME_AUTHORITY_ENTRYPOINT_PATH_OUTSIDE_REPOSITORY",
+    ):
+        authority.probe_manifest_entrypoints(document, root)
+
+
 @pytest.mark.parametrize(
     "reported_paths",
     [

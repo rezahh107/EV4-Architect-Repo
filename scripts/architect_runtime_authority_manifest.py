@@ -77,7 +77,18 @@ def _validate_relative_path(value: str, key: str) -> None:
 
 
 def _native_repository_path(root: Path, repository_path: str) -> Path:
-    return (root / Path(*PurePosixPath(repository_path).parts)).resolve()
+    root = root.resolve()
+    resolved = (
+        root / Path(*PurePosixPath(repository_path).parts)
+    ).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise RuntimeAuthorityManifestError(
+            "RUNTIME_AUTHORITY_PATH_OUTSIDE_REPOSITORY: "
+            f"{repository_path}"
+        ) from exc
+    return resolved
 
 
 _CHILD_ENTRYPOINT_PROBE = r'''
@@ -105,6 +116,21 @@ try:
     runtime_interface_id = request["runtime_interface_id"]
     declared_python_paths = set(request["declared_python_authority_paths"])
     expected = (root / Path(*PurePosixPath(entrypoint_path).parts)).resolve()
+    try:
+        expected.relative_to(root)
+    except ValueError:
+        emit({
+            "status": "invalid",
+            "entrypoint_path": entrypoint_path,
+            "executed_file": None,
+            "missing_symbols": [],
+            "loaded_repository_python_paths": [],
+            "process_id": os.getpid(),
+            "error_code": "RUNTIME_AUTHORITY_ENTRYPOINT_PATH_OUTSIDE_REPOSITORY",
+            "error_type": "PathOutsideRepository",
+            "message": "Manifest entrypoint resolves outside the repository",
+        })
+        raise SystemExit(0)
     scripts = (root / "scripts").resolve()
     sys.path.insert(0, str(scripts))
     synthetic_name = "_ev4_public_entrypoint_probe_" + hashlib.sha256(
