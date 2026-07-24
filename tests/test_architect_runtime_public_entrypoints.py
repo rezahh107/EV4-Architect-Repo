@@ -119,6 +119,27 @@ def test_all_entrypoints_use_independent_exact_processes(tmp_path: Path) -> None
     )
 
 
+def test_repository_manifest_probes_every_declared_entrypoint() -> None:
+    document = json.loads(
+        (REPO_ROOT / authority.MANIFEST_PATH).read_text(encoding="utf-8")
+    )
+    results = authority.probe_manifest_entrypoints(document, REPO_ROOT)
+    expected_paths = [
+        item["path"] for item in document["public_entry_points"]
+    ]
+    assert len(results) == len(expected_paths)
+    assert len({item["process_id"] for item in results}) == len(results)
+    assert [item["entrypoint_path"] for item in results] == expected_paths
+    assert [item["executed_file"] for item in results] == expected_paths
+    assert all(item["status"] == "valid" for item in results)
+    assert all(item["missing_symbols"] == [] for item in results)
+    declared = set(document["python_authority_paths"])
+    assert all(
+        set(item["loaded_repository_python_paths"]) <= declared
+        for item in results
+    )
+
+
 def test_additional_exports_are_allowed(tmp_path: Path) -> None:
     root, document = _write_root(tmp_path)
     authority.validate_manifest_document(document, root)
@@ -323,6 +344,16 @@ def test_probe_timeout_fails_closed(
 def test_sequential_roots_do_not_reuse_modules(tmp_path: Path) -> None:
     root_a, document_a = _write_root(tmp_path, marker="A")
     root_b, document_b = _write_root(tmp_path, marker="B")
+    for root, marker in ((root_a, "A"), (root_b, "B")):
+        wrapper = root / "scripts/architect_quality_runtime.py"
+        source = wrapper.read_text(encoding="utf-8")
+        wrapper.write_text(
+            "from pathlib import Path\n"
+            "Path(__file__).with_name('probe-marker.txt').write_text("
+            f"{marker!r}, encoding='utf-8')\n"
+            f"{source}",
+            encoding="utf-8",
+        )
     result_a = authority.probe_manifest_entrypoints(document_a, root_a)[0]
     result_b = authority.probe_manifest_entrypoints(document_b, root_b)[0]
     assert result_a["process_id"] != result_b["process_id"]
@@ -332,6 +363,12 @@ def test_sequential_roots_do_not_reuse_modules(tmp_path: Path) -> None:
     assert result_b["executed_file"] == (
         "scripts/architect_quality_runtime.py"
     )
+    assert (
+        root_a / "scripts/probe-marker.txt"
+    ).read_text(encoding="utf-8") == "A"
+    assert (
+        root_b / "scripts/probe-marker.txt"
+    ).read_text(encoding="utf-8") == "B"
 
 
 def test_repository_checker_reports_exact_probe_count() -> None:
