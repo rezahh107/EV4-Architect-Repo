@@ -59,8 +59,6 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Checkout exact pull request head
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -89,7 +87,7 @@ jobs:
             scripts/architect_runtime_project_gate.py \
             scripts/architect_runtime_project_gate_core.py \
             scripts/architect_runtime_project_gate/__init__.py \
-            scripts/architect_stage_claim_guard.py \
+            scripts/architect_runtime_stage_claim_guard.py \
             scripts/architect_build_tree_validation.py \
             scripts/architect_payload_derivation_validation.py \
             scripts/architect_css_target_validation.py \
