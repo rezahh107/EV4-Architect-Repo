@@ -1,6 +1,9 @@
-"""Supported Architect Runtime entry point.
+#!/usr/bin/env python3
+"""Canonical public wrapper for the single Architect Runtime interface."""
+from __future__ import annotations
 
-Implementation is exposed by the history-replay package; the evaluator core is
-internal and receives only Runtime-derived state.
-"""
 from architect_quality_runtime import *  # noqa: F401,F403
+from architect_project_gate_runtime_api import (  # noqa: F401
+    ProjectGateFinalizationResult,
+    finalize_project_gate,
+)
