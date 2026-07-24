@@ -347,5 +347,5 @@ def test_base_schema_diagnostic_preserves_path_and_stage() -> None:
         for item in caught.value.diagnostics
         if item.code == "RUNTIME_STAGE_OUTPUT_SCHEMA_INVALID"
     )
-    assert diagnostic.path == "run_id"
+    assert diagnostic.path == "<root>"
     assert diagnostic.stage_id == "/intake"
