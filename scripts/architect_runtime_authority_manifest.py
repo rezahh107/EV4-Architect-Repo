@@ -76,19 +76,49 @@ def _validate_relative_path(value: str, key: str) -> None:
         )
 
 
-def _native_repository_path(root: Path, repository_path: str) -> Path:
+def _resolve_repository_owned_path(
+    root: Path,
+    repository_path: str,
+    *,
+    error_code: str,
+) -> Path:
     root = root.resolve()
-    resolved = (
-        root / Path(*PurePosixPath(repository_path).parts)
-    ).resolve()
+    candidate = root
+    for part in PurePosixPath(repository_path).parts:
+        candidate /= part
+        if candidate.is_symlink():
+            raise RuntimeAuthorityManifestError(
+                f"{error_code}: {repository_path}: "
+                "repository-relative path traverses a symlink"
+            )
+    resolved = candidate.resolve()
     try:
         resolved.relative_to(root)
     except ValueError as exc:
         raise RuntimeAuthorityManifestError(
-            "RUNTIME_AUTHORITY_PATH_OUTSIDE_REPOSITORY: "
-            f"{repository_path}"
+            f"{error_code}: {repository_path}: "
+            "resolved path is outside the repository"
         ) from exc
     return resolved
+
+
+def _native_repository_path(root: Path, repository_path: str) -> Path:
+    return _resolve_repository_owned_path(
+        root,
+        repository_path,
+        error_code="RUNTIME_AUTHORITY_PATH_UNOWNED",
+    )
+
+
+def _entrypoint_repository_path(
+    root: Path,
+    repository_path: str,
+) -> Path:
+    return _resolve_repository_owned_path(
+        root,
+        repository_path,
+        error_code="RUNTIME_AUTHORITY_ENTRYPOINT_PATH_UNOWNED",
+    )
 
 
 _CHILD_ENTRYPOINT_PROBE = r'''
@@ -108,6 +138,41 @@ def emit(value):
     sys.stdout.flush()
 
 
+def reject_unowned_entrypoint(entrypoint_path, message):
+    emit({
+        "status": "invalid",
+        "entrypoint_path": entrypoint_path,
+        "executed_file": None,
+        "missing_symbols": [],
+        "loaded_repository_python_paths": [],
+        "process_id": os.getpid(),
+        "error_code": "RUNTIME_AUTHORITY_ENTRYPOINT_PATH_UNOWNED",
+        "error_type": "UnownedRepositoryPath",
+        "message": message,
+    })
+    raise SystemExit(0)
+
+
+def resolve_owned_entrypoint(root, entrypoint_path):
+    candidate = root
+    for part in PurePosixPath(entrypoint_path).parts:
+        candidate /= part
+        if candidate.is_symlink():
+            reject_unowned_entrypoint(
+                entrypoint_path,
+                "Manifest entrypoint path traverses a symlink",
+            )
+    expected = candidate.resolve()
+    try:
+        expected.relative_to(root)
+    except ValueError:
+        reject_unowned_entrypoint(
+            entrypoint_path,
+            "Manifest entrypoint resolves outside the repository",
+        )
+    return expected
+
+
 try:
     request = json.load(sys.stdin)
     root = Path(request["root"]).resolve()
@@ -115,22 +180,7 @@ try:
     declared_symbols = request["declared_symbols"]
     runtime_interface_id = request["runtime_interface_id"]
     declared_python_paths = set(request["declared_python_authority_paths"])
-    expected = (root / Path(*PurePosixPath(entrypoint_path).parts)).resolve()
-    try:
-        expected.relative_to(root)
-    except ValueError:
-        emit({
-            "status": "invalid",
-            "entrypoint_path": entrypoint_path,
-            "executed_file": None,
-            "missing_symbols": [],
-            "loaded_repository_python_paths": [],
-            "process_id": os.getpid(),
-            "error_code": "RUNTIME_AUTHORITY_ENTRYPOINT_PATH_OUTSIDE_REPOSITORY",
-            "error_type": "PathOutsideRepository",
-            "message": "Manifest entrypoint resolves outside the repository",
-        })
-        raise SystemExit(0)
+    expected = resolve_owned_entrypoint(root, entrypoint_path)
     scripts = (root / "scripts").resolve()
     sys.path.insert(0, str(scripts))
     synthetic_name = "_ev4_public_entrypoint_probe_" + hashlib.sha256(
@@ -288,6 +338,7 @@ def _run_entrypoint_probe(
     timeout_seconds: float,
 ) -> dict[str, Any]:
     entrypoint_path = entry["path"]
+    _entrypoint_repository_path(root, entrypoint_path)
     request = {
         "root": str(root),
         "entrypoint_path": entrypoint_path,
@@ -481,6 +532,7 @@ def validate_manifest_document(
         _validate_relative_path(path, "public_entry_points")
         if path not in python_paths:
             raise RuntimeAuthorityManifestError(f"Public entry point is not declared: {path}")
+        _entrypoint_repository_path(root, path)
         if (
             not isinstance(symbols, list)
             or not symbols

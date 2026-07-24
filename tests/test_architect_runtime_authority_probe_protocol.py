@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -58,6 +59,38 @@ def _completed_result(paths: object) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _execute_child_probe(
+    monkeypatch: pytest.MonkeyPatch,
+    request: dict,
+) -> dict:
+    stdin = io.StringIO(json.dumps(request))
+    stdout = io.StringIO()
+    monkeypatch.setattr(sys, "stdin", stdin)
+    monkeypatch.setattr(sys, "stdout", stdout)
+    monkeypatch.setattr(
+        sys,
+        "dont_write_bytecode",
+        sys.dont_write_bytecode,
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        exec(authority._CHILD_ENTRYPOINT_PROBE, {})
+    assert exc_info.value.code == 0
+    return json.loads(stdout.getvalue())
+
+
+def _child_request(root: Path, document: dict) -> dict:
+    entry = document["public_entry_points"][0]
+    return {
+        "root": str(root),
+        "entrypoint_path": entry["path"],
+        "declared_symbols": entry["symbols"],
+        "runtime_interface_id": document["runtime_interface_id"],
+        "declared_python_authority_paths": (
+            document["python_authority_paths"]
+        ),
+    }
+
+
 def test_manifest_symbols_fully_own_interface_exports(tmp_path: Path) -> None:
     root, document = _write_root(tmp_path)
     assert authority.validate_manifest_document(document, root) is document
@@ -70,22 +103,71 @@ def test_authority_path_resolution_cannot_escape_repository(
     (tmp_path / "outside.py").write_text("SYMBOL = 1\n", encoding="utf-8")
     with pytest.raises(
         authority.RuntimeAuthorityManifestError,
-        match="RUNTIME_AUTHORITY_PATH_OUTSIDE_REPOSITORY",
+        match="RUNTIME_AUTHORITY_PATH_UNOWNED",
     ):
         authority._native_repository_path(root, "../outside.py")
 
 
 def test_child_rejects_resolved_entrypoint_outside_repository(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root, document = _write_root(tmp_path)
     (tmp_path / "outside.py").write_text("SYMBOL = 1\n", encoding="utf-8")
     document["public_entry_points"][0]["path"] = "../outside.py"
+    result = _execute_child_probe(
+        monkeypatch,
+        _child_request(root, document),
+    )
+    assert result["status"] == "invalid"
+    assert result["error_code"] == (
+        "RUNTIME_AUTHORITY_ENTRYPOINT_PATH_UNOWNED"
+    )
+
+
+def test_parent_rejects_mocked_symlink_before_subprocess(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, document = _write_root(tmp_path)
+    target = (root / "scripts/entry.py").resolve()
+    real_is_symlink = Path.is_symlink
+
+    def mocked_is_symlink(path: Path) -> bool:
+        return path == target or real_is_symlink(path)
+
+    def unexpected_subprocess(*args, **kwargs):
+        pytest.fail("unowned entrypoint started a subprocess")
+
+    monkeypatch.setattr(Path, "is_symlink", mocked_is_symlink)
+    monkeypatch.setattr(authority.subprocess, "run", unexpected_subprocess)
     with pytest.raises(
         authority.RuntimeAuthorityManifestError,
-        match="RUNTIME_AUTHORITY_ENTRYPOINT_PATH_OUTSIDE_REPOSITORY",
+        match="RUNTIME_AUTHORITY_ENTRYPOINT_PATH_UNOWNED",
     ):
         authority.probe_manifest_entrypoints(document, root)
+
+
+def test_child_rejects_mocked_symlink_component(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, document = _write_root(tmp_path)
+    target = (root / "scripts/entry.py").resolve()
+    real_is_symlink = Path.is_symlink
+
+    def mocked_is_symlink(path: Path) -> bool:
+        return path == target or real_is_symlink(path)
+
+    monkeypatch.setattr(Path, "is_symlink", mocked_is_symlink)
+    result = _execute_child_probe(
+        monkeypatch,
+        _child_request(root, document),
+    )
+    assert result["status"] == "invalid"
+    assert result["error_code"] == (
+        "RUNTIME_AUTHORITY_ENTRYPOINT_PATH_UNOWNED"
+    )
 
 
 @pytest.mark.parametrize(
