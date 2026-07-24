@@ -25,6 +25,13 @@ for _name in dir(_core):
 INTERNAL_ASSEMBLER = _core
 
 
+def _validate_css(payload: dict[str, Any]) -> dict[str, Any]:
+    diagnostics = validate_css_target_references(payload)
+    if diagnostics:
+        raise PayloadDerivationError(diagnostics)
+    return payload
+
+
 def assemble_architect_stage_payload(
     *,
     stage_outputs: Iterable[dict[str, Any]] | None = None,
@@ -36,27 +43,42 @@ def assemble_architect_stage_payload(
 ) -> dict[str, Any]:
     """Assemble only from replayed model-authored Stage Output history.
 
-    ``run_state`` is accepted solely to extract its Stage Output history for
-    compatibility. Caller-supplied Stage Results, locks, ledgers, and digests are
-    ignored and recomputed by ``resume_run``.
+    During canonical replay the internal evaluator passes the state it has just
+    derived. That internal call consumes the state directly to avoid recursive
+    replay. External callers never have the active Runtime context and therefore
+    always reconstruct from Stage Output history before assembly.
     """
 
     import architect_quality_runtime as runtime
+
+    active_context = runtime.current_run_context()
+    if active_context is not None:
+        if not isinstance(run_state, dict):
+            raise PayloadDerivationError(
+                runtime.RuntimeDiagnostic(
+                    "PAYLOAD_REPLAY_STATE_REQUIRED",
+                    "Internal terminal assembly requires Runtime-derived replay state",
+                    path="run_state",
+                )
+            )
+        return _validate_css(
+            _core.assemble_architect_stage_payload(
+                run_state=run_state,
+                source_kind=active_context.source_kind,
+            )
+        )
 
     if stage_outputs is None:
         values = run_state.get("evaluated_stage_outputs", []) if isinstance(run_state, dict) else []
         stage_outputs = [item for item in values if isinstance(item, dict)]
     history = [copy.deepcopy(item) for item in stage_outputs]
     root = Path(repository_root or runtime.ROOT).resolve()
-    context = run_context or runtime.current_run_context() or runtime.RunContext(
-        source_kind=source_kind
-    )
-    provider = git_provider if git_provider is not None else runtime.current_git_provider()
+    context = run_context or runtime.RunContext(source_kind=source_kind)
     session = runtime.resume_run(
         history,
         run_context=context,
         repository_root=root,
-        git_provider=provider,
+        git_provider=git_provider,
     )
     canonical_state = session.run_state
     if canonical_state is None:
@@ -67,14 +89,12 @@ def assemble_architect_stage_payload(
                 path="history",
             )
         )
-    payload = _core.assemble_architect_stage_payload(
-        run_state=canonical_state,
-        source_kind=context.source_kind,
+    return _validate_css(
+        _core.assemble_architect_stage_payload(
+            run_state=canonical_state,
+            source_kind=context.source_kind,
+        )
     )
-    diagnostics = validate_css_target_references(payload)
-    if diagnostics:
-        raise PayloadDerivationError(diagnostics)
-    return payload
 
 
 __all__ = [
