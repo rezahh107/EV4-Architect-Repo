@@ -7,8 +7,8 @@
     {
       "path": "scripts/architect_quality_runtime.py",
       "symbols": [
-        "RUNTIME_INTERFACE_ID",
         "ProjectGateFinalizationResult",
+        "RUNTIME_INTERFACE_ID",
         "RunContext",
         "RuntimeSession",
         "SessionProjection",
