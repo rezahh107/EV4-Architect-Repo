@@ -1,0 +1,18 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/decompose",
+  "stage_version": "1.0.0",
+  "check_evidence": {
+    "observation_inference_separated": {"claim": "Observed roles and bounded inferences are separate.", "reason": "The canonical content uses distinct observations and inferences arrays."},
+    "implementation_not_selected": {"claim": "No Elementor implementation is selected.", "reason": "The Stage describes roles without implementation mapping."},
+    "unknowns_recorded": {"claim": "No material unknown is omitted.", "reason": "The explicit unknowns array is present and empty for this bounded fixture."}
+  },
+  "canonical_content": {
+    "observations": ["one normal-flow content group", "one decorative connector role"],
+    "inferences": ["a contained overlay layer may be viable"],
+    "unknowns": []
+  },
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}

@@ -1,0 +1,14 @@
+{
+  "run_id": "run-example-001",
+  "stage_id": "/recommend",
+  "stage_version": "1.1.0",
+  "check_evidence": {
+    "audited_candidate_selected": {"claim": "ARCH-FAM-C is proposed from the audited eligible set.", "reason": "The selected Candidate appears in prior audited outputs."},
+    "candidate_lock_established": {"claim": "One Candidate is proposed for Runtime lock.", "reason": "The decision input identifies exactly one Candidate."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "canonical_content": {"selected_candidate_id": "ARCH-FAM-C", "rationale": "The Candidate covers all bounded architecture roles."},
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}
