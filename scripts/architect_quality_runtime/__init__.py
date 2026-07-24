@@ -412,6 +412,15 @@ class RuntimeSession:
                 git_provider=self._git_provider,
             )
             if replay.status != "valid":
+                result = replay.results[-1] if replay.results else None
+                if (
+                    isinstance(result, dict)
+                    and result.get("stage_id") == observed
+                    and result.get("stage_status") != "pass"
+                ):
+                    return self._rejected(
+                        replay.diagnostics, stage_result=result, state=self._state
+                    )
                 raise _core.StageOutputValidationError(replay.diagnostics)
             self._outputs.append(candidate)
             self._results = [_copy(item) for item in replay.results]
