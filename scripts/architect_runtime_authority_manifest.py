@@ -76,6 +76,15 @@ def _validate_relative_path(value: str, key: str) -> None:
         )
 
 
+def _validate_public_entrypoint_wrapper_path(value: str) -> None:
+    path = PurePosixPath(value)
+    if path.parent != PurePosixPath("scripts") or path.suffix != ".py":
+        raise RuntimeAuthorityManifestError(
+            "RUNTIME_AUTHORITY_PUBLIC_ENTRYPOINT_WRAPPER_PATH_INVALID: "
+            f"{value}"
+        )
+
+
 def _resolve_repository_owned_path(
     root: Path,
     repository_path: str,
@@ -338,6 +347,7 @@ def _run_entrypoint_probe(
     timeout_seconds: float,
 ) -> dict[str, Any]:
     entrypoint_path = entry["path"]
+    _validate_public_entrypoint_wrapper_path(entrypoint_path)
     _entrypoint_repository_path(root, entrypoint_path)
     request = {
         "root": str(root),
@@ -530,6 +540,7 @@ def validate_manifest_document(
         if not isinstance(path, str):
             raise RuntimeAuthorityManifestError(f"public_entry_points[{index}].path is invalid")
         _validate_relative_path(path, "public_entry_points")
+        _validate_public_entrypoint_wrapper_path(path)
         if path not in python_paths:
             raise RuntimeAuthorityManifestError(f"Public entry point is not declared: {path}")
         _entrypoint_repository_path(root, path)

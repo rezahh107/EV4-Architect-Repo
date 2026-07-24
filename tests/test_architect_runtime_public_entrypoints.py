@@ -219,14 +219,38 @@ def test_broken_wrapper_fails_with_healthy_package(
 
 def test_wrong_entrypoint_file_fails(tmp_path: Path) -> None:
     root, document = _write_root(tmp_path)
+    (root / "scripts/wrong.py").write_text(
+        "OTHER_SYMBOL = True\n",
+        encoding="utf-8",
+    )
     mutated = copy.deepcopy(document)
-    mutated["public_entry_points"][1][
-        "path"
-    ] = "scripts/architect_quality_runtime/__init__.py"
+    mutated["python_authority_paths"].append("scripts/wrong.py")
+    mutated["python_authority_paths"].sort()
+    mutated["public_entry_points"][1]["path"] = "scripts/wrong.py"
     mutated["public_entry_points"].sort(key=lambda item: item["path"])
     with pytest.raises(
         authority.RuntimeAuthorityManifestError,
         match="ENTRYPOINT_SYMBOL_MISSING",
+    ):
+        authority.validate_manifest_document(mutated, root)
+
+
+@pytest.mark.parametrize("entry_index", [0, 1, 2])
+def test_same_named_package_cannot_replace_public_wrapper(
+    tmp_path: Path,
+    entry_index: int,
+) -> None:
+    root, document = _write_root(tmp_path)
+    mutated = copy.deepcopy(document)
+    wrapper_path = mutated["public_entry_points"][entry_index]["path"]
+    package_path = f"{wrapper_path[:-3]}/__init__.py"
+    assert package_path in mutated["python_authority_paths"]
+    mutated["public_entry_points"][entry_index]["path"] = package_path
+    mutated["public_entry_points"].sort(key=lambda item: item["path"])
+    mutated["python_authority_paths"].remove(wrapper_path)
+    with pytest.raises(
+        authority.RuntimeAuthorityManifestError,
+        match="PUBLIC_ENTRYPOINT_WRAPPER_PATH_INVALID",
     ):
         authority.validate_manifest_document(mutated, root)
 
