@@ -17,16 +17,28 @@ def main() -> int:
     try:
         manifest = load_runtime_authority_manifest(root)
     except RuntimeAuthorityManifestError as exc:
-        print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+        print(
+            json.dumps(
+                {"status": "invalid", "error": str(exc)},
+                sort_keys=True,
+            )
+        )
         return 1
+    entrypoint_count = len(manifest["public_entry_points"])
     print(
         json.dumps(
             {
                 "status": "valid",
                 "manifest_path": str(MANIFEST_PATH),
                 "runtime_interface_id": manifest["runtime_interface_id"],
-                "python_authority_path_count": len(manifest["python_authority_paths"]),
-                "data_authority_path_count": len(manifest["data_authority_paths"]),
+                "public_entrypoint_count": entrypoint_count,
+                "independent_subprocess_count": entrypoint_count,
+                "python_authority_path_count": len(
+                    manifest["python_authority_paths"]
+                ),
+                "data_authority_path_count": len(
+                    manifest["data_authority_paths"]
+                ),
             },
             sort_keys=True,
         )
