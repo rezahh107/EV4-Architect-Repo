@@ -3,30 +3,54 @@ name: validate-architect-bootstrap
 on:
   pull_request:
     paths:
+      - '.gitignore'
       - 'AGENTS.md'
       - 'README.md'
       - 'STATUS.md'
       - '01_PROJECT_INSTRUCTIONS.md'
       - '02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md'
       - 'contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md'
+      - 'contracts/ARCHITECT_RUNTIME_HISTORY_REPLAY_V1.md'
       - 'contracts/ARCHITECT_STAGE_RESULT_V1.md'
+      - 'contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md'
       - 'contracts/REPOSITORY_REPAIR_RECOMMENDATION_HANDOFF.md'
       - 'diagnostics/LLM_DEBUG_TRACE_CONTRACT.md'
+      - 'examples/conversational-stage-output/**'
       - 'fixtures/architect-quality-runtime/**'
+      - 'fixtures/conversational-run/**'
       - 'fixtures/repository-repair-recommendation-handoff/**'
       - 'manifests/architect-conversation-bootstrap.v1.json'
       - 'manifests/architect-pipeline-manifest.v1.json'
       - 'schemas/architect-conversation-bootstrap.v1.schema.json'
+      - 'schemas/architect-conversational-stage-output-base.v1.schema.json'
       - 'schemas/ev4-architect-pipeline-manifest.v1.schema.json'
       - 'schemas/ev4-architect-stage-result.v1.schema.json'
+      - 'schemas/ev4-architect-stage-payload.v1.schema.json'
       - 'release/EV4_PROJECT_RELEASE_PACK_v1/**'
       - 'scripts/check-architect-bootstrap.py'
+      - 'scripts/check-architect-conversational-stage-output.py'
       - 'scripts/check-architect-quality-runtime.py'
+      - 'scripts/check-architect-stage-payload.py'
+      - 'scripts/check_architect_stage_payload_core.py'
+      - 'scripts/architect_conversational_stage_output.py'
       - 'scripts/architect_quality_runtime.py'
+      - 'scripts/architect_quality_runtime_core.py'
+      - 'scripts/architect_quality_runtime/**'
+      - 'scripts/architect_runtime_errors.py'
+      - 'scripts/architect_runtime_project_gate.py'
+      - 'scripts/architect_runtime_project_gate_core.py'
+      - 'scripts/architect_runtime_project_gate/**'
+      - 'scripts/architect_stage_claim_guard.py'
+      - 'scripts/architect_build_tree_validation.py'
+      - 'scripts/architect_payload_derivation_validation.py'
+      - 'scripts/architect_css_target_validation.py'
+      - 'scripts/architect_payload_semantic_validator.py'
+      - 'scripts/architect_runtime_payload_assembler.py'
+      - 'scripts/architect_runtime_payload_assembler_core.py'
+      - 'scripts/architect_runtime_payload_assembler/**'
+      - 'scripts/architect_project_gate_exporter/eligibility.py'
       - 'scripts/repository_repair_handoff.py'
-      - 'tests/test_architect_bootstrap_semantics.py'
-      - 'tests/test_architect_quality_runtime.py'
-      - 'tests/test_repository_repair_recommendation_handoff.py'
+      - 'tests/**'
       - '.github/workflows/validate-architect-bootstrap.yml'
 
 permissions:
@@ -53,19 +77,70 @@ jobs:
       - name: Install validation dependencies
         run: python -m pip install 'jsonschema>=4.22.0' 'PyYAML>=6.0' 'pytest>=8.0.0'
 
-      - name: Compile quality runtime and repository repair implementation
+      - name: Compile Runtime history, Payload, and repository repair implementation
         run: |
           python -m py_compile \
             scripts/architect_quality_runtime.py \
+            scripts/architect_quality_runtime_core.py \
+            scripts/architect_quality_runtime/__init__.py \
+            scripts/architect_runtime_errors.py \
+            scripts/architect_runtime_project_gate.py \
+            scripts/architect_runtime_project_gate_core.py \
+            scripts/architect_runtime_project_gate/__init__.py \
+            scripts/architect_runtime_stage_claim_guard.py \
+            scripts/architect_build_tree_validation.py \
+            scripts/architect_payload_derivation_validation.py \
+            scripts/architect_css_target_validation.py \
+            scripts/architect_payload_semantic_validator.py \
+            scripts/architect_runtime_payload_assembler.py \
+            scripts/architect_runtime_payload_assembler_core.py \
+            scripts/architect_runtime_payload_assembler/__init__.py \
+            scripts/architect_project_gate_exporter/eligibility.py \
+            scripts/architect_conversational_stage_output.py \
             scripts/check-architect-quality-runtime.py \
+            scripts/check-architect-conversational-stage-output.py \
             scripts/check-architect-bootstrap.py \
+            scripts/check-architect-stage-payload.py \
+            scripts/check_architect_stage_payload_core.py \
             scripts/repository_repair_handoff.py \
+            tests/test_architect_build_tree_validation.py \
+            tests/test_architect_payload_derivation_validation.py \
             tests/test_architect_quality_runtime.py \
+            tests/test_architect_runtime_history_session.py \
+            tests/test_architect_css_target_referential_integrity.py \
+            tests/test_architect_conversational_stage_output.py \
+            tests/test_architect_conversational_stage_output_root_complete.py \
+            tests/test_architect_runtime_truth_spine.py \
+            tests/test_architect_runtime_completion_payload_errors.py \
             tests/test_architect_bootstrap_semantics.py \
             tests/test_repository_repair_recommendation_handoff.py
 
       - name: Validate quality-first full pipeline regression
-        run: python scripts/check-architect-quality-runtime.py
+        id: quality_runtime
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/check-architect-quality-runtime.py 2>&1 | tee "${{ runner.temp }}/architect-quality-runtime.log"
+
+      - name: Upload quality Runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-quality-runtime-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/architect-quality-runtime.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce quality Runtime result
+        if: steps.quality_runtime.outcome != 'success'
+        run: exit 1
+
+      - name: Validate conversational Stage Output examples and fixtures
+        run: python scripts/check-architect-conversational-stage-output.py
+
+      - name: Validate Architect Stage Payload
+        run: python scripts/check-architect-stage-payload.py
 
       - name: Validate Architect bootstrap semantics
         id: bootstrap_semantics
@@ -73,14 +148,14 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/check-architect-bootstrap.py 2>&1 | tee architect-bootstrap-semantics.log
+          python scripts/check-architect-bootstrap.py 2>&1 | tee "${{ runner.temp }}/architect-bootstrap-semantics.log"
 
       - name: Upload bootstrap semantic diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: architect-bootstrap-semantics-${{ github.event.pull_request.head.sha }}
-          path: architect-bootstrap-semantics.log
+          path: ${{ runner.temp }}/architect-bootstrap-semantics.log
           if-no-files-found: error
           retention-days: 2
 
@@ -88,11 +163,84 @@ jobs:
         if: steps.bootstrap_semantics.outcome != 'success'
         run: exit 1
 
-      - name: Run quality runtime and bootstrap mutation tests
+      - name: Remove generated bytecode before live-checkout tests
+        shell: bash
+        run: find . -type d -name __pycache__ -prune -exec rm -rf {} +
+
+      - name: Run Runtime history, session, provenance, CSS, Build Tree, and derivation tests
+        id: runtime_history_tests
+        continue-on-error: true
+        shell: bash
         run: |
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
+          set -o pipefail
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -vv \
+            tests/test_architect_runtime_history_session.py \
+            tests/test_architect_css_target_referential_integrity.py \
+            tests/test_architect_build_tree_validation.py \
+            tests/test_architect_payload_derivation_validation.py \
             tests/test_architect_quality_runtime.py \
-            tests/test_architect_bootstrap_semantics.py
+            tests/test_architect_runtime_completion_payload_errors.py \
+            tests/test_architect_bootstrap_semantics.py \
+            2>&1 | tee "${{ runner.temp }}/architect-runtime-history-tests.log"
+
+      - name: Upload Runtime history diagnostics
+        if: always() && steps.runtime_history_tests.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-runtime-history-tests-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/architect-runtime-history-tests.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce Runtime history test result
+        if: steps.runtime_history_tests.outcome != 'success'
+        run: exit 1
+
+      - name: Run conversational Stage Output mutation tests
+        id: conversational_stage_output_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -vv \
+            tests/test_architect_conversational_stage_output.py \
+            tests/test_architect_conversational_stage_output_root_complete.py \
+            tests/test_architect_runtime_truth_spine.py \
+            2>&1 | tee "${{ runner.temp }}/architect-conversational-stage-output-tests.log"
+
+      - name: Upload conversational Stage Output test diagnostics
+        if: always() && steps.conversational_stage_output_tests.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-conversational-stage-output-tests-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/architect-conversational-stage-output-tests.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce conversational Stage Output test result
+        if: steps.conversational_stage_output_tests.outcome != 'success'
+        run: exit 1
+
+      - name: Run full repository test suite
+        id: full_repository_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q 2>&1 | tee "${{ runner.temp }}/architect-full-repository-tests.log"
+
+      - name: Upload full repository test diagnostics
+        if: always() && steps.full_repository_tests.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: architect-full-repository-tests-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/architect-full-repository-tests.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce full repository test result
+        if: steps.full_repository_tests.outcome != 'success'
+        run: exit 1
 
       - name: Run repository repair handoff tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q tests/test_repository_repair_recommendation_handoff.py

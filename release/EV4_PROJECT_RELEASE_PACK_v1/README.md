@@ -2,7 +2,7 @@
 
 Status: release_candidate_quality_first_runtime  
 Pack schema: `ev4-project-release-pack@1.0.0`  
-Date: 2026-07-22  
+Date: 2026-07-23  
 Target runtime: ChatGPT Project
 
 ## Purpose
@@ -50,6 +50,7 @@ EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md
 EV4_FIRST_RUN_GUIDE.md
 PROJECT_SOURCE_MANIFEST.md
 EV4_RUN_COPILOT_INSTRUCTIONS.md
+CONVERSATIONAL_STAGE_OUTPUT_UPLOAD_SET.v1.json
 ```
 
 ## Release Boundary
@@ -76,4 +77,6 @@ production readiness
 
 ## Recommended Setup
 
-Use `PROJECT_INSTRUCTIONS_FINAL.md` as Project Instructions and upload the five core release files listed in `PROJECT_SOURCE_MANIFEST.md`.
+Use `PROJECT_INSTRUCTIONS_FINAL.md` as Project Instructions. Upload every path listed in `CONVERSATIONAL_STAGE_OUTPUT_UPLOAD_SET.v1.json#minimum_upload_paths` when conversational Stage Output emission is enabled.
+
+That deterministic set contains the five core release files plus the exact Pipeline Manifest, conversational Contract, extensible Base Schema, and the registered complete conversational examples. The Pipeline Manifest remains authoritative for every Stage ID, exact Stage version, and exact `check_evidence` key.

@@ -1,0 +1,36 @@
+{
+  "upload_set_id": "ev4-architect-conversational-stage-output-upload-set@1.0.0",
+  "purpose": "Exact minimum source set for constructing structurally valid conversational Architect Stage Output without unstated repository access.",
+  "manifest_path": "manifests/architect-pipeline-manifest.v1.json",
+  "contract": {
+    "path": "contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md",
+    "identity": "ev4-architect-conversational-stage-output@1.0.0"
+  },
+  "base_schema": {
+    "path": "schemas/architect-conversational-stage-output-base.v1.schema.json",
+    "identity": "ev4-architect-conversational-stage-output-base@1.0.0"
+  },
+  "example_paths": [
+    "examples/conversational-stage-output/intake.example.json",
+    "examples/conversational-stage-output/recommend.example.json",
+    "examples/conversational-stage-output/build-tree.example.json",
+    "examples/conversational-stage-output/implementation.example.json",
+    "examples/conversational-stage-output/handoff-export.example.json"
+  ],
+  "minimum_upload_paths": [
+    "release/EV4_PROJECT_RELEASE_PACK_v1/PROJECT_INSTRUCTIONS_FINAL.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_CORE_CONTRACTS_BUNDLE.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_STAGE_PROTOCOLS_BUNDLE.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_EXAMPLES_AND_CALIBRATION_BUNDLE.md",
+    "release/EV4_PROJECT_RELEASE_PACK_v1/EV4_FIRST_RUN_GUIDE.md",
+    "manifests/architect-pipeline-manifest.v1.json",
+    "contracts/ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1.md",
+    "schemas/architect-conversational-stage-output-base.v1.schema.json",
+    "examples/conversational-stage-output/intake.example.json",
+    "examples/conversational-stage-output/recommend.example.json",
+    "examples/conversational-stage-output/build-tree.example.json",
+    "examples/conversational-stage-output/implementation.example.json",
+    "examples/conversational-stage-output/handoff-export.example.json"
+  ],
+  "authority_note": "The Pipeline Manifest remains authoritative for every Stage ID, exact Stage version, and exact required check_evidence key. This upload set does not duplicate that inventory."
+}

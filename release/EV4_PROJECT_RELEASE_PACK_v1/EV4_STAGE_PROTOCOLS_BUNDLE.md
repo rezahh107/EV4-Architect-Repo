@@ -1,35 +1,56 @@
 # EV4 Stage Protocols Bundle
 
 Status: release_candidate_quality_first_runtime  
-Version: 1.2.0
+Version: 1.4.0
 
 ## Common Runtime Protocol
 
-Every logical Stage produces domain-specific Stage Output. One canonical evaluator derives the Stage Result:
-
 ```text
-Stage Output + Run State + Manifest-owned checks
+model-authored Stage content and check claims
++ evaluator-owned Run State
++ Runtime-owned RunContext
+→ conversational Base Schema
+→ scripts/architect_stage_claim_guard.py
 → scripts/architect_quality_runtime.py#evaluate_stage
+→ evaluator-derived Stage Result
 → pass | needs_input | blocked
 ```
 
 A serialized Stage Result is readable but non-authorizing. Stage Anchors, Validation Bundles, independent regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, and repository maintenance are not ordinary continuation prerequisites.
 
-The Pipeline Manifest owns the finite recognized checks for each Stage. Missing, unknown, cross-Stage, failed, unresolved, or improperly `not_applicable` required checks block continuation.
+The Pipeline Manifest owns exact Stage/check keys. Model check records carry non-authorizing `claim` and `reason`; legacy `result` is ignored. The Stage Claim Guard derives every check outcome from an explicit evaluation basis.
 
-## /intake
+Reasoning Stages use `completion_class: reasoning_complete`; this is bounded structural and consistency completion, not objective proof of reasoning quality. Consequential Stages and the terminal boundary use `completion_class: validated_pass` only after deterministic predicates pass.
 
-Capture usable input, defaults, constraints, non-blocking unknowns, and minimum blocking questions.
+## Conversational Stage Output Emission
 
-Forbidden: architecture, scoring, recommendation, build tree, invented exact values.
+<!-- BEGIN ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
+After completing each Stage, produce one complete standalone Runtime-compatible Stage Output JSON artifact for that Stage.
+
+Use contract `ev4-architect-conversational-stage-output@1.0.0` and base Schema `ev4-architect-conversational-stage-output-base@1.0.0`. The JSON is model-authored evaluator input, not an evaluator-derived Stage Result.
+
+Use the exact `run_id`, Manifest `stage_id`, Manifest `stage_version`, and exact Manifest-owned `check_evidence` keys. Each check record carries a non-authorizing `claim` and `reason`; do not author an official check result. Preserve complete Stage-specific canonical content, active Unknowns, and the locked Candidate. A summary must not replace canonical content.
+
+Do not author official `PASS`, `stage_status`, `quality_checks`, `completion_class`, `next_stage`, continuation authority, official digests, `RunContext`, `source_kind`, authoritative `synthetic`, producer provenance, or `project_gate_payload`. At `/project-gate-export`, request export only; the Runtime assembles the official terminal Payload from the evaluated Run.
+
+Emit one separate Stage Output artifact per Stage. A later Stage artifact must not replace or modify an earlier artifact. Until the official Runtime evaluates an artifact, any presentation label is only `stage_status: not_evaluated` with `claim_basis: model_authored_stage_output_only` and is non-authorizing.
+
+Prefer an actual UTF-8 `.json` attachment. When attachment creation is unavailable, return one exact JSON code block, provide an explicit proposed filename, and state truthfully that no attachment was created.
+<!-- END ARCHITECT_CONVERSATIONAL_STAGE_OUTPUT_V1 -->
+
+## /intake — reasoning_complete
+
+Capture usable input, constraints, explicit Unknown introductions, and minimum blocking questions.
+
+Deterministic boundaries: required `input_basis` exists; no Candidate or architecture is selected; unavailable exact values are not declared known.
+
+Forbidden: architecture selection, scoring, recommendation, Build Tree, invented exact values.
 
 `pass → /research`.
 
-## /research
+## /research — reasoning_complete
 
-Govern platform-capability evidence and version-sensitive claims.
-
-Disposition:
+Record one canonical disposition:
 
 ```text
 active_lookup_completed
@@ -38,140 +59,93 @@ no_platform_question
 blocked_by_missing_required_source
 ```
 
-The first three may pass. No external lookup receipt is required for a truthful `no_platform_question` result.
-
-Forbidden: visual interpretation, scoring, recommendation, tree, implementation.
+The first three may pass. Research does not decide project-specific architecture, score Candidates, recommend, or convert unsupported claims into exact facts.
 
 `pass → /decompose`.
 
-## /decompose
+## /decompose — reasoning_complete
 
-Produce the visual-role map and preserve:
-
-```text
-observed
-likely | inferred
-unknown
-not_allowed_yet
-```
-
-Forbidden: architecture choice, scoring, exact values, Elementor tree, DOM inference.
+Preserve separate observations, inferences, and explicit Unknowns. Do not select implementation or architecture.
 
 `pass → /architectures`.
 
-## /architectures
+## /architectures — reasoning_complete
 
-Enumerate viable architecture families and prove coverage.
-
-Forbidden: winner selection, scoring, final tree, implementation.
+Provide distinct Candidate identities, architecture families, and explicit coverage. Do not select a winner. Coverage quality remains attributed reasoning; Candidate shape and absence of recommendation are Runtime-checkable.
 
 `pass → /score-evidence`.
 
-## /score-evidence
+## /score-evidence — reasoning_complete
 
-Score every eligible candidate using the approved rubric and evidence.
-
-```text
-? = missing evidence
-N/A = genuinely non-applicable
-Unknowns are not numbers.
-```
-
-Forbidden: hidden recommendation, invented scores, candidate modification.
+Represent every prior Candidate with structured coverage and evidence state. Do not hide a recommendation or turn unknown evidence into numeric fact.
 
 `pass → /score-audit`.
 
-## /score-audit
+## /score-audit — validated_pass
 
-Audit arithmetic, weights, denominator handling, evidence use, gate overrides, unknown discipline, cross-candidate consistency, and hidden recommendation.
-
-Only an accepted state equivalent to `pass` or `pass_with_minor_flags`, with no material defect, permits recommendation.
+Runtime checks accepted audit status, material-defect absence, internal Candidate identity consistency, and rubric-set integrity. A model-authored `pass` cannot grant acceptance.
 
 `pass → /recommend`.
 
-## /recommend
+## /recommend — validated_pass
 
-Select one candidate from the audited eligible set and establish:
+The model proposes one Candidate. Runtime verifies it exists in both the architecture set and the audited eligible set, then establishes Candidate lock.
 
-```text
-selected_candidate_id
-selected_candidate_locked: true
-```
-
-Forbidden: re-scoring, new architecture, tree, implementation, invented exact values.
+Forbidden: re-scoring, new architecture, Build Tree, implementation, invented exact values.
 
 `pass → /build-tree`.
 
 ## Unknown Lifecycle
 
-Active unknowns persist in Run State. Omission is not resolution.
+Active Unknowns persist in Runtime Run State. Omission is not resolution. Downstream-critical resolution requires an evidence reference present in `RunContext.verified_evidence_refs`; a caller string alone is not verified evidence.
 
-Ordinary resolution requires an explicit type and note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+## /build-tree — validated_pass
 
-## /build-tree
-
-Translate the locked candidate into canonical structured Build Tree content.
-
-Required: node identities, parent relationships, wrapper justification, editable content, overlay boundaries, class intent, unknowns, and selected-candidate preservation.
-
-The evaluator computes the digest from the actual structured content. Do not create a wrapper Artifact solely to obtain a digest.
-
-Forbidden: re-architecture, final CSS, implementation settings, exact-value invention, caller-authored digest authority.
+Translate the locked Candidate into canonical structured Build Tree content. Runtime verifies Candidate preservation, root/node structure, architecture-drift absence, and computes the Build Tree digest from actual content.
 
 `pass → /implementation`.
 
-## /implementation
+## /implementation — validated_pass
 
-Map the approved tree to Elementor elements, widgets, classes, variables, assets, responsive controls, interactions, accessibility, and scoped CSS needs.
-
-The canonical structured Implementation content must contain the approved Build Tree representation. The evaluator derives both content identity and fidelity.
-
-Forbidden: unsupported assets, breakpoints, interactions, values, UI paths, global CSS, readiness overclaim, `null == null` fidelity, fabricated digest equality.
+Map the approved tree to implementation content. Runtime requires the embedded approved Build Tree, compares its digest with the prior canonical tree, and computes Implementation identity.
 
 `pass → /final-audit`.
 
-## /final-audit
+## /final-audit — validated_pass
 
-Audit candidate lock, tree/implementation fidelity, required content, responsive validity, accessibility, scoped CSS, unknown lifecycle, and handoff safety.
-
-Blocker/high findings, candidate drift, unsupported exact values, invalid responsive strategy, missing required content, unresolved downstream-critical unknowns, or implementation/tree mismatch prevent pass.
+The model provides findings. Runtime derives acceptance from required audit scope, absence of blocker/high findings, Candidate lock, Implementation fidelity, and active downstream-critical Unknowns.
 
 `pass → /handoff-export`.
 
-## /handoff-export
+## /handoff-export — validated_pass
 
-Package accepted outputs without adding decisions.
-
-Required: candidate lock, actual canonical content identities, findings and unknowns preserved, and canonical Project Gate payload source.
-
-Forbidden: new decisions, hidden repair, legacy export substitution.
+Package accepted outputs without adding decisions. Runtime derives eligibility from accepted Final Audit, Candidate lock, required Build/Implementation identities, no critical Unknowns, and preserved final-audit reference.
 
 `pass → /project-gate-export`.
 
-## /project-gate-export
+## /project-gate-export — validated_pass
 
-Produce the canonical Architect Producer Gate Export or a fail-closed blocked result.
-
-A pass result must be derived from:
+The conversational Stage Output contains only a non-authoritative export request or presentation note. Caller-supplied `project_gate_payload`, `synthetic`, producer provenance, success Booleans, digests, or handoff status are forbidden.
 
 ```text
-actual canonical Architect Stage Payload
+evaluated Stage Outputs
++ derived Stage Results
++ Run State
++ RunContext
+→ Runtime Payload Assembler
+→ ev4-architect-stage-payload@1.0.0
 → existing Schema and semantic validation
-→ selected-candidate consistency
+→ producer provenance from the actual checkout
 → existing Producer Gate exporter
-→ actual canonical export
 → contract and digest verification
+→ Runtime-derived handoff
 ```
 
-Caller-authored Booleans do not authorize success. Preserve locked identity, canonical serialization, provenance, digest integrity, invalid-payload rejection, and legacy-output non-substitution.
-
-This is terminal.
+`RunContext.source_kind` is `live_conversation`, `fixture`, `example`, or `test_vector`. Runtime derives synthetic state. Synthetic contexts may report business `would_allow`, but actual handoff remains false. This is terminal.
 
 ## Partial Rerun
 
-Use the earliest Stage whose owned information changed. Invalidate dependent downstream Stage Results, preserve unaffected Run State, reactivate unknowns whose resolutions depended on invalidated work, and invalidate candidate lock only when the rerun reaches `/recommend` or earlier.
-
-Do not add a general rerun ledger, cryptographic rerun receipt, or independent rerun authorization.
+Use the earliest affected Stage. Invalidate dependent outputs/results, preserve unaffected Run State, reactivate affected Unknowns, and invalidate Candidate lock only when rerun reaches `/recommend` or earlier.
 
 ## Resume
 
