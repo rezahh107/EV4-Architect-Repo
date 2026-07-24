@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Literal
 from jsonschema import Draft202012Validator
 
+from architect_handoff_classification import partition_unresolved_evidence
+
 Severity = Literal["error","warning","info","insufficient_evidence"]
 ORDER = {"error":0,"insufficient_evidence":1,"warning":2,"info":3}
 FORBIDDEN = {
@@ -93,8 +95,21 @@ class ArchitectPayloadValidator:
         missing=sorted(REQUIRED_FORBIDDEN_WORK-{item for item in forbidden_work if isinstance(item,str)})
         if missing: out.append(D("A_R04_FORBIDDEN_WORK_INCOMPLETE","error","Architect payload must explicitly forbid invented downstream facts.","$.forbidden_work","A-R04",missing=missing))
         unresolved_evidence=_as_list(v.get("unresolved_evidence"))
+        classification=partition_unresolved_evidence(unresolved_evidence)
         if v.get("payload_status")=="insufficient_evidence" and not unresolved_evidence:
             out.append(D("A_R05_UNRESOLVED_EVIDENCE_MISSING","error","Insufficient payloads must structurally state missing evidence.","$.unresolved_evidence","A-R05"))
+        if v.get("payload_status")=="complete" and classification.transition_blockers:
+            out.append(D(
+                "A_R05_TRANSITION_BLOCKER_STATUS_MISMATCH",
+                "insufficient_evidence",
+                "Payload status cannot be complete while unresolved evidence blocks Architect Payload acceptance or CE transition.",
+                "$.payload_status",
+                "A-R05",
+                transition_blocker_ids=[
+                    str(item.get("unresolved_id"))
+                    for item in classification.transition_blockers
+                ],
+            ))
         architect_intent=_as_dict(v.get("architect_intent"))
         css=_as_dict(architect_intent.get("scoped_css_intent"))
         if css.get("global_css_allowed") is not False: out.append(D("A_R08_GLOBAL_CSS_NOT_ALLOWED","error","Scoped CSS intent must not allow global CSS.","$.architect_intent.scoped_css_intent.global_css_allowed","A-R08"))
@@ -157,7 +172,14 @@ class ArchitectPayloadValidator:
         return out
     def _result(self,value,diags):
         ordered=sorted(diags,key=lambda d:d.key())
-        status="invalid" if any(d.severity=="error" for d in ordered) else "insufficient_evidence" if isinstance(value,dict) and value.get("payload_status")=="insufficient_evidence" else "valid"
+        status=(
+            "invalid"
+            if any(d.severity=="error" for d in ordered)
+            else "insufficient_evidence"
+            if any(d.severity=="insufficient_evidence" for d in ordered)
+            or (isinstance(value,dict) and value.get("payload_status")=="insufficient_evidence")
+            else "valid"
+        )
         return {"status":status,"diagnostics":[d.to_dict() for d in ordered]}
 
 
