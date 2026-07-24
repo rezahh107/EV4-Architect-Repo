@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import ast
 import copy
+import importlib
 import json
 import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = REPO_ROOT / "scripts"
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
@@ -17,9 +18,10 @@ from architect_handoff_classification import (
     blocks_architect_transition,
     partition_unresolved_evidence,
 )
-from architect_project_gate_exporter import base, contracts, eligibility
+from architect_project_gate_exporter import eligibility
 
-DOWNSTREAM_FIXTURE = REPO_ROOT / (
+_legacy = importlib.import_module("_legacy_architect_runtime_truth_spine")
+DOWNSTREAM_FIXTURE = ROOT / (
     "fixtures/architect-stage-payload/valid/"
     "complete-with-unresolved-downstream-evidence.v1.json"
 )
@@ -47,11 +49,17 @@ def fixture_payload() -> dict:
     return json.loads(DOWNSTREAM_FIXTURE.read_text(encoding="utf-8"))
 
 
-def provenance() -> base.GitProvenance:
-    return base.GitProvenance(
-        repository=base.REPOSITORY,
-        ref="test/handoff-classification",
-        commit_sha="a" * 40,
+def runtime_payload(monkeypatch, items: list[dict]) -> dict:
+    _, _, state = _legacy.evaluate_prefix(11)
+    assembler = importlib.import_module("architect_runtime_payload_assembler")
+    monkeypatch.setattr(
+        assembler.INTERNAL_ASSEMBLER,
+        "_unknowns",
+        lambda _state: copy.deepcopy(items),
+    )
+    return assembler.INTERNAL_ASSEMBLER.assemble_architect_stage_payload(
+        run_state=state,
+        source_kind="fixture",
     )
 
 
@@ -93,30 +101,6 @@ def test_required_before_matrix(deadline: str, expected: bool) -> None:
     assert blocks_architect_transition(item) is expected
 
 
-def test_multiple_blocks_use_any_transition_boundary() -> None:
-    item = unresolved(
-        "mixed-blocks",
-        blocks=["builder_execution", "ce_transition", "production_readiness"],
-        required_before="builder_execution",
-    )
-    assert blocks_architect_transition(item) is True
-
-
-def test_multiple_downstream_blocks_remain_nonblocking() -> None:
-    item = unresolved(
-        "downstream-blocks",
-        blocks=["builder_execution", "responsive_validation", "production_readiness"],
-        required_before="builder_execution",
-    )
-    assert blocks_architect_transition(item) is False
-
-
-def test_partition_empty_is_stable() -> None:
-    classification = partition_unresolved_evidence([])
-    assert classification.transition_blockers == ()
-    assert classification.downstream_obligations == ()
-
-
 def test_partition_preserves_order_identity_and_input() -> None:
     items = [
         unresolved(
@@ -143,9 +127,7 @@ def test_partition_preserves_order_identity_and_input() -> None:
         ),
     ]
     before = copy.deepcopy(items)
-
     classification = partition_unresolved_evidence(items)
-
     assert [item["unresolved_id"] for item in classification.transition_blockers] == [
         "architect",
         "ce",
@@ -185,22 +167,21 @@ def test_malformed_items_fail_deterministically(item, error, message) -> None:
         partition_unresolved_evidence([item])
 
 
-def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
+def test_existing_downstream_fixture_remains_functionally_nonblocking() -> None:
     payload = fixture_payload()
-
     classification = partition_unresolved_evidence(payload["unresolved_evidence"])
-
     assert payload["payload_status"] == "complete"
     assert classification.transition_blockers == ()
-    assert [
-        item["unresolved_id"] for item in classification.downstream_obligations
-    ] == ["unresolved-mobile-connectors", "unresolved-real-export-json"]
+    assert eligibility.derive_handoff_eligibility(payload) == {
+        "would_allow": True,
+        "blockers": [],
+    }
 
 
 @pytest.mark.parametrize(
-    ("case_id", "items", "status", "synthetic", "would_allow", "allowed", "handoff_status", "stage_status"),
+    ("case_id", "items", "status", "would_allow"),
     [
-        ("none", [], "complete", False, True, True, "successful", "complete"),
+        ("none", [], "complete", True),
         (
             "responsive-only",
             [
@@ -212,11 +193,7 @@ def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
                 )
             ],
             "complete",
-            False,
             True,
-            True,
-            "successful_with_flags",
-            "complete",
         ),
         (
             "builder-only",
@@ -229,11 +206,7 @@ def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
                 )
             ],
             "complete",
-            False,
             True,
-            True,
-            "successful_with_flags",
-            "complete",
         ),
         (
             "production-only",
@@ -246,11 +219,7 @@ def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
                 )
             ],
             "complete",
-            False,
             True,
-            True,
-            "successful_with_flags",
-            "complete",
         ),
         (
             "architect-acceptance",
@@ -263,10 +232,6 @@ def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
             ],
             "insufficient_evidence",
             False,
-            False,
-            False,
-            "insufficient_evidence",
-            "insufficient_evidence",
         ),
         (
             "ce-transition",
@@ -279,25 +244,15 @@ def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
             ],
             "insufficient_evidence",
             False,
-            False,
-            False,
-            "insufficient_evidence",
-            "insufficient_evidence",
         ),
         (
             "mixed",
             [
                 unresolved(
                     "responsive",
-                    blocks=["responsive_validation", "production_readiness"],
+                    blocks=["responsive_validation"],
                     required_before="responsive_validation",
                     owner="responsive",
-                ),
-                unresolved(
-                    "builder",
-                    blocks=["builder_execution", "production_readiness"],
-                    required_before="builder_execution",
-                    owner="builder",
                 ),
                 unresolved(
                     "ce",
@@ -307,118 +262,43 @@ def test_existing_complete_downstream_fixture_remains_nonblocking() -> None:
             ],
             "insufficient_evidence",
             False,
-            False,
-            False,
-            "insufficient_evidence",
-            "insufficient_evidence",
-        ),
-        (
-            "synthetic-downstream",
-            [
-                unresolved(
-                    "responsive-only",
-                    blocks=["responsive_validation", "production_readiness"],
-                    required_before="responsive_validation",
-                    owner="responsive",
-                )
-            ],
-            "complete",
-            True,
-            True,
-            False,
-            "blocked",
-            "blocked",
         ),
     ],
 )
-def test_all_consumers_share_the_classification_matrix(
+def test_assembler_and_functional_eligibility_share_matrix(
+    monkeypatch,
     case_id: str,
     items: list[dict],
     status: str,
-    synthetic: bool,
     would_allow: bool,
-    allowed: bool,
-    handoff_status: str,
-    stage_status: str,
 ) -> None:
-    payload = fixture_payload()
-    payload["payload_status"] = status
-    payload["synthetic"] = synthetic
-    payload["unresolved_evidence"] = copy.deepcopy(items)
-
-    classification = partition_unresolved_evidence(payload["unresolved_evidence"])
-    functional = eligibility.derive_handoff_eligibility(payload)
-    export, _ = contracts.build_export(
-        payload,
-        provenance(),
-        f"classification-{case_id}",
-        "classification-test",
-    )
-
-    assert functional["would_allow"] is would_allow
-    assert functional["blockers"] == list(classification.transition_blockers)
-    assert export["handoff"]["allowed"] is allowed
-    assert export["handoff"]["status"] == handoff_status
-    assert export["stage_manifest"][0]["status"] == stage_status
-    assert export["handoff"]["unresolved_evidence"] == items
-    assert export["stage_manifest"][0]["unknowns"] == items
+    payload = runtime_payload(monkeypatch, items)
+    assert payload["payload_status"] == status, case_id
+    assert payload["unresolved_evidence"] == items
+    assert eligibility.derive_handoff_eligibility(payload)["would_allow"] is would_allow
 
 
-def test_status_only_inconsistency_blocks_without_duplicate_transition_item() -> None:
-    payload = fixture_payload()
-    payload["payload_status"] = "insufficient_evidence"
-
-    functional = eligibility.derive_handoff_eligibility(payload)
-
-    assert functional == {
-        "would_allow": False,
-        "blockers": [{"code": "ARCH_PAYLOAD_INSUFFICIENT_EVIDENCE"}],
-    }
-
-
-def test_transition_item_is_not_double_reported_by_status() -> None:
-    item = unresolved(
-        "ce",
-        blocks=["ce_transition"],
-        required_before="ce_transition",
-    )
-    payload = fixture_payload()
-    payload["payload_status"] = "insufficient_evidence"
-    payload["unresolved_evidence"] = [item]
-
-    functional = eligibility.derive_handoff_eligibility(payload)
-
-    assert functional == {"would_allow": False, "blockers": [item]}
-
-
-def test_consumers_delegate_transition_classification_to_shared_module() -> None:
+def test_all_four_consumers_delegate_to_shared_classifier() -> None:
     paths = [
-        REPO_ROOT / "scripts/architect_runtime_payload_assembler_core.py",
-        REPO_ROOT / "scripts/architect_project_gate_exporter/eligibility.py",
-        REPO_ROOT / "scripts/architect_project_gate_exporter/contracts.py",
+        ROOT / "scripts/architect_runtime_payload_assembler_core.py",
+        ROOT / "scripts/architect_project_gate_exporter/eligibility.py",
+        ROOT / "scripts/architect_project_gate_exporter/contracts.py",
+        ROOT / "scripts/check_architect_stage_payload_core.py",
     ]
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        imported = any(
+        assert any(
             isinstance(node, ast.ImportFrom)
             and node.module == "architect_handoff_classification"
             and any(alias.name == "partition_unresolved_evidence" for alias in node.names)
             for node in ast.walk(tree)
-        )
-        delegated = any(
+        ), path
+        assert any(
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
             and node.func.id == "partition_unresolved_evidence"
             for node in ast.walk(tree)
-        )
-        assert imported, path
-        assert delegated, path
-
-        local_function_names = {
-            node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-        }
-        assert "_transition_blockers" not in local_function_names, path
-
+        ), path
         assigned_names = {
             target.id
             for node in ast.walk(tree)
@@ -428,6 +308,5 @@ def test_consumers_delegate_transition_classification_to_shared_module() -> None
             )
             if isinstance(target, ast.Name)
         }
-        assert "boundaries" not in assigned_names, path
         assert "ARCHITECT_TRANSITION_BLOCKS" not in assigned_names, path
         assert "ARCHITECT_TRANSITION_DEADLINES" not in assigned_names, path

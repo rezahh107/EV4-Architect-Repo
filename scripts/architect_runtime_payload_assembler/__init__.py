@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 from architect_css_target_validation import validate_css_target_references
 from architect_runtime_errors import PayloadDerivationError
+from architect_runtime_payload_authority import _issue_runtime_terminal_payload
 
 _CORE_NAME = "_ev4_architect_payload_assembler_internal"
 _CORE_PATH = Path(__file__).resolve().parents[1] / "architect_runtime_payload_assembler_core.py"
@@ -41,12 +42,12 @@ def assemble_architect_stage_payload(
     repository_root: Path | None = None,
     git_provider: Any | None = None,
 ) -> dict[str, Any]:
-    """Assemble only from replayed model-authored Stage Output history.
+    """Derive a Payload from replayed Stage Outputs or active terminal Runtime state.
 
-    During canonical replay the internal evaluator passes the state it has just
-    derived. That internal call consumes the state directly to avoid recursive
-    replay. External callers never have the active Runtime context and therefore
-    always reconstruct from Stage Output history before assembly.
+    External callers may request deterministic replay and validation, but the
+    returned dictionary is not exporter-authorizing. Only the active terminal
+    evaluator transaction receives the one-shot issuance capability consumed by
+    the Project Gate exporter.
     """
 
     import architect_quality_runtime as runtime
@@ -61,11 +62,16 @@ def assemble_architect_stage_payload(
                     path="run_state",
                 )
             )
-        return _validate_css(
+        payload = _validate_css(
             _core.assemble_architect_stage_payload(
                 run_state=run_state,
                 source_kind=active_context.source_kind,
             )
+        )
+        return _issue_runtime_terminal_payload(
+            payload,
+            run_state=run_state,
+            source_kind=active_context.source_kind,
         )
 
     if stage_outputs is None:

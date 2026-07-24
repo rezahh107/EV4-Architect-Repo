@@ -1,7 +1,7 @@
+"""Runtime-internal Project Gate artifact construction and contract validation."""
 from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -10,8 +10,14 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from architect_handoff_classification import partition_unresolved_evidence
+from architect_runtime_payload_authority import (
+    RuntimePayloadAuthorityError,
+    _consume_runtime_terminal_payload,
+)
 
 from .base import *
+
+_RUNTIME_INPUT_REF = "quality_runtime:runtime_issued_payload"
 
 
 def validate_payload(root: Path, payload: Any) -> dict[str, Any]:
@@ -52,17 +58,10 @@ def validate_payload(root: Path, payload: Any) -> dict[str, Any]:
         raise ExportError(
             "ARCH_EXPORT_VALIDATOR_RESULT_INVALID",
             "semantic_validation",
-            "Official validator returned an unsupported status.",
+            "Official Architect validator returned an unsupported status.",
             "repository_owner",
         )
     return result
-
-
-def _input_ref(root: Path, payload: Path) -> str:
-    try:
-        return str(payload.resolve().relative_to(root.resolve())).replace(os.sep, "/")
-    except ValueError:
-        return f"operator_input:{payload.name}"
 
 
 def _source(source_type: str, reference: str) -> dict[str, str]:
@@ -74,19 +73,19 @@ def _source(source_type: str, reference: str) -> dict[str, str]:
     return {"type": "manual_observation", "reference": prefix + reference}
 
 
-def _evidence(payload: dict[str, Any], payload_hash: str, input_ref: str) -> list[dict[str, Any]]:
+def _evidence(payload: dict[str, Any], payload_hash: str) -> list[dict[str, Any]]:
     output = [
         {
             "id": "architect-stage-payload-canonical",
             "kind": "report",
             "state": "exported",
-            "description": "Canonical identity of the Architect Stage Payload supplied to the exporter.",
+            "description": "Canonical Runtime-issued Architect Stage Payload.",
             "artifact_hash": {
                 "algorithm": "sha256",
                 "value": payload_hash,
                 "scope": "canonical_json",
             },
-            "source": {"type": "manual_observation", "reference": input_ref},
+            "source": {"type": "manual_observation", "reference": _RUNTIME_INPUT_REF},
             "derivation_rule": {"id": "ev4-canonical-json-sha256", "version": "1.0.0"},
         }
     ]
@@ -126,22 +125,49 @@ def _evidence(payload: dict[str, Any], payload_hash: str, input_ref: str) -> lis
 
 
 def build_export(
-    payload: dict[str, Any], git: GitProvenance, run_id: str, input_ref: str
+    payload: dict[str, Any],
+    git: GitProvenance,
+    run_id: str,
+    input_ref: str,
 ) -> tuple[dict[str, Any], dict[str, str]]:
+    """Build only inside the active terminal Runtime transaction.
+
+    Schema-valid dictionaries, copied Runtime Payloads, and caller-provided
+    provenance are insufficient. The one-shot capability is issued by the
+    canonical assembler during terminal evaluator replay and consumed here.
+    """
+
     run_id = run_id.strip()
     if not run_id:
         raise ExportError(
             "ARCH_EXPORT_RUN_ID_REQUIRED",
             "run_identity",
-            "--run-id is required to distinguish independent runs.",
-            "operator",
+            "Runtime-derived run_id is required.",
+            "repository_owner",
         )
+    if input_ref != _RUNTIME_INPUT_REF:
+        raise ExportError(
+            "ARCH_EXPORT_CALLER_INPUT_REF_FORBIDDEN",
+            "runtime_authority",
+            "Project Gate provenance is owned by the terminal Runtime transaction.",
+            "repository_owner",
+        )
+    try:
+        issuance = _consume_runtime_terminal_payload(payload, run_id=run_id)
+    except RuntimePayloadAuthorityError as exc:
+        raise ExportError(
+            "ARCH_EXPORT_RUNTIME_PAYLOAD_AUTHORITY_REQUIRED",
+            "runtime_authority",
+            str(exc),
+            "repository_owner",
+        ) from exc
+
     payload_hash = digest(payload)
     unresolved = payload.get("unresolved_evidence", [])
     classification = partition_unresolved_evidence(unresolved)
     blockers = list(classification.transition_blockers)
     insufficient = payload.get("payload_status") == "insufficient_evidence"
-    synthetic = payload.get("synthetic") is True
+    synthetic = issuance.synthetic
     allowed = not insufficient and not synthetic and not blockers
     handoff_status = (
         "insufficient_evidence"
@@ -184,12 +210,10 @@ def build_export(
         },
         "evidence_status": str(payload.get("payload_status")),
         "payload": {"schema_id": PAYLOAD_ID, "data": payload},
-        "evidence": _evidence(payload, payload_hash, input_ref),
+        "evidence": _evidence(payload, payload_hash),
         "provenance": {
-            "source": f"architect_stage_payload:{input_ref}",
-            "created_by": str(
-                payload.get("payload_identity", {}).get("created_by", "ev4_architect")
-            ),
+            "source": _RUNTIME_INPUT_REF,
+            "created_by": "architect_quality_runtime",
         },
         "synthetic": synthetic,
     }
@@ -231,17 +255,17 @@ def build_export(
         reasons.append(
             {
                 "id": "synthetic-run-not-authorized",
-                "reason": "Synthetic payloads cannot authorize a real handoff.",
+                "reason": "Synthetic Runtime execution cannot authorize a real handoff.",
             }
         )
-    diagnostics += [
+    diagnostics.extend(
         {
             "code": "ARCH_EXPORT_TRANSITION_EVIDENCE_BLOCKED",
             "severity": "error",
             "unresolved_id": item.get("unresolved_id"),
         }
         for item in blockers
-    ]
+    )
 
     export = {
         "schema_version": EXPORT_VERSION,
@@ -373,7 +397,7 @@ def verify_hashes(export: dict[str, Any], expected: dict[str, str]) -> None:
             raise ExportError(
                 "ARCH_EXPORT_HASH_SELF_VERIFICATION_FAILED",
                 "hash_self_verification",
-                f"{key} changed after construction or write.",
+                f"{key} changed after construction.",
                 "repository_owner",
             )
     recorded = (

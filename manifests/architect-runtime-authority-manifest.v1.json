@@ -44,13 +44,9 @@
     "scripts/architect_payload_derivation_validation.py",
     "scripts/architect_payload_semantic_validator.py",
     "scripts/architect_project_gate_exporter/__init__.py",
-    "scripts/architect_project_gate_exporter/ancestry.py",
     "scripts/architect_project_gate_exporter/base.py",
     "scripts/architect_project_gate_exporter/contracts.py",
     "scripts/architect_project_gate_exporter/eligibility.py",
-    "scripts/architect_project_gate_exporter/locking.py",
-    "scripts/architect_project_gate_exporter/runner.py",
-    "scripts/architect_project_gate_exporter/transaction.py",
     "scripts/architect_quality_runtime.py",
     "scripts/architect_quality_runtime/__init__.py",
     "scripts/architect_quality_runtime_core.py",
@@ -58,6 +54,7 @@
     "scripts/architect_runtime_payload_assembler.py",
     "scripts/architect_runtime_payload_assembler/__init__.py",
     "scripts/architect_runtime_payload_assembler_core.py",
+    "scripts/architect_runtime_payload_authority.py",
     "scripts/architect_runtime_project_gate.py",
     "scripts/architect_runtime_project_gate/__init__.py",
     "scripts/architect_runtime_project_gate_core.py",
@@ -77,6 +74,7 @@
     "terminal_payload_path": "results[-1].project_gate_export.runtime_issued_payload",
     "canonical_validity_path": "results[-1].project_gate_export.canonical_payload_valid",
     "functional_eligibility_path": "results[-1].project_gate_export.functional_eligibility",
-    "handoff_allowed_path": "results[-1].project_gate_export.handoff_allowed"
+    "handoff_allowed_path": "results[-1].project_gate_export.handoff_allowed",
+    "direct_caller_payload_export": "unsupported_removed"
   }
 }
