@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ev4-architect-project-gate-finalization-receipt@1.0.0",
+  "title": "EV4 Architect Project Gate Finalization Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id", "schema_version", "runtime_interface_id", "run_id",
+    "source_kind", "synthetic", "producer", "stage_history", "payload",
+    "artifact", "handoff", "finalization"
+  ],
+  "properties": {
+    "schema_id": {"const": "ev4-architect-project-gate-finalization-receipt@1.0.0"},
+    "schema_version": {"const": "1.0.0"},
+    "runtime_interface_id": {"const": "ev4-architect-quality-runtime@2.0.0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "source_kind": {"enum": ["live_conversation", "fixture", "example", "test_vector"]},
+    "synthetic": {"type": "boolean"},
+    "producer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "ref", "commit_sha"],
+      "properties": {
+        "repository": {"const": "rezahh107/EV4-Architect-Repo"},
+        "ref": {"type": "string", "minLength": 1},
+        "commit_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "stage_history": {
+      "type": "object", "additionalProperties": false,
+      "required": ["stage_count", "terminal_stage", "canonical_sha256"],
+      "properties": {
+        "stage_count": {"const": 12},
+        "terminal_stage": {"const": "/project-gate-export"},
+        "canonical_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "payload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_id", "canonical_sha256", "runtime_issued"],
+      "properties": {
+        "schema_id": {"const": "ev4-architect-stage-payload@1.0.0"},
+        "canonical_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "runtime_issued": {"const": true}
+      }
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "filename", "relative_path", "canonical_sha256", "schema_valid",
+        "semantic_valid", "hashes_verified", "committed"
+      ],
+      "properties": {
+        "filename": {"const": "architect-project-gate.json"},
+        "relative_path": {"const": "architect-project-gate.json"},
+        "canonical_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "schema_valid": {"const": true},
+        "semantic_valid": {"const": true},
+        "hashes_verified": {"const": true},
+        "committed": {"const": true}
+      }
+    },
+    "handoff": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "allowed", "status", "functional_eligibility_would_allow",
+        "blocking_diagnostics"
+      ],
+      "properties": {
+        "allowed": {"type": "boolean"},
+        "status": {"enum": ["successful", "successful_with_flags", "blocked", "insufficient_evidence"]},
+        "functional_eligibility_would_allow": {"type": "boolean"},
+        "blocking_diagnostics": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "finalization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "completed", "receipt_filename", "receipt_relative_path"],
+      "properties": {
+        "status": {"enum": ["published_allowed", "published_blocked"]},
+        "completed": {"const": true},
+        "receipt_filename": {"const": "architect-project-gate-receipt.json"},
+        "receipt_relative_path": {"const": "architect-project-gate-receipt.json"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"source_kind": {"const": "live_conversation"}}},
+      "then": {"properties": {"synthetic": {"const": false}}},
+      "else": {"properties": {"synthetic": {"const": true}}}
+    },
+    {
+      "if": {"properties": {"handoff": {"properties": {"allowed": {"const": true}}}}},
+      "then": {"properties": {"finalization": {"properties": {"status": {"const": "published_allowed"}}}}},
+      "else": {"properties": {"finalization": {"properties": {"status": {"const": "published_blocked"}}}}}
+    }
+  ]
+}

@@ -1,3 +1,6 @@
-"""Internal implementation for the Architect Project Gate exporter."""
+"""Internal modules for Runtime-owned Project Gate artifact construction.
 
-from .runner import *  # noqa: F401,F403
+No public CLI, compatibility alias, or caller-Payload export surface is exposed.
+"""
+
+__all__: list[str] = []

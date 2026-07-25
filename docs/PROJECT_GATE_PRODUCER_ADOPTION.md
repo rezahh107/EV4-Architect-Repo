@@ -1,54 +1,66 @@
 # Project Gate Producer Adoption — Architect
 
-Status: `runtime_exporter_implemented_pending_independent_review`
+Status: `runtime_finalization_api_pending_cross_repository_review`
 
-This document records the Architect-owned Producer Gate Export adoption and the repository-local operator exporter.
+> Direct Project Gate export from a caller-supplied Payload file is unsupported and has been removed.
 
 ## Contract chain
 
 ```text
-Architect Stage Payload v1
-→ Project Gate Stage Evidence Bundle v1
-→ Project Gate Producer Gate Export v1
+complete ordered model-authored Architect Stage Outputs
+→ official evaluator replay
+→ Runtime-derived Stage Results and Run State
+→ Runtime-issued ev4-architect-stage-payload@1.0.0
+→ one-shot capability consumption
+→ stage-evidence-bundle.v1
+→ producer-gate-export.v1
+→ Contract and hash validation
+→ Architect-owned artifact and receipt publication
+→ ce-intake
 ```
-
-## Active identities
 
 ```yaml
 architect_payload: ev4-architect-stage-payload@1.0.0
 stage_bundle: stage-evidence-bundle.v1
 producer_gate_export: producer-gate-export.v1
+finalization_receipt: ev4-architect-project-gate-finalization-receipt@1.0.0
 handoff_target: ce-intake
-acquisition_mode: producer_emitted_gate_artifact
+acquisition_mode: runtime_finalization_api
 silent_fallback_allowed: false
 ```
 
-## Prompt 0 contract pin
+## Consumer entrypoint
 
-```yaml
-project_gate_commit: ea19c22c32458068e167b267da8b819e9263cdf7
-producer_gate_export_schema: contracts/common/producer-gate-export.v1.schema.json
-producer_gate_export_sha256: c556bb9deeccdcafeb885a1c8b3dbd660e4e06f452b8ac3c7040d21377465fcc
-stage_bundle_sha256: fc1ec6d3f7aecbabaeb0a3455d9eb42788779d2fa1531e8c7b2cb3bde706a886
+Stage-QC and other authorized consumers invoke only:
+
+```python
+scripts/architect_quality_runtime.py#finalize_project_gate(
+    stage_outputs,
+    *,
+    run_context,
+    repository_root,
+    output_directory,
+    git_provider=None,
+)
 ```
 
-The vendored contract copies remain pinned to this immutable Project Gate authority. This task does not update Project Gate or claim current-live-head compatibility.
+The semantic input is the complete ordered twelve-Stage Output history. Payloads,
+Payload paths, caller Stage Results, caller Run State, caller provenance, digests,
+eligibility, validator output, or Handoff booleans are not accepted.
 
-## Official exporter
+The Runtime performs one replay and one Payload assembly. The terminal evaluator
+returns one explicit internal execution object carrying the complete artifact;
+the normal public Stage Result contains only its existing summary. Architect then
+publishes `architect-project-gate.json` and
+`architect-project-gate-receipt.json` outside the repository.
 
-```bash
-python scripts/export-architect-project-gate.py \
-  --payload path/to/architect-stage-payload.json \
-  --run-id <actual-architect-run-id> \
-  --output architect-project-gate.json
-```
+The vendored Project Gate contracts remain pinned and their wire format is
+preserved. The Runtime terminal transaction owns Payload issuance, checkout
+provenance, canonical hashes, validator identity, export construction,
+publication, receipt creation, and Handoff authorization.
 
-The exporter validates the active Architect payload, derives Git provenance from the actual checkout, constructs and validates the Stage Evidence Bundle and Producer Gate Export, computes deterministic canonical hashes, writes atomically, and revalidates the written artifact.
-
-See `docs/ARCHITECT_PROJECT_GATE_EXPORTER.md` for the complete operator and evidence contract.
-
-## Boundaries
-
-Architect adoption and local export generation do not prove CE acceptance, Builder executability, Responsive completion, current Project Gate registry adoption, live Elementor execution, real Elementor export validation, release readiness, or production readiness.
-
-Synthetic fixtures remain synthetic and cannot authorize a real handoff. Concise Persian summaries may be short; machine artifacts must remain complete and cannot be replaced by summaries.
+Synthetic execution remains non-authorizing. A valid synthetic or otherwise
+blocked transaction may finalize and publish official blocked outputs, while
+`handoff.allowed` remains false. This repository does not claim CE acceptance,
+Builder executability, Responsive completion, live Elementor execution, release
+readiness, or production readiness without downstream evidence.

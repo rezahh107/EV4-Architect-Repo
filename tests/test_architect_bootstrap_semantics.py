@@ -60,6 +60,13 @@ def replace_once(root: Path, relative: str, old: str, new: str) -> None:
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
+def replace_all(root: Path, relative: str, old: str, new: str) -> None:
+    path = root / relative
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
 def manifest_requires_anchor(root: Path) -> None:
     value = load_json(root, "manifests/architect-pipeline-manifest.v1.json")
     value["normal_run_continuation"]["internal_anchor_required"] = True
@@ -94,7 +101,7 @@ def build_tree_evaluation_mode_drift(root: Path) -> None:
 
 
 def remove_not_evaluated_claim_rule(root: Path) -> None:
-    replace_once(
+    replace_all(
         root,
         "02_PROJECT_INSTRUCTIONS_ACTIVE_OVERRIDES.md",
         "stage_status: not_evaluated",

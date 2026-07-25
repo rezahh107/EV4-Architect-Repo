@@ -1,0 +1,15 @@
+{
+  "run_id": "run-conversational-minimal-001",
+  "stage_id": "/project-gate-export",
+  "stage_version": "1.0.0",
+  "check_evidence": {
+    "canonical_payload_valid": {"claim": "Runtime should assemble and validate the canonical Architect Stage Payload.", "reason": "The model requests export but does not supply the authoritative Payload."},
+    "canonical_export_valid": {"claim": "Runtime should construct and verify the canonical Producer Gate export.", "reason": "Exporter validation and hash verification are evaluator-owned."},
+    "legacy_export_not_substituted": {"claim": "The canonical Producer Gate export path should be used.", "reason": "No legacy Builder Feed is supplied as terminal authority."}
+  },
+  "decision_input": {"selected_candidate_id": "ARCH-FAM-C"},
+  "export_request": {"format": "producer-gate-export.v1", "presentation_note": "Assemble the official payload from this evaluated Run."},
+  "unknown_introductions": [],
+  "unknown_resolutions": [],
+  "blockers": []
+}

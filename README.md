@@ -77,23 +77,11 @@ Stage Output
 → evaluator-derived Stage Result
 ```
 
-The evaluator derives:
-
-```yaml
-stage_status: pass | needs_input | blocked
-blocking_issues: []
-carried_unknowns: []
-quality_checks: {}
-next_stage: exact Manifest successor or null
-evaluation_mode:
-evaluated_stage_output_digest:
-```
+The evaluator derives Stage status, blocking issues, carried unknowns, quality checks, next Stage, evaluation mode, and evaluated Stage Output digest.
 
 A producer-authored or serialized Stage Result is readable but non-authorizing. Resume recomputes from the smallest available Stage Output and Run State; it does not require a new persistent store, immutable receipt, or Artifact registry.
 
-The normal Run does not require internal Stage Anchors, Validation Bundles, independent Bundle regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, or repository maintenance.
-
-Those controls remain optional repository-development, audit, compatibility, or deterministic-regression tooling.
+The normal Run does not require internal Stage Anchors, Validation Bundles, independent Bundle regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, or repository maintenance. Those controls remain optional repository-development, audit, compatibility, or deterministic-regression tooling.
 
 ## Quality Boundaries Preserved
 
@@ -128,15 +116,11 @@ no_platform_question
 blocked_by_missing_required_source
 ```
 
-`existing_evidence_sufficient` and `no_platform_question` are valid passing outcomes. No citations, URLs, retrieval metadata, or source receipts are required when no platform-capability claim needs active lookup.
-
 Only genuinely required unavailable evidence blocks. Research establishes platform capability, not screenshot interpretation or architecture recommendation.
 
 ## Unknown Lifecycle
 
-Active unknowns persist in the small Run State. Omission from later output is not resolution.
-
-Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+Active unknowns persist in the small Run State. Omission from later output is not resolution. Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
 
 ## Candidate and Content Fidelity
 
@@ -149,33 +133,34 @@ no real canonical content
 → no claimed digest
 ```
 
-The evaluator computes content identities from actual canonical content and verifies Implementation against the approved Build Tree representation.
-
-Conversational Stage output does not require cryptographic identity.
+The evaluator computes content identities from actual canonical content and verifies Implementation against the approved Build Tree representation. Conversational Stage output does not require cryptographic identity.
 
 ## EV4 Project Gate Workflow
 
 ```text
-Architect output
-→ EV4 Project Gate
+model-authored Stage Output JSON files
+→ Stage-QC evaluator replay
+→ Runtime-derived Stage Results and Run State
+→ Runtime-issued canonical Architect Stage Payload
+→ Runtime-internal Project Gate exporter and validator
 → accepted: CE Input Package
 → needs repair: Architect Repair Package
 ```
 
 The terminal `/project-gate-export` boundary remains strongly fail-closed.
 
-A pass result is derived only from:
+> Direct Project Gate export from a caller-supplied Payload file is unsupported and has been removed.
 
-```text
-actual canonical Architect Stage Payload
-→ existing JSON Schema and semantic validation
-→ selected-candidate consistency
-→ existing Producer Gate exporter
-→ actual canonical export
-→ contract and digest verification
-```
+There is no public `--payload` command, Payload-path exporter, preview command, compatibility alias, Windows wrapper, or WSL wrapper. A decoded JSON object that matches the Payload Schema is not Runtime issuance and cannot authorize Handoff.
 
-Caller-controlled success Booleans cannot substitute for actual validation.
+Authority ownership:
+
+- Stage Output: model-authored evidence;
+- Stage Result: evaluator-derived;
+- Payload: Runtime-issued from replayed state;
+- Project Gate artifact and receipt: exporter- and validator-issued.
+
+The Runtime terminal transaction derives its Payload from contiguous Stage Output history, evaluator-derived Stage Results, Runtime Run State and RunContext, candidate-lock state, the Unknown ledger, the canonical assembler, and actual checkout provenance. Caller-controlled Booleans, provenance fields, digests, validator identities, or `synthetic: false` cannot substitute for this transaction.
 
 Canonical Architect payload identity:
 
@@ -183,22 +168,9 @@ Canonical Architect payload identity:
 ev4-architect-stage-payload@1.0.0
 ```
 
-## Official Project Gate Export Command
-
-```bash
-python scripts/export-architect-project-gate.py \
-  --payload path/to/architect-stage-payload.json \
-  --run-id <actual-architect-run-id> \
-  --output architect-project-gate.json
-```
-
-Invalid, synthetic, blocked, or insufficient-evidence inputs cannot produce an allowed handoff.
-
 ## Optional Audit Tooling
 
-The Stage Anchor/Bundle contracts, Validation Profiles Registry, and `architect_validation_*` modules remain preserved for repository audit, exact-byte deterministic regression, compatibility evidence, and historical readability.
-
-They are not active user-facing transition tickets.
+The Stage Anchor/Bundle contracts, Validation Profiles Registry, and `architect_validation_*` modules remain preserved for repository audit, exact-byte deterministic regression, compatibility evidence, and historical readability. They are not active user-facing transition tickets.
 
 ## Validation
 
@@ -211,7 +183,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
   tests/test_architect_bootstrap_semantics.py
 ```
 
-Existing payload, governance, release-pack, and optional transaction suites remain applicable.
+Existing payload, governance, release-pack, Runtime-authority, and transaction-boundary suites remain applicable.
 
 ## Boundaries
 
