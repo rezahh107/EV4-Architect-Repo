@@ -164,7 +164,9 @@ model-authored Stage Output JSON files
 
 The terminal `/project-gate-export` boundary remains strongly fail-closed.
 
-Direct Project Gate export from a caller-supplied Payload is unsupported. A decoded JSON object that matches the Payload Schema is not Runtime issuance and cannot authorize Handoff.
+Direct Project Gate export from a caller-supplied Payload file is unsupported and has been removed.
+
+A decoded JSON object that matches the Payload Schema is not Runtime issuance and cannot authorize Handoff.
 
 Authority ownership:
 
