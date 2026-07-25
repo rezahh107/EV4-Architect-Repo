@@ -6,6 +6,10 @@ import importlib
 
 import pytest
 
+from _runtime_private_execution_projection import (
+    evaluate_run_with_private_payload,
+)
+
 _legacy = importlib.import_module("_legacy_architect_runtime_completion_payload_errors")
 
 
@@ -31,7 +35,8 @@ def _evaluate_prefix(items, count: int, *, kind: str = "fixture"):
 
 
 def _evaluate_full(items=None, *, kind: str = "fixture"):
-    return _legacy.runtime.evaluate_run(
+    return evaluate_run_with_private_payload(
+        _legacy.runtime,
         items or _legacy.all_outputs(),
         root=_legacy.REPO_ROOT,
         run_context=_legacy.context(kind),

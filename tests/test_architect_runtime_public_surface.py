@@ -86,6 +86,7 @@ def test_package_and_exact_wrapper_expose_one_canonical_api() -> None:
     assert package["canonical_finalize_identity"] is True
     assert package["canonical_result_identity"] is True
     assert package["finalize_module"] == "architect_quality_runtime"
+    assert package["result_type_module"] == "architect_quality_runtime"
 
 
 def test_exact_wrapper_is_one_pure_reexport() -> None:
