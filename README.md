@@ -1,6 +1,6 @@
 # EV4 Architect Repo
 
-Status: minimal evaluator-derived quality-first runtime implemented on PR #36; exact-Head CI and fresh rereview remain required before technical acceptance. Real non-synthetic downstream acceptance and production readiness remain `insufficient_evidence`.
+Status: Runtime interface v2 and its exact public entry points are merged. The official Stage-QC consumer is also merged against the reviewed Runtime Authority Manifest and authority-file compatibility model. Real non-synthetic downstream acceptance and production readiness remain `insufficient_evidence`.
 
 Role: `architecture_decision_system`
 
@@ -58,9 +58,29 @@ manifests/architect-pipeline-manifest.v1.json
 
 `/builder-feed-export` remains a legacy compatibility output, not canonical Project Gate Producer Export.
 
+## Runtime Authority
+
+The active public Runtime interface is:
+
+```text
+ev4-architect-quality-runtime@2.0.0
+```
+
+Its machine-readable authority and consumer surface are defined by:
+
+```text
+manifests/architect-runtime-authority-manifest.v1.json
+contracts/ARCHITECT_RUNTIME_HISTORY_REPLAY_V1.md
+scripts/architect_quality_runtime.py
+```
+
+The Runtime owns replay, evaluator-derived Stage Results, Run State, Unknown state, candidate lock, Payload issuance, provenance, and Project Gate finalization. A caller-authored Stage Result, Run State, Payload, PASS claim, digest, provenance field, or Handoff Boolean is non-authorizing.
+
+Canonical public operations are exposed through the wrapper and manifest. Consumers must use those public entry points rather than copying Runtime modules or importing private implementation surfaces.
+
 ## Minimal Quality-First Continuation
 
-Active runtime authority:
+Active continuation authority:
 
 ```text
 contracts/QUALITY_FIRST_RUNTIME_ALIGNMENT.md
@@ -71,15 +91,11 @@ scripts/architect_quality_runtime.py#evaluate_stage
 
 ```text
 Stage Output
-+ current Run State
++ replay-derived Run State
 + finite Manifest-owned Stage rules
 → evaluate_stage
 → evaluator-derived Stage Result
 ```
-
-The evaluator derives Stage status, blocking issues, carried unknowns, quality checks, next Stage, evaluation mode, and evaluated Stage Output digest.
-
-A producer-authored or serialized Stage Result is readable but non-authorizing. Resume recomputes from the smallest available Stage Output and Run State; it does not require a new persistent store, immutable receipt, or Artifact registry.
 
 The normal Run does not require internal Stage Anchors, Validation Bundles, independent Bundle regeneration, Validation Profile completeness, exact-head CI, PR review, Merge evidence, or repository maintenance. Those controls remain optional repository-development, audit, compatibility, or deterministic-regression tooling.
 
@@ -120,7 +136,7 @@ Only genuinely required unavailable evidence blocks. Research establishes platfo
 
 ## Unknown Lifecycle
 
-Active unknowns persist in the small Run State. Omission from later output is not resolution. Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
+Active unknowns persist through replay-derived state. Omission from later output is not resolution. Ordinary resolution requires an explicit type and explanatory note. A resolvable evidence reference is required only for downstream-critical or Artifact-dependent unknowns.
 
 ## Candidate and Content Fidelity
 
@@ -139,8 +155,7 @@ The evaluator computes content identities from actual canonical content and veri
 
 ```text
 model-authored Stage Output JSON files
-→ Stage-QC evaluator replay
-→ Runtime-derived Stage Results and Run State
+→ Runtime replay and evaluator-derived projections
 → Runtime-issued canonical Architect Stage Payload
 → Runtime-internal Project Gate exporter and validator
 → accepted: CE Input Package
@@ -149,24 +164,33 @@ model-authored Stage Output JSON files
 
 The terminal `/project-gate-export` boundary remains strongly fail-closed.
 
-> Direct Project Gate export from a caller-supplied Payload file is unsupported and has been removed.
-
-There is no public `--payload` command, Payload-path exporter, preview command, compatibility alias, Windows wrapper, or WSL wrapper. A decoded JSON object that matches the Payload Schema is not Runtime issuance and cannot authorize Handoff.
+Direct Project Gate export from a caller-supplied Payload is unsupported. A decoded JSON object that matches the Payload Schema is not Runtime issuance and cannot authorize Handoff.
 
 Authority ownership:
 
 - Stage Output: model-authored evidence;
-- Stage Result: evaluator-derived;
-- Payload: Runtime-issued from replayed state;
+- Stage Result and Run State: Runtime-derived;
+- Payload: Runtime-issued from complete replay;
 - Project Gate artifact and receipt: exporter- and validator-issued.
-
-The Runtime terminal transaction derives its Payload from contiguous Stage Output history, evaluator-derived Stage Results, Runtime Run State and RunContext, candidate-lock state, the Unknown ledger, the canonical assembler, and actual checkout provenance. Caller-controlled Booleans, provenance fields, digests, validator identities, or `synthetic: false` cannot substitute for this transaction.
 
 Canonical Architect payload identity:
 
 ```text
 ev4-architect-stage-payload@1.0.0
 ```
+
+## Official Stage-QC Consumer
+
+`rezahh107/EV4-Architect-Stage-QC` is the official local Windows-first QC consumer. It:
+
+- starts a fresh Python interpreter for each selected Architect operation;
+- executes one bounded operation per child process;
+- loads only the official public Runtime surface from the selected checkout;
+- verifies repository identity, Runtime interface, committed authority blob identities, and exact working-tree bytes against its committed Lock;
+- preserves actual checkout commit and reviewed Lock reference commit as distinct diagnostics;
+- never accepts caller-owned Payload, Stage Result, Run State, provenance, or Handoff authority through the process boundary.
+
+The Stage-QC Lock is a consumer compatibility artifact. Architect remains the sole owner of Runtime semantics, Pipeline order, Payload issuance, and Project Gate finalization.
 
 ## Optional Audit Tooling
 
@@ -183,7 +207,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q \
   tests/test_architect_bootstrap_semantics.py
 ```
 
-Existing payload, governance, release-pack, Runtime-authority, and transaction-boundary suites remain applicable.
+Existing payload, governance, release-pack, Runtime-authority, public-entrypoint, and transaction-boundary suites remain applicable.
 
 ## Boundaries
 
@@ -192,6 +216,7 @@ This repository does not perform interactive Elementor execution, prove construc
 ## Companion Repositories
 
 ```text
+https://github.com/rezahh107/EV4-Architect-Stage-QC
 https://github.com/rezahh107/EV4-Project-Gate
 https://github.com/rezahh107/EV4-Constructability-Engineer-Repo
 https://github.com/rezahh107/EV4-Builder-Assistant-Repo
@@ -200,4 +225,4 @@ https://github.com/rezahh107/EV4-Responsive-Architect
 
 ## Status Authority
 
-Mutable project status is maintained only in `STATUS.md`. This README is orientation and does not override live repository evidence.
+Mutable project and validation status is maintained only in `STATUS.md`. This README is orientation and does not override live repository evidence, the Pipeline Manifest, the Runtime Authority Manifest, active contracts, Schemas, or validators.
