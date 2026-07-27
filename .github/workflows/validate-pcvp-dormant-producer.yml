@@ -180,11 +180,10 @@ jobs:
             git -C "$target" diff --exit-code -- .
             git -C "$target" diff --cached --exit-code -- .
             test -z "$(git -C "$target" status --porcelain=v1 --untracked-files=all)"
-            git -C "$target" remote remove origin
           }
 
           checkout_exact             "$EV4_DECISION_KERNEL_CHECKOUT"             "https://github.com/rezahh107/EV4-Decision-Kernel.git"             "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          checkout_exact             "$EV4_PROJECT_GATE_CHECKOUT"             "https://github.com/rezahh107/EV4-Project-Gate.git"             "7a08b4f5cdd5d9899efa3e86ae2f10b782cf18cf"
+          checkout_exact             "$EV4_PROJECT_GATE_CHECKOUT"             "https://github.com/rezahh107/EV4-Project-Gate.git"             "8c90c8bd84b6923edb68ddfe2b508ba454a9b47b"
           checkout_exact             "$EV4_CE_CHECKOUT"             "https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git"             "883675e1bc1859c93e7ffed55de4f5998391d7ac"
 
       - name: Set up Node.js 20
@@ -230,7 +229,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "7a08b4f5cdd5d9899efa3e86ae2f10b782cf18cf"
+          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "8c90c8bd84b6923edb68ddfe2b508ba454a9b47b"
           test "$(git -C "$EV4_CE_CHECKOUT" rev-parse HEAD)" = "883675e1bc1859c93e7ffed55de4f5998391d7ac"
           test -z "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
           test -z "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
