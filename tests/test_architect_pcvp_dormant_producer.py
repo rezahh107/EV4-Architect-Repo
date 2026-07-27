@@ -471,8 +471,9 @@ def test_all_canonical_fixtures_match_pinned_declared_layers() -> None:
 
 def test_exact_project_gate_consumer_accepts_candidate_losslessly() -> None:
     checkout = os.environ.get("EV4_PROJECT_GATE_CHECKOUT")
-    if not checkout:
-        pytest.skip("exact Project Gate checkout is a CI-only dependency")
+    kernel_checkout = os.environ.get("EV4_DECISION_KERNEL_CHECKOUT")
+    if not checkout or not kernel_checkout:
+        pytest.skip("exact Project Gate and Decision Kernel checkouts are CI-only dependencies")
     carrier = _candidate()
     source = str(Path(checkout) / "src")
     sys.path.insert(0, source)
@@ -487,7 +488,10 @@ def test_exact_project_gate_consumer_accepts_candidate_losslessly() -> None:
         }
         original = copy.deepcopy(artifact)
         projection, diagnostics = module.inspect_optional_pcvp_carrier(
-            artifact, checkout
+            artifact,
+            checkout,
+            decision_kernel_repo=kernel_checkout,
+            downstream_stage="CONSTRUCTABILITY_ENGINEER",
         )
     finally:
         sys.path.remove(source)
@@ -495,6 +499,7 @@ def test_exact_project_gate_consumer_accepts_candidate_losslessly() -> None:
     assert diagnostics == []
     assert projection["status"] == "validated"
     assert projection["source_stage"] == "ARCHITECT"
+    assert projection["downstream_stage"] == "CONSTRUCTABILITY_ENGINEER"
     assert projection["carrier"] == {"continuation_assurance": carrier}
 
 

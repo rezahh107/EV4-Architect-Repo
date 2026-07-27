@@ -184,8 +184,18 @@ jobs:
           }
 
           checkout_exact             "$EV4_DECISION_KERNEL_CHECKOUT"             "https://github.com/rezahh107/EV4-Decision-Kernel.git"             "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          checkout_exact             "$EV4_PROJECT_GATE_CHECKOUT"             "https://github.com/rezahh107/EV4-Project-Gate.git"             "cfa666c3237a35a32b7ff186348df7532a7e02fe"
+          checkout_exact             "$EV4_PROJECT_GATE_CHECKOUT"             "https://github.com/rezahh107/EV4-Project-Gate.git"             "7a08b4f5cdd5d9899efa3e86ae2f10b782cf18cf"
           checkout_exact             "$EV4_CE_CHECKOUT"             "https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git"             "883675e1bc1859c93e7ffed55de4f5998391d7ac"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "20"
+
+      - name: Install pinned Decision Kernel execution dependencies
+        env:
+          EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/decision-kernel
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix "$EV4_DECISION_KERNEL_CHECKOUT"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -202,6 +212,7 @@ jobs:
 
       - name: Validate exact current Project Gate and CE consumers
         env:
+          EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/decision-kernel
           EV4_PROJECT_GATE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/project-gate
           EV4_CE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/constructability-engineer
           PYTHONDONTWRITEBYTECODE: "1"
@@ -219,7 +230,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "cfa666c3237a35a32b7ff186348df7532a7e02fe"
+          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "7a08b4f5cdd5d9899efa3e86ae2f10b782cf18cf"
           test "$(git -C "$EV4_CE_CHECKOUT" rev-parse HEAD)" = "883675e1bc1859c93e7ffed55de4f5998391d7ac"
           test -z "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
           test -z "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
