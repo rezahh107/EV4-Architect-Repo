@@ -1,4 +1,12 @@
-"""Hard-disabled EV4-PCVP producer for the Architect → Project Gate edge."""
+"""Hard-disabled EV4-PCVP producer support for the Architect → Project Gate edge.
+
+This module owns pinned resource verification, deterministic carrier formatting,
+and canonical semantic validation.  It deliberately exposes no supported API
+that can mint or attach an authoritative carrier from caller-supplied facts.
+The only authoritative attachment site is
+``architect_project_gate_exporter.contracts.build_export`` after the existing
+one-shot Runtime Payload issuance has been consumed.
+"""
 from __future__ import annotations
 
 import copy
@@ -23,10 +31,16 @@ PRODUCER_EMISSION_ENABLED = False
 ROOT = Path(__file__).resolve().parents[1]
 LOCK_PATH = Path("contracts/pcvp/architect-producer.lock.json")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SCHEMA_NAMES = (
+    "authorization.schema.json",
+    "claim.schema.json",
+    "effect.schema.json",
+    "handoff.schema.json",
+)
 
 
 class PCVPProducerError(RuntimeError):
-    """Raised when dormant producer identity or derivation fails closed."""
+    """Raised when dormant producer identity, derivation, or validation fails closed."""
 
 
 def _load_json(path: Path) -> Any:
@@ -72,8 +86,7 @@ def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
     }
     if (
         not isinstance(lock, dict)
-        or lock.get("schema_version")
-        != "ev4-pcvp-architect-producer-lock.v1"
+        or lock.get("schema_version") != "ev4-pcvp-architect-producer-lock.v1"
         or lock.get("architecture_lock_id") != ARCHITECTURE_LOCK_ID
         or lock.get("policy") != expected_policy
     ):
@@ -148,8 +161,7 @@ def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
     required_paths = {
         "contracts/pcvp/EV4_PCVP_MODEL_POLICY_v1.0.0.md",
         "contracts/pcvp/architect.profile.yaml",
-        "contracts/pcvp/vendor/decision-kernel/v1.0.0/"
-        "authorization.schema.json",
+        "contracts/pcvp/vendor/decision-kernel/v1.0.0/authorization.schema.json",
         "contracts/pcvp/vendor/decision-kernel/v1.0.0/claim.schema.json",
         "contracts/pcvp/vendor/decision-kernel/v1.0.0/effect.schema.json",
         "contracts/pcvp/vendor/decision-kernel/v1.0.0/handoff.schema.json",
@@ -166,24 +178,32 @@ def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
     }
 
 
-def _validate_carrier(
-    document: dict[str, Any], repository_root: str | Path
-) -> None:
-    root = Path(repository_root)
-    vendor = root / "contracts/pcvp/vendor/decision-kernel/v1.0.0"
+def _load_schemas(repository_root: Path) -> dict[str, dict[str, Any]]:
+    verify_pcvp_resources(repository_root)
+    vendor = repository_root / "contracts/pcvp/vendor/decision-kernel/v1.0.0"
     schemas: dict[str, dict[str, Any]] = {}
-    for name in (
-        "authorization.schema.json",
-        "claim.schema.json",
-        "effect.schema.json",
-        "handoff.schema.json",
-    ):
+    for name in _SCHEMA_NAMES:
         value = _load_json(vendor / name)
         if not isinstance(value, dict):
             raise PCVPProducerError(f"PCVP schema is not an object: {name}")
-        Draft202012Validator.check_schema(value)
+        try:
+            Draft202012Validator.check_schema(value)
+        except Exception as exc:
+            raise PCVPProducerError(
+                f"PCVP schema is invalid: {name} ({type(exc).__name__})"
+            ) from exc
         schemas[name] = value
+    return schemas
 
+
+def _diagnostic(layer: str, code: str, subject: str, detail: str) -> dict[str, str]:
+    return {"layer": layer, "code": code, "subject": subject, "detail": detail}
+
+
+def _schema_diagnostics(
+    document: dict[str, Any], repository_root: Path
+) -> list[dict[str, str]]:
+    schemas = _load_schemas(repository_root)
     registry = Registry()
     for schema in schemas.values():
         registry = registry.with_resource(
@@ -192,20 +212,332 @@ def _validate_carrier(
     validator = Draft202012Validator(
         schemas["handoff.schema.json"], registry=registry
     )
+    diagnostics: list[dict[str, str]] = []
     errors = sorted(
         validator.iter_errors(document),
-        key=lambda error: (list(error.absolute_path), error.message),
+        key=lambda error: (
+            tuple(str(part) for part in error.absolute_path),
+            error.validator or "",
+            error.message,
+        ),
     )
-    if errors:
-        first = errors[0]
-        path = ".".join(str(part) for part in first.absolute_path) or "$"
-        raise PCVPProducerError(
-            f"Generated PCVP carrier failed canonical schema at {path}: "
-            f"{first.message}"
+    for error in errors:
+        path = "/" + "/".join(str(part) for part in error.absolute_path)
+        diagnostics.append(
+            _diagnostic(
+                "JSON_SCHEMA",
+                f"PCVP_SCHEMA_{str(error.validator).upper()}",
+                path or "/",
+                error.message,
+            )
+        )
+    return diagnostics
+
+
+def _cross_record_and_semantic_diagnostics(
+    document: dict[str, Any],
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    carrier = document["continuation_assurance"]
+    claims = carrier["claims"]
+    effects = carrier["effects"]
+    authorizations = carrier["authorizations"]
+    summary = carrier["stage_summary"]
+    cross_record: list[dict[str, str]] = []
+    semantic_policy: list[dict[str, str]] = []
+
+    claims_by_id = {item["claim_id"]: item for item in claims}
+    effects_by_id = {item["effect_id"]: item for item in effects}
+    authorizations_by_id = {
+        item["authorization_id"]: item for item in authorizations
+    }
+    all_ids = [
+        *(item["claim_id"] for item in claims),
+        *(item["effect_id"] for item in effects),
+        *(item["authorization_id"] for item in authorizations),
+    ]
+    if len(set(all_ids)) != len(all_ids):
+        cross_record.append(
+            _diagnostic(
+                "CROSS_RECORD",
+                "PCVP_ID_NOT_GLOBALLY_UNIQUE",
+                "continuation_assurance",
+                "Claim, Effect and Authorization identifiers must be globally unique within the carrier.",
+            )
         )
 
+    for effect in effects:
+        for claim_id in effect["depends_on_claim_ids"]:
+            if claim_id not in claims_by_id:
+                cross_record.append(
+                    _diagnostic(
+                        "CROSS_RECORD",
+                        "PCVP_EFFECT_CLAIM_REF_UNRESOLVED",
+                        effect["effect_id"],
+                        claim_id,
+                    )
+                )
 
-def build_continuation_assurance(
+        authorization = (
+            None
+            if effect["authorization_ref"] is None
+            else authorizations_by_id.get(effect["authorization_ref"])
+        )
+        if effect["authorization_ref"] is not None and authorization is None:
+            cross_record.append(
+                _diagnostic(
+                    "CROSS_RECORD",
+                    "PCVP_EFFECT_AUTH_REF_UNRESOLVED",
+                    effect["effect_id"],
+                    effect["authorization_ref"],
+                )
+            )
+        if authorization is not None:
+            if authorization["status"] != "ACTIVE":
+                cross_record.append(
+                    _diagnostic(
+                        "CROSS_RECORD",
+                        "PCVP_EFFECT_AUTH_NOT_ACTIVE",
+                        effect["effect_id"],
+                        authorization["authorization_id"],
+                    )
+                )
+            covered = (
+                effect["effect_id"] in authorization["allowed_effect_ids"]
+                or effect["effect_class"]
+                in authorization["allowed_effect_classes"]
+            )
+            if not covered:
+                cross_record.append(
+                    _diagnostic(
+                        "CROSS_RECORD",
+                        "PCVP_EFFECT_AUTH_NOT_COVERING",
+                        effect["effect_id"],
+                        authorization["authorization_id"],
+                    )
+                )
+            if authorization["permitted_scope"] != effect["permitted_scope"]:
+                cross_record.append(
+                    _diagnostic(
+                        "CROSS_RECORD",
+                        "PCVP_EFFECT_AUTH_SCOPE_MISMATCH",
+                        effect["effect_id"],
+                        authorization["authorization_id"],
+                    )
+                )
+            if (
+                authorization["basis"] == "SAFE_REVERSIBLE_DEFAULT"
+                and effect["effect_class"]
+                in {"EXTERNAL_MUTATION", "IRREVERSIBLE_OR_AUTHORITY_BEARING"}
+            ):
+                semantic_policy.append(
+                    _diagnostic(
+                        "SEMANTIC_POLICY",
+                        "PCVP_SAFE_DEFAULT_FORBIDDEN_EFFECT",
+                        effect["effect_id"],
+                        effect["effect_class"],
+                    )
+                )
+
+        dependent_claims = [
+            claims_by_id[claim_id]
+            for claim_id in effect["depends_on_claim_ids"]
+            if claim_id in claims_by_id
+        ]
+        contradicted_critical = any(
+            claim["criticality"] == "CRITICAL"
+            and claim["applicability_state"] == "APPLICABLE"
+            and claim["verification_state"] == "CONTRADICTED"
+            for claim in dependent_claims
+        )
+        if contradicted_critical and effect["continuation_state"] != "BLOCKED":
+            semantic_policy.append(
+                _diagnostic(
+                    "SEMANTIC_POLICY",
+                    "PCVP_CONTRADICTED_CRITICAL_EFFECT_NOT_BLOCKED",
+                    effect["effect_id"],
+                    effect["continuation_state"],
+                )
+            )
+
+    current_effect = effects_by_id.get(summary["current_effect_id"])
+    if current_effect is None:
+        cross_record.append(
+            _diagnostic(
+                "CROSS_RECORD",
+                "PCVP_SUMMARY_EFFECT_REF_UNRESOLVED",
+                "stage_summary",
+                summary["current_effect_id"],
+            )
+        )
+        return cross_record, semantic_policy
+
+    current_dependencies = set(current_effect["depends_on_claim_ids"])
+    for claim_id in summary["derived_from_claim_ids"]:
+        if claim_id not in claims_by_id:
+            cross_record.append(
+                _diagnostic(
+                    "CROSS_RECORD",
+                    "PCVP_SUMMARY_CLAIM_REF_UNRESOLVED",
+                    "stage_summary",
+                    claim_id,
+                )
+            )
+        elif claim_id not in current_dependencies:
+            cross_record.append(
+                _diagnostic(
+                    "CROSS_RECORD",
+                    "PCVP_SUMMARY_CLAIM_NOT_EFFECT_DEPENDENCY",
+                    "stage_summary",
+                    claim_id,
+                )
+            )
+
+    dependent_claims = [
+        claims_by_id[claim_id]
+        for claim_id in current_effect["depends_on_claim_ids"]
+        if claim_id in claims_by_id
+    ]
+    critical_contradicted = any(
+        claim["criticality"] == "CRITICAL"
+        and claim["applicability_state"] == "APPLICABLE"
+        and claim["verification_state"] == "CONTRADICTED"
+        for claim in dependent_claims
+    )
+    any_contradicted = any(
+        claim["verification_state"] == "CONTRADICTED"
+        for claim in dependent_claims
+    )
+    critical_applicable_not_verified = any(
+        claim["criticality"] == "CRITICAL"
+        and claim["applicability_state"] == "APPLICABLE"
+        and claim["verification_state"] != "VERIFIED"
+        for claim in dependent_claims
+    )
+    material_applicability_undetermined = any(
+        claim["criticality"] in {"CRITICAL", "MATERIAL"}
+        and claim["applicability_state"] == "UNDETERMINED"
+        for claim in dependent_claims
+    )
+    applicable_unverified = any(
+        claim["applicability_state"] == "APPLICABLE"
+        and claim["verification_state"] == "UNVERIFIED"
+        for claim in dependent_claims
+    )
+
+    if summary["owner_projection"] == "GREEN" and (
+        current_effect["continuation_state"] != "CONTINUE"
+        or critical_applicable_not_verified
+        or any_contradicted
+        or material_applicability_undetermined
+    ):
+        semantic_policy.append(
+            _diagnostic(
+                "SEMANTIC_POLICY",
+                "PCVP_GREEN_PROJECTION_INVALID",
+                "stage_summary",
+                current_effect["effect_id"],
+            )
+        )
+
+    if summary["owner_projection"] == "YELLOW":
+        expected_substate = (
+            "CONTINUATION_AVAILABLE"
+            if current_effect["continuation_state"] == "CONTINUE"
+            else "OWNER_CHOICE_REQUIRED"
+            if current_effect["continuation_state"] == "AUTHORIZATION_REQUIRED"
+            else None
+        )
+        if (
+            expected_substate is None
+            or summary["yellow_substate"] != expected_substate
+            or (
+                not applicable_unverified
+                and current_effect["continuation_state"]
+                != "AUTHORIZATION_REQUIRED"
+            )
+            or critical_contradicted
+        ):
+            semantic_policy.append(
+                _diagnostic(
+                    "SEMANTIC_POLICY",
+                    "PCVP_YELLOW_PROJECTION_INVALID",
+                    "stage_summary",
+                    current_effect["effect_id"],
+                )
+            )
+
+    if (
+        summary["owner_projection"] == "RED"
+        and current_effect["continuation_state"] != "BLOCKED"
+    ):
+        semantic_policy.append(
+            _diagnostic(
+                "SEMANTIC_POLICY",
+                "PCVP_RED_WITH_NON_BLOCKED_EFFECT",
+                "stage_summary",
+                current_effect["effect_id"],
+            )
+        )
+
+    if (
+        current_effect["continuation_state"] == "BLOCKED"
+        or critical_contradicted
+    ) and summary["owner_projection"] != "RED":
+        semantic_policy.append(
+            _diagnostic(
+                "SEMANTIC_POLICY",
+                "PCVP_REQUIRED_RED_PROJECTION_MISSING",
+                "stage_summary",
+                current_effect["effect_id"],
+            )
+        )
+
+    return cross_record, semantic_policy
+
+
+def _evaluate_carrier_document(
+    document: dict[str, Any], repository_root: str | Path = ROOT
+) -> dict[str, Any]:
+    """Evaluate one carrier with the pinned canonical layer ordering."""
+    root = Path(repository_root)
+    schema_diagnostics = _schema_diagnostics(document, root)
+    if schema_diagnostics:
+        return {
+            "observed_layer": "JSON_SCHEMA",
+            "accepted": False,
+            "diagnostics": schema_diagnostics,
+        }
+    cross_record, semantic_policy = _cross_record_and_semantic_diagnostics(document)
+    if cross_record:
+        return {
+            "observed_layer": "CROSS_RECORD",
+            "accepted": False,
+            "diagnostics": cross_record,
+        }
+    if semantic_policy:
+        return {
+            "observed_layer": "SEMANTIC_POLICY",
+            "accepted": False,
+            "diagnostics": semantic_policy,
+        }
+    return {"observed_layer": "ACCEPT", "accepted": True, "diagnostics": []}
+
+
+def _validate_carrier(
+    document: dict[str, Any], repository_root: str | Path = ROOT
+) -> None:
+    result = _evaluate_carrier_document(document, repository_root)
+    if result["accepted"]:
+        return
+    first = result["diagnostics"][0]
+    raise PCVPProducerError(
+        "Generated PCVP carrier failed canonical validation "
+        f"at {result['observed_layer']}: {first['code']} "
+        f"({first['subject']}: {first['detail']})"
+    )
+
+
+def _format_continuation_assurance_candidate(
     *,
     run_id: str,
     payload_hash: str,
@@ -213,9 +545,13 @@ def build_continuation_assurance(
     handoff_allowed: bool,
     source_kind: str,
     unresolved_count: int,
-    repository_root: str | Path = ROOT,
 ) -> dict[str, Any]:
-    """Derive a bounded carrier from existing Runtime-owned export facts."""
+    """Format non-authoritative candidate data from Runtime-derived values.
+
+    Calling this private pure-data helper does not create an official carrier.
+    Official status exists only after build_export validates and attaches the
+    result inside the already-authorized terminal Runtime transaction.
+    """
     if not isinstance(run_id, str) or not run_id.strip():
         raise PCVPProducerError("Runtime-derived run_id is required.")
     if not isinstance(payload_hash, str) or not SHA256.fullmatch(payload_hash):
@@ -236,7 +572,6 @@ def build_continuation_assurance(
     ):
         raise PCVPProducerError("Runtime export facts are malformed.")
 
-    verify_pcvp_resources(repository_root)
     suffix = _identity(run_id, payload_hash)
     payload_claim_id = f"CLM-ARCH-PAYLOAD-{suffix}"
     downstream_claim_id = f"CLM-ARCH-DOWNSTREAM-{suffix}"
@@ -396,8 +731,8 @@ def build_continuation_assurance(
             }
         )
 
-    document = {
-        "continuation_assurance": {
+    return copy.deepcopy(
+        {
             "policy_id": POLICY_ID,
             "policy_version": POLICY_VERSION,
             "source_stage": SOURCE_STAGE,
@@ -417,41 +752,7 @@ def build_continuation_assurance(
                 "derivation_reason": derivation_reason,
             },
         }
-    }
-    _validate_carrier(document, repository_root)
-    return copy.deepcopy(document["continuation_assurance"])
-
-
-def attach_to_export_if_enabled(
-    export: dict[str, Any],
-    *,
-    run_id: str,
-    payload_hash: str,
-    canonical_payload_valid: bool,
-    handoff_allowed: bool,
-    source_kind: str,
-    unresolved_count: int,
-    repository_root: str | Path = ROOT,
-) -> dict[str, Any]:
-    """Attach only after a dedicated code change enables producer emission."""
-    if not isinstance(export, dict):
-        raise PCVPProducerError("Producer Gate Export must be an object.")
-    if "continuation_assurance" in export:
-        raise PCVPProducerError(
-            "Caller-supplied continuation_assurance is forbidden."
-        )
-    if not PRODUCER_EMISSION_ENABLED:
-        return export
-    export["continuation_assurance"] = build_continuation_assurance(
-        run_id=run_id,
-        payload_hash=payload_hash,
-        canonical_payload_valid=canonical_payload_valid,
-        handoff_allowed=handoff_allowed,
-        source_kind=source_kind,
-        unresolved_count=unresolved_count,
-        repository_root=repository_root,
     )
-    return export
 
 
 __all__ = [
@@ -462,8 +763,5 @@ __all__ = [
     "PCVPProducerError",
     "POLICY_ID",
     "POLICY_VERSION",
-    "PRODUCER_EMISSION_ENABLED",
-    "attach_to_export_if_enabled",
-    "build_continuation_assurance",
     "verify_pcvp_resources",
 ]
