@@ -49,6 +49,13 @@ jobs:
           path: dependencies/decision-kernel
           persist-credentials: false
 
+      - name: Assert exact clean Decision Kernel checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C dependencies/decision-kernel rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
+          test -z "$(git -C dependencies/decision-kernel status --porcelain=v1 --untracked-files=all)"
+
       - name: Checkout exact Project Gate consumer
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -56,6 +63,13 @@ jobs:
           ref: cfa666c3237a35a32b7ff186348df7532a7e02fe
           path: dependencies/project-gate
           persist-credentials: false
+
+      - name: Assert exact clean Project Gate checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C dependencies/project-gate rev-parse HEAD)" = "cfa666c3237a35a32b7ff186348df7532a7e02fe"
+          test -z "$(git -C dependencies/project-gate status --porcelain=v1 --untracked-files=all)"
 
       - name: Checkout exact Constructability Engineer consumer
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -65,15 +79,11 @@ jobs:
           path: dependencies/constructability-engineer
           persist-credentials: false
 
-      - name: Assert exact clean dependency checkouts
+      - name: Assert exact clean Constructability Engineer checkout
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C dependencies/decision-kernel rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          test "$(git -C dependencies/project-gate rev-parse HEAD)" = "cfa666c3237a35a32b7ff186348df7532a7e02fe"
           test "$(git -C dependencies/constructability-engineer rev-parse HEAD)" = "9b0e75cdbda2f3fe99f473ae77336e1601f6daa6"
-          test -z "$(git -C dependencies/decision-kernel status --porcelain=v1 --untracked-files=all)"
-          test -z "$(git -C dependencies/project-gate status --porcelain=v1 --untracked-files=all)"
           test -z "$(git -C dependencies/constructability-engineer status --porcelain=v1 --untracked-files=all)"
 
       - name: Set up Python 3.11
