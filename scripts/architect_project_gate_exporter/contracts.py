@@ -162,6 +162,14 @@ def build_export(
             "repository_owner",
         ) from exc
 
+    if "continuation_assurance" in payload:
+        raise ExportError(
+            "ARCH_EXPORT_CALLER_PCVP_CARRIER_FORBIDDEN",
+            "runtime_authority",
+            "Caller-supplied continuation_assurance is forbidden.",
+            "repository_owner",
+        )
+
     payload_hash = digest(payload)
     unresolved = payload.get("unresolved_evidence", [])
     classification = partition_unresolved_evidence(unresolved)
@@ -329,6 +337,7 @@ def build_export(
             "silent_fallback_allowed": False,
         },
     }
+
     hashes = {
         "payload_hash": payload_hash,
         "bundle_hash": bundle_hash,
