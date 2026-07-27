@@ -51,12 +51,7 @@ def _evaluate(document: dict) -> dict:
 def _capture_genuine_runtime_carrier(
     monkeypatch: pytest.MonkeyPatch,
 ) -> dict:
-    """Capture the future carrier inside the genuine terminal transaction.
-
-    The wrapper removes it before the unchanged active Producer Gate Export
-    schema is evaluated. This exercises only the dormant future branch and
-    does not create a production activation surface.
-    """
+    """Capture the dormant carrier inside the genuine terminal transaction."""
 
     captured: list[dict] = []
     real_build = contracts.build_export
@@ -99,19 +94,20 @@ def test_supported_surface_exposes_no_authoritative_raw_fact_minting_api() -> No
 
 
 def test_raw_true_values_cannot_mint_an_authoritative_carrier() -> None:
-    public_callables = {
+    public_functions = {
         name: value
         for name in pcvp.__all__
-        if callable(value := getattr(pcvp, name))
+        if inspect.isfunction(value := getattr(pcvp, name))
     }
-    assert set(public_callables) == {"PCVPProducerError", "verify_pcvp_resources"}
+    assert set(public_functions) == {"verify_pcvp_resources"}
+    assert issubclass(pcvp.PCVPProducerError, RuntimeError)
     assert all(
         "canonical_payload_valid" not in inspect.signature(value).parameters
-        for value in public_callables.values()
+        for value in public_functions.values()
     )
     assert all(
         "handoff_allowed" not in inspect.signature(value).parameters
-        for value in public_callables.values()
+        for value in public_functions.values()
     )
 
 
@@ -268,9 +264,13 @@ def _summary_claim_not_dependency(document: dict) -> None:
 
 
 def _invalid_green(document: dict) -> None:
-    summary = document["continuation_assurance"]["stage_summary"]
-    summary["owner_projection"] = "GREEN"
-    summary["yellow_substate"] = None
+    carrier = document["continuation_assurance"]
+    critical = carrier["claims"][0]
+    critical["verification_state"] = "UNVERIFIED"
+    critical["lifecycle_state"] = "ACTIVE"
+    critical["evidence_refs"] = []
+    carrier["stage_summary"]["owner_projection"] = "GREEN"
+    carrier["stage_summary"]["yellow_substate"] = None
 
 
 def _invalid_yellow(document: dict) -> None:
@@ -380,10 +380,7 @@ def test_all_canonical_fixtures_match_pinned_declared_layers() -> None:
     checkout = os.environ.get("EV4_DECISION_KERNEL_CHECKOUT")
     if not checkout:
         pytest.skip("exact Decision Kernel checkout is a CI-only dependency")
-    fixture_root = (
-        Path(checkout)
-        / "kernel/pcvp/v1.0.0/bundle/05-FIXTURES"
-    )
+    fixture_root = Path(checkout) / "kernel/pcvp/v1.0.0/bundle/05-FIXTURES"
     index = yaml.safe_load((fixture_root / "fixture-index.yaml").read_text("utf-8"))
     suite = index["fixture_suite"]
     observed = {"accepted": 0, "rejected": 0}
