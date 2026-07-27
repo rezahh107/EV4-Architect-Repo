@@ -10,7 +10,6 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from architect_handoff_classification import partition_unresolved_evidence
-import architect_pcvp_producer as _pcvp
 from architect_runtime_payload_authority import (
     RuntimePayloadAuthorityError,
     _consume_runtime_terminal_payload,
@@ -338,30 +337,6 @@ def build_export(
             "silent_fallback_allowed": False,
         },
     }
-
-    # The disabled branch intentionally performs no resource verification,
-    # carrier formatting, or carrier validation and therefore preserves the
-    # exact legacy export and hash behavior.
-    if _pcvp.PRODUCER_EMISSION_ENABLED:
-        try:
-            carrier = _pcvp._format_continuation_assurance_candidate(
-                run_id=run_id,
-                payload_hash=payload_hash,
-                canonical_payload_valid=True,
-                handoff_allowed=allowed,
-                source_kind=issuance.source_kind,
-                unresolved_count=len(unresolved),
-            )
-            document = {"continuation_assurance": carrier}
-            _pcvp._validate_carrier(document)
-        except _pcvp.PCVPProducerError as exc:
-            raise ExportError(
-                "ARCH_EXPORT_PCVP_CARRIER_INVALID",
-                "pcvp_validation",
-                str(exc),
-                "repository_owner",
-            ) from exc
-        export["continuation_assurance"] = carrier
 
     hashes = {
         "payload_hash": payload_hash,

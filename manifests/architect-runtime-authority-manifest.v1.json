@@ -45,7 +45,6 @@
     "scripts/architect_handoff_classification.py",
     "scripts/architect_payload_derivation_validation.py",
     "scripts/architect_payload_semantic_validator.py",
-    "scripts/architect_pcvp_producer.py",
     "scripts/architect_project_gate_exporter/__init__.py",
     "scripts/architect_project_gate_exporter/base.py",
     "scripts/architect_project_gate_exporter/contracts.py",

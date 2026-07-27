@@ -48,40 +48,39 @@ def _evaluate(document: dict) -> dict:
     return pcvp._evaluate_carrier_document(document, ROOT)
 
 
-def _capture_genuine_runtime_carrier(
+def _capture_legacy_runtime_export(
     monkeypatch: pytest.MonkeyPatch,
 ) -> dict:
-    """Capture the dormant carrier inside the genuine terminal transaction."""
+    """Observe the genuine terminal export without changing its behavior."""
 
     captured: list[dict] = []
     real_build = contracts.build_export
 
-    def capture_then_preserve_legacy(*args, **kwargs):
+    def capture_unchanged(*args, **kwargs):
         export, hashes = real_build(*args, **kwargs)
-        carrier = export.pop("continuation_assurance")
-        captured.append(copy.deepcopy(carrier))
-        hashes["export_hash"] = contracts.digest(export)
+        captured.append(copy.deepcopy(export))
         return export, hashes
 
-    monkeypatch.setattr(pcvp, "PRODUCER_EMISSION_ENABLED", True)
-    monkeypatch.setattr(contracts, "build_export", capture_then_preserve_legacy)
-    outcome = runtime.evaluate_run(
+    monkeypatch.setattr(contracts, "build_export", capture_unchanged)
+    outcome = runtime._replay_outcome(
         _legacy.full_outputs(),
-        root=ROOT,
-        run_context=_legacy.context("live_conversation"),
+        run_context=_legacy.context("fixture"),
+        repository_root=ROOT,
+        require_terminal=True,
+        git_provider=_legacy.FixtureGitProvider(),
     )
-    assert outcome["status"] == "valid", outcome["errors"]
+    assert outcome.status == "valid", outcome.to_public()["errors"]
     assert len(captured) == 1
     return captured[0]
 
 
-def test_resources_are_exactly_pinned_and_emission_is_hard_disabled() -> None:
+def test_resources_are_exactly_pinned_and_rollout_remains_inactive() -> None:
     result = pcvp.verify_pcvp_resources(ROOT)
     assert result["producer_emission"] is False
     assert result["adoption_status"] == "not_yet_adopted"
     assert result["activation_effect"] == "NONE"
     assert len(result["resource_hashes"]) == 6
-    assert pcvp.PRODUCER_EMISSION_ENABLED is False
+    assert not hasattr(pcvp, "PRODUCER_EMISSION_ENABLED")
 
 
 def test_supported_surface_exposes_no_authoritative_raw_fact_minting_api() -> None:
@@ -90,7 +89,37 @@ def test_supported_surface_exposes_no_authoritative_raw_fact_minting_api() -> No
     assert "PRODUCER_EMISSION_ENABLED" not in pcvp.__all__
     assert not hasattr(pcvp, "build_continuation_assurance")
     assert not hasattr(pcvp, "attach_to_export_if_enabled")
+    assert not hasattr(pcvp, "PRODUCER_EMISSION_ENABLED")
     assert "repository_root" not in inspect.signature(contracts.build_export).parameters
+
+
+def test_active_exporter_has_no_pcvp_import_call_or_activation_path() -> None:
+    module_source = Path(contracts.__file__).read_text(encoding="utf-8")
+    build_source = inspect.getsource(contracts.build_export)
+    producer_source = Path(pcvp.__file__).read_text(encoding="utf-8")
+    manifest = json.loads(
+        (
+            ROOT / "manifests/architect-runtime-authority-manifest.v1.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert "architect_pcvp_producer" not in module_source
+    assert "_format_continuation_assurance_candidate" not in build_source
+    assert "PRODUCER_EMISSION_ENABLED" not in build_source
+    assert 'export["continuation_assurance"]' not in build_source
+    assert "os.environ" not in build_source
+    assert "os.getenv" not in build_source
+    assert "PRODUCER_EMISSION_ENABLED" not in producer_source
+    assert (
+        "scripts/architect_pcvp_producer.py"
+        not in manifest["python_authority_paths"]
+    )
+    assert list(inspect.signature(contracts.build_export).parameters) == [
+        "payload",
+        "git",
+        "run_id",
+        "input_ref",
+    ]
 
 
 def test_raw_true_values_cannot_mint_an_authoritative_carrier() -> None:
@@ -125,20 +154,17 @@ def test_dormant_runtime_path_does_not_touch_pcvp_resources(
         raise AssertionError("dormant path must not load or validate PCVP resources")
 
     monkeypatch.setattr(pcvp, "verify_pcvp_resources", forbidden)
-    outcome = runtime.evaluate_run(
-        _legacy.full_outputs(),
-        root=ROOT,
-        run_context=_legacy.context("live_conversation"),
-    )
-    assert outcome["status"] == "valid", outcome["errors"]
-    terminal = outcome["results"][-1]["project_gate_export"]
-    assert terminal["handoff_allowed"] is True
+    export = _capture_legacy_runtime_export(monkeypatch)
+    assert export["handoff"]["allowed"] is False
+    assert export["handoff"]["status"] == "blocked"
+    assert "continuation_assurance" not in export
 
 
-def test_only_genuine_runtime_transaction_reaches_official_carrier_construction(
+def test_private_candidate_is_deterministic_valid_and_non_authoritative(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    carrier = _capture_genuine_runtime_carrier(monkeypatch)
+    carrier = _candidate()
+    assert carrier == _candidate()
     assert carrier["policy_id"] == "EV4-PCVP"
     assert carrier["policy_version"] == "1.0.0"
     assert carrier["source_stage"] == "ARCHITECT"
@@ -152,6 +178,20 @@ def test_only_genuine_runtime_transaction_reaches_official_carrier_construction(
     assert downstream["verification_state"] == "UNVERIFIED"
     assert downstream["evidence_refs"] == []
     assert _evaluate({"continuation_assurance": carrier})["accepted"] is True
+    assert "continuation_assurance" not in _capture_legacy_runtime_export(monkeypatch)
+
+
+def test_unchanged_export_contract_rejects_candidate_attachment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    export = _capture_legacy_runtime_export(monkeypatch)
+    contracts.validate_contracts(ROOT, export)
+
+    unsupported = copy.deepcopy(export)
+    unsupported["continuation_assurance"] = _candidate()
+    with pytest.raises(contracts.ExportError) as caught:
+        contracts.validate_contracts(ROOT, unsupported)
+    assert caught.value.code == "ARCH_EXPORT_PRODUCER_EXPORT_SCHEMA_FAILED"
 
 
 def test_copied_reconstructed_and_mutated_payloads_remain_non_authorizing() -> None:
@@ -203,6 +243,12 @@ def _duplicate_id(document: dict) -> None:
 
 def _unresolved_claim(document: dict) -> None:
     document["continuation_assurance"]["effects"][0]["depends_on_claim_ids"][0] = (
+        "CLM-MISSING"
+    )
+
+
+def _unresolved_claim_dependency(document: dict) -> None:
+    document["continuation_assurance"]["claims"][1]["dependency_refs"][0] = (
         "CLM-MISSING"
     )
 
@@ -300,6 +346,11 @@ def _required_red_missing(document: dict) -> None:
         (_duplicate_id, "CROSS_RECORD", "PCVP_ID_NOT_GLOBALLY_UNIQUE"),
         (_unresolved_claim, "CROSS_RECORD", "PCVP_EFFECT_CLAIM_REF_UNRESOLVED"),
         (
+            _unresolved_claim_dependency,
+            "CROSS_RECORD",
+            "PCVP_CLAIM_DEPENDENCY_UNRESOLVED",
+        ),
+        (
             _unresolved_authorization,
             "CROSS_RECORD",
             "PCVP_EFFECT_AUTH_REF_UNRESOLVED",
@@ -361,11 +412,27 @@ def test_complete_cross_record_and_semantic_mutation_matrix(
     assert code in {item["code"] for item in result["diagnostics"]}
 
 
-def test_arbitrary_valid_cardinalities_are_supported() -> None:
+def test_missing_claim_dependency_reports_dependent_and_missing_claim_ids() -> None:
+    document = _document()
+    dependent_claim = document["continuation_assurance"]["claims"][1]
+    dependent_claim["dependency_refs"][0] = "CLM-MISSING"
+    result = _evaluate(document)
+    assert result["accepted"] is False
+    assert result["observed_layer"] == "CROSS_RECORD"
+    assert {
+        "layer": "CROSS_RECORD",
+        "code": "PCVP_CLAIM_DEPENDENCY_UNRESOLVED",
+        "subject": dependent_claim["claim_id"],
+        "detail": "CLM-MISSING",
+    } in result["diagnostics"]
+
+
+def test_valid_multi_claim_dependency_chain_is_accepted() -> None:
     document = _document()
     carrier = document["continuation_assurance"]
     extra_claim = copy.deepcopy(carrier["claims"][1])
     extra_claim["claim_id"] = "CLM-ARCH-EXTRA-VALID"
+    extra_claim["dependency_refs"] = [carrier["claims"][1]["claim_id"]]
     carrier["claims"].append(extra_claim)
     carrier["effects"][0]["depends_on_claim_ids"].append(extra_claim["claim_id"])
     carrier["stage_summary"]["derived_from_claim_ids"].append(extra_claim["claim_id"])
@@ -402,39 +469,40 @@ def test_all_canonical_fixtures_match_pinned_declared_layers() -> None:
     assert observed == {"accepted": 8, "rejected": 10}
 
 
-def test_exact_project_gate_consumer_accepts_genuine_carrier_losslessly(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_exact_project_gate_consumer_accepts_candidate_losslessly() -> None:
     checkout = os.environ.get("EV4_PROJECT_GATE_CHECKOUT")
     if not checkout:
         pytest.skip("exact Project Gate checkout is a CI-only dependency")
-    carrier = _capture_genuine_runtime_carrier(monkeypatch)
+    carrier = _candidate()
     source = str(Path(checkout) / "src")
     sys.path.insert(0, source)
     try:
         module = importlib.import_module("ev4_transition.pcvp_carrier")
+        assert Path(module.__file__).resolve() == (
+            Path(checkout) / "src/ev4_transition/pcvp_carrier.py"
+        ).resolve()
         artifact = {
             "producer": {"stage": "architect"},
             "continuation_assurance": copy.deepcopy(carrier),
         }
+        original = copy.deepcopy(artifact)
         projection, diagnostics = module.inspect_optional_pcvp_carrier(
             artifact, checkout
         )
     finally:
         sys.path.remove(source)
+    assert artifact == original
     assert diagnostics == []
     assert projection["status"] == "validated"
     assert projection["source_stage"] == "ARCHITECT"
     assert projection["carrier"] == {"continuation_assurance": carrier}
 
 
-def test_exact_ce_consumer_accepts_genuine_carrier_without_upgrade(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_exact_ce_consumer_accepts_candidate_without_upgrade() -> None:
     checkout = os.environ.get("EV4_CE_CHECKOUT")
     if not checkout:
         pytest.skip("exact CE checkout is a CI-only dependency")
-    carrier = _capture_genuine_runtime_carrier(monkeypatch)
+    carrier = _candidate()
     path = Path(checkout) / "validator/pcvp_carrier.py"
     spec = importlib.util.spec_from_file_location("_exact_ce_pcvp_carrier", path)
     assert spec is not None and spec.loader is not None
@@ -442,7 +510,9 @@ def test_exact_ce_consumer_accepts_genuine_carrier_without_upgrade(
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     artifact = {"continuation_assurance": copy.deepcopy(carrier)}
+    original = copy.deepcopy(artifact)
     projection, diagnostics = module.inspect_optional_pcvp_carrier(artifact, checkout)
+    assert artifact == original
     assert diagnostics == []
     assert projection["status"] == "validated"
     assert projection["source_stage"] == "ARCHITECT"

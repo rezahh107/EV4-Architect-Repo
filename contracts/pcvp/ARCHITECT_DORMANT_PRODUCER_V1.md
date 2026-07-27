@@ -22,10 +22,17 @@ optional `continuation_assurance` carrier in a later activation change.
   separate activation change.
 - The vendored PCVP policy, profile, lock, and schemas remain dormant resources;
   they are not declared as active Runtime data authority before activation.
+- Dedicated validation compares all six locked local resources byte-for-byte
+  with their canonical paths at the immutable Decision Kernel snapshot.
 
-`PRODUCER_EMISSION_ENABLED` is hard-coded to `False`, the lock forbids caller
-override, and no environment variable or public API can enable emission.
-Changing that state belongs to a separate activation PR after all required
-consumers, producer checks, boundary checks, and independent review are ready.
+The active Project Gate exporter does not import the dormant producer, call the
+private candidate builder, or contain any PCVP attachment branch. There is no
+module flag, environment variable, argument, public API, or test-only switch
+that can enable emission. The private builder produces non-authoritative
+candidate data for validation and consumer compatibility tests only.
+
+Activation belongs to one later atomic PR that changes the export schema,
+attachment path, and activation tests together after all required consumers,
+producer checks, boundary checks, and independent review are ready.
 
 Rollout status remains `not_yet_adopted`; activation effect remains `NONE`.

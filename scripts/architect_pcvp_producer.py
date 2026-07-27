@@ -1,11 +1,10 @@
-"""Hard-disabled EV4-PCVP producer support for the Architect → Project Gate edge.
+"""Dormant EV4-PCVP candidate support for the Architect → Project Gate edge.
 
-This module owns pinned resource verification, deterministic carrier formatting,
-and canonical semantic validation.  It deliberately exposes no supported API
-that can mint or attach an authoritative carrier from caller-supplied facts.
-The only authoritative attachment site is
-``architect_project_gate_exporter.contracts.build_export`` after the existing
-one-shot Runtime Payload issuance has been consumed.
+This module owns pinned resource verification, deterministic candidate
+formatting, and canonical semantic validation. It deliberately exposes no
+supported API that can mint or attach an authoritative carrier. No active
+Runtime authority imports this module, and the active Project Gate exporter has
+no PCVP attachment or activation path.
 """
 from __future__ import annotations
 
@@ -27,7 +26,6 @@ CANONICAL_COMMIT = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
 SOURCE_STAGE = "ARCHITECT"
 BOUNDARY_READER_STAGE = "PROJECT_GATE"
 CONSUMER_STAGE = "CONSTRUCTABILITY_ENGINEER"
-PRODUCER_EMISSION_ENABLED = False
 ROOT = Path(__file__).resolve().parents[1]
 LOCK_PATH = Path("contracts/pcvp/architect-producer.lock.json")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -264,6 +262,18 @@ def _cross_record_and_semantic_diagnostics(
                 "Claim, Effect and Authorization identifiers must be globally unique within the carrier.",
             )
         )
+
+    for claim in claims:
+        for dependency_id in claim["dependency_refs"]:
+            if dependency_id not in claims_by_id:
+                cross_record.append(
+                    _diagnostic(
+                        "CROSS_RECORD",
+                        "PCVP_CLAIM_DEPENDENCY_UNRESOLVED",
+                        claim["claim_id"],
+                        dependency_id,
+                    )
+                )
 
     for effect in effects:
         for claim_id in effect["depends_on_claim_ids"]:
@@ -531,7 +541,7 @@ def _validate_carrier(
         return
     first = result["diagnostics"][0]
     raise PCVPProducerError(
-        "Generated PCVP carrier failed canonical validation "
+        "PCVP candidate failed canonical validation "
         f"at {result['observed_layer']}: {first['code']} "
         f"({first['subject']}: {first['detail']})"
     )
@@ -549,8 +559,9 @@ def _format_continuation_assurance_candidate(
     """Format non-authoritative candidate data from Runtime-derived values.
 
     Calling this private pure-data helper does not create an official carrier.
-    Official status exists only after build_export validates and attaches the
-    result inside the already-authorized terminal Runtime transaction.
+    No active export schema or Runtime path attaches this candidate. Official
+    status requires a later atomic activation change covering schema,
+    attachment, and activation tests together.
     """
     if not isinstance(run_id, str) or not run_id.strip():
         raise PCVPProducerError("Runtime-derived run_id is required.")
@@ -578,8 +589,8 @@ def _format_continuation_assurance_candidate(
     effect_id = f"EFF-ARCH-HANDOFF-{suffix}"
     authorization_id = f"AUTH-ARCH-HANDOFF-{suffix}"
     scope = (
-        "Attach one PCVP carrier to the existing Runtime-authorized Architect "
-        "Producer Gate Export for lossless Project Gate transport to CE; no "
+        "Describe one prospective PCVP carrier for lossless Project Gate "
+        "transport to CE; this candidate is not attached or emitted, and no "
         "handoff eligibility or downstream authority may be created or upgraded."
     )
 
