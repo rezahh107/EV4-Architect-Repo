@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from architect_handoff_classification import partition_unresolved_evidence
+from architect_pcvp_producer import attach_to_export_if_enabled
 from architect_runtime_payload_authority import (
     RuntimePayloadAuthorityError,
     _consume_runtime_terminal_payload,
@@ -329,6 +330,15 @@ def build_export(
             "silent_fallback_allowed": False,
         },
     }
+    attach_to_export_if_enabled(
+        export,
+        run_id=run_id,
+        payload_hash=payload_hash,
+        canonical_payload_valid=True,
+        handoff_allowed=allowed,
+        source_kind=issuance.source_kind,
+        unresolved_count=len(unresolved),
+    )
     hashes = {
         "payload_hash": payload_hash,
         "bundle_hash": bundle_hash,
