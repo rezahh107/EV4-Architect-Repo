@@ -69,6 +69,7 @@ def _capture_genuine_runtime_carrier(
         _legacy.full_outputs(),
         root=ROOT,
         run_context=_legacy.context("live_conversation"),
+        git_provider=_legacy.FixtureGitProvider(),
     )
     assert outcome["status"] == "valid", outcome["errors"]
     assert len(captured) == 1
@@ -129,6 +130,7 @@ def test_dormant_runtime_path_does_not_touch_pcvp_resources(
         _legacy.full_outputs(),
         root=ROOT,
         run_context=_legacy.context("live_conversation"),
+        git_provider=_legacy.FixtureGitProvider(),
     )
     assert outcome["status"] == "valid", outcome["errors"]
     terminal = outcome["results"][-1]["project_gate_export"]
