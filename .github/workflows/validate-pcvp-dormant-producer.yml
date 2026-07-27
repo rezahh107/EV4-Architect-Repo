@@ -22,10 +22,6 @@ jobs:
     name: Exact-head Runtime authority and pinned PCVP parity
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      EV4_DECISION_KERNEL_CHECKOUT: ${{ github.workspace }}/dependencies/decision-kernel
-      EV4_PROJECT_GATE_CHECKOUT: ${{ github.workspace }}/dependencies/project-gate
-      EV4_CE_CHECKOUT: ${{ github.workspace }}/dependencies/constructability-engineer
     steps:
       - name: Checkout exact Architect pull request head
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -34,57 +30,47 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Assert exact clean Architect checkout
+      - name: Assert exact Architect pull request head
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Assert clean Architect checkout
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --exit-code -- .
+          git diff --cached --exit-code -- .
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
 
-      - name: Checkout exact Decision Kernel reference
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          repository: rezahh107/EV4-Decision-Kernel
-          ref: 069a50fa243b01fa578a7c1bcb8864d9e796d34b
-          path: dependencies/decision-kernel
-          persist-credentials: false
-
-      - name: Assert exact clean Decision Kernel checkout
+      - name: Checkout immutable read-only PCVP dependencies
         shell: bash
+        env:
+          EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/decision-kernel
+          EV4_PROJECT_GATE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/project-gate
+          EV4_CE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/constructability-engineer
+          GIT_TERMINAL_PROMPT: "0"
         run: |
           set -euo pipefail
-          test "$(git -C dependencies/decision-kernel rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          test -z "$(git -C dependencies/decision-kernel status --porcelain=v1 --untracked-files=all)"
 
-      - name: Checkout exact Project Gate consumer
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          repository: rezahh107/EV4-Project-Gate
-          ref: cfa666c3237a35a32b7ff186348df7532a7e02fe
-          path: dependencies/project-gate
-          persist-credentials: false
+          checkout_exact() {
+            local target="$1"
+            local repository="$2"
+            local expected_sha="$3"
+            mkdir -p "$(dirname "$target")"
+            git init -q "$target"
+            git -C "$target" remote add origin "$repository"
+            git -C "$target" -c protocol.version=2 fetch --depth=1 --no-tags origin "$expected_sha"
+            git -C "$target" checkout --quiet --detach FETCH_HEAD
+            test "$(git -C "$target" rev-parse HEAD)" = "$expected_sha"
+            git -C "$target" diff --exit-code -- .
+            git -C "$target" diff --cached --exit-code -- .
+            test -z "$(git -C "$target" status --porcelain=v1 --untracked-files=all)"
+            git -C "$target" remote remove origin
+          }
 
-      - name: Assert exact clean Project Gate checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git -C dependencies/project-gate rev-parse HEAD)" = "cfa666c3237a35a32b7ff186348df7532a7e02fe"
-          test -z "$(git -C dependencies/project-gate status --porcelain=v1 --untracked-files=all)"
-
-      - name: Checkout exact Constructability Engineer consumer
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          repository: rezahh107/EV4-Constructability-Engineer-Repo
-          ref: 9b0e75cdbda2f3fe99f473ae77336e1601f6daa6
-          path: dependencies/constructability-engineer
-          persist-credentials: false
-
-      - name: Assert exact clean Constructability Engineer checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git -C dependencies/constructability-engineer rev-parse HEAD)" = "9b0e75cdbda2f3fe99f473ae77336e1601f6daa6"
-          test -z "$(git -C dependencies/constructability-engineer status --porcelain=v1 --untracked-files=all)"
+          checkout_exact             "$EV4_DECISION_KERNEL_CHECKOUT"             "https://github.com/rezahh107/EV4-Decision-Kernel.git"             "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
+          checkout_exact             "$EV4_PROJECT_GATE_CHECKOUT"             "https://github.com/rezahh107/EV4-Project-Gate.git"             "cfa666c3237a35a32b7ff186348df7532a7e02fe"
+          checkout_exact             "$EV4_CE_CHECKOUT"             "https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git"             "9b0e75cdbda2f3fe99f473ae77336e1601f6daa6"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -102,6 +88,11 @@ jobs:
           tests/test_architect_pcvp_dormant_producer.py
 
       - name: Validate Runtime authority, semantic parity, and consumers
+        env:
+          EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/decision-kernel
+          EV4_PROJECT_GATE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/project-gate
+          EV4_CE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/constructability-engineer
+          PYTHONDONTWRITEBYTECODE: "1"
         run: >-
           PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q
           tests/test_architect_pcvp_dormant_producer.py
@@ -117,7 +108,22 @@ jobs:
 
       - name: Run complete Architect repository suite
         run: >-
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider --ignore=dependencies -q
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q
+
+      - name: Assert immutable dependency checkouts remain clean
+        shell: bash
+        env:
+          EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/decision-kernel
+          EV4_PROJECT_GATE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/project-gate
+          EV4_CE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/constructability-engineer
+        run: |
+          set -euo pipefail
+          test "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
+          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "cfa666c3237a35a32b7ff186348df7532a7e02fe"
+          test "$(git -C "$EV4_CE_CHECKOUT" rev-parse HEAD)" = "9b0e75cdbda2f3fe99f473ae77336e1601f6daa6"
+          test -z "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C "$EV4_CE_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
 
       - name: Check bounded patch whitespace
         run: git diff --check
