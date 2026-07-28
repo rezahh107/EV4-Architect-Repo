@@ -6,13 +6,13 @@
   "canonical": {
     "repository": "rezahh107/EV4-Project-Gate",
     "path": "contracts/common/producer-gate-export.v1.schema.json",
-    "commit_sha": "ea19c22c32458068e167b267da8b819e9263cdf7",
-    "file_sha256": "c556bb9deeccdcafeb885a1c8b3dbd660e4e06f452b8ac3c7040d21377465fcc"
+    "commit_sha": "a8c743a7441dc8a06c3aa23310eed99076fc97d6",
+    "file_sha256": "f51de4cec802e5576d1248df6c33d9f84c0ccf8ad356783e1857a797dc0b6e90"
   },
   "vendored": {
     "repository": "rezahh107/EV4-Architect-Repo",
     "path": "contracts/project-gate/producer-gate-export.v1.schema.json",
-    "file_sha256": "c556bb9deeccdcafeb885a1c8b3dbd660e4e06f452b8ac3c7040d21377465fcc",
+    "file_sha256": "f51de4cec802e5576d1248df6c33d9f84c0ccf8ad356783e1857a797dc0b6e90",
     "local_copy_authoritative": false
   },
   "verification": {
