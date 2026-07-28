@@ -1,6 +1,6 @@
 name: verify-project-gate-contract
 
-# Prompt 01: Project Gate contract caller.
+# Project Gate common-contract caller.
 on:
   pull_request:
     paths:
@@ -12,6 +12,6 @@ permissions:
 
 jobs:
   verify-project-gate-contract:
-    uses: rezahh107/EV4-Project-Gate/.github/workflows/verify-vendored-common-contract.yml@ea19c22c32458068e167b267da8b819e9263cdf7
+    uses: rezahh107/EV4-Project-Gate/.github/workflows/verify-vendored-common-contract.yml@a8c743a7441dc8a06c3aa23310eed99076fc97d6
     with:
       lock_path: contracts/project-gate/producer-gate-export.v1.lock.json
