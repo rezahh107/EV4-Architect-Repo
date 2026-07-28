@@ -62,12 +62,15 @@ def _capture_runtime_export(
         return export, hashes
 
     monkeypatch.setattr(contracts, "build_export", capture_unchanged)
+    replay_kwargs = {}
+    if source_kind != "live_conversation":
+        replay_kwargs["git_provider"] = _legacy.FixtureGitProvider()
     outcome = runtime._replay_outcome(
         _legacy.full_outputs(),
         run_context=_legacy.context(source_kind),
         repository_root=ROOT,
         require_terminal=True,
-        git_provider=_legacy.FixtureGitProvider(),
+        **replay_kwargs,
     )
     assert outcome.status == "valid", outcome.to_public()["errors"]
     assert len(captured) == 1
