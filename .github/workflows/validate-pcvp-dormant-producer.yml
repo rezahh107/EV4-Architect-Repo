@@ -109,7 +109,7 @@ jobs:
         run: python scripts/validate-pcvp-canonical-bytes.py
 
       - name: Validate active lock and canonical activation authority
-        id: active-lock
+        id: active_lock
         continue-on-error: true
         env:
           EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/decision-kernel-bundle
@@ -124,7 +124,7 @@ jobs:
           tests/test_architect_pcvp_dormant_producer.py::test_exporter_uses_private_pcvp_builder_without_env_or_public_override
 
       - name: Validate real Runtime attachment behavior
-        id: runtime-attachment
+        id: runtime_attachment
         continue-on-error: true
         env:
           EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/decision-kernel-bundle
@@ -138,7 +138,7 @@ jobs:
           tests/test_architect_pcvp_dormant_producer.py::test_copied_reconstructed_and_caller_augmented_payloads_remain_non_authorizing
 
       - name: Validate PCVP semantic fail-closed matrix
-        id: semantic-matrix
+        id: semantic_matrix
         continue-on-error: true
         env:
           EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-dependencies/decision-kernel-bundle
@@ -154,9 +154,9 @@ jobs:
       - name: Enforce focused PCVP validation layers
         if: always()
         env:
-          ACTIVE_LOCK: ${{ steps.active-lock.outcome }}
-          RUNTIME_ATTACHMENT: ${{ steps.runtime-attachment.outcome }}
-          SEMANTIC_MATRIX: ${{ steps.semantic-matrix.outcome }}
+          ACTIVE_LOCK: ${{ steps.active_lock.outcome }}
+          RUNTIME_ATTACHMENT: ${{ steps.runtime_attachment.outcome }}
+          SEMANTIC_MATRIX: ${{ steps.semantic_matrix.outcome }}
         run: |
           set -euo pipefail
           test "$ACTIVE_LOCK" = success
@@ -256,7 +256,7 @@ jobs:
         run: python -m pip install "jsonschema>=4.22.0" "pytest>=8.0.0" "PyYAML>=6.0.0"
 
       - name: Validate exact current Project Gate against actual Runtime emission
-        id: project-gate
+        id: project_gate
         continue-on-error: true
         env:
           EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/decision-kernel
@@ -282,7 +282,7 @@ jobs:
       - name: Enforce exact consumer acceptance
         if: always()
         env:
-          PROJECT_GATE: ${{ steps.project-gate.outcome }}
+          PROJECT_GATE: ${{ steps.project_gate.outcome }}
           CE: ${{ steps.ce.outcome }}
         run: |
           set -euo pipefail
