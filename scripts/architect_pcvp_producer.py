@@ -1,10 +1,10 @@
-"""Dormant EV4-PCVP candidate support for the Architect → Project Gate edge.
+"""Active EV4-PCVP carrier construction for the Architect → Project Gate → CE edge.
 
-This module owns pinned resource verification, deterministic candidate
-formatting, and canonical semantic validation. It deliberately exposes no
-supported API that can mint or attach an authoritative carrier. No active
-Runtime authority imports this module, and the active Project Gate exporter has
-no PCVP attachment or activation path.
+The immutable EV4-PCVP bundle remains byte-pinned to its original Decision Kernel
+snapshot. Official emission is authorized separately by the exact canonical edge
+activation merge. Carrier construction stays private to the Runtime-owned terminal
+Project Gate transaction; callers cannot supply raw Runtime facts, select a
+repository root, or override activation through environment/configuration input.
 """
 from __future__ import annotations
 
@@ -23,6 +23,15 @@ POLICY_VERSION = "1.0.0"
 ARCHITECTURE_LOCK_ID = "EV4-PCVP-ROLL-LOCK-20260727-R1"
 CANONICAL_REPOSITORY = "rezahh107/EV4-Decision-Kernel"
 CANONICAL_COMMIT = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
+ACTIVATION_COMMIT = "ad0e7235929d7f6d847724f6b4d1a6a3c57453db"
+ACTIVATION_PATH = "kernel/pcvp/pcvp-activation.v1.json"
+ACTIVATION_ID = "EV4-PCVP-ACT-ARCH-PG-CE-20260728-R1"
+ACTIVATION_EDGE = "ARCHITECT_TO_PROJECT_GATE_TO_CE"
+DISABLED_EDGES = (
+    "CE_TO_BUILDER",
+    "BUILDER_TO_RESPONSIVE",
+    "RESPONSIVE_TO_FINAL",
+)
 SOURCE_STAGE = "ARCHITECT"
 BOUNDARY_READER_STAGE = "PROJECT_GATE"
 CONSUMER_STAGE = "CONSTRUCTABILITY_ENGINEER"
@@ -38,7 +47,7 @@ _SCHEMA_NAMES = (
 
 
 class PCVPProducerError(RuntimeError):
-    """Raised when dormant producer identity, derivation, or validation fails closed."""
+    """Raised when producer identity, activation, derivation, or validation fails closed."""
 
 
 def _load_json(path: Path) -> Any:
@@ -72,15 +81,63 @@ def _identity(run_id: str, payload_hash: str) -> str:
     return digest[:16].upper()
 
 
+def _validate_activation_authority_document(document: Any) -> None:
+    """Require the exact canonical staged activation and no downstream rollout."""
+    if not isinstance(document, dict):
+        raise PCVPProducerError("PCVP activation authority must be a JSON object.")
+    if document.get("schema_version") != "ev4-pcvp-edge-activation.v1":
+        raise PCVPProducerError("PCVP activation schema identity drifted.")
+    if document.get("activation_id") != ACTIVATION_ID:
+        raise PCVPProducerError("PCVP activation identifier drifted.")
+    policy = document.get("policy")
+    if policy != {
+        "id": POLICY_ID,
+        "version": POLICY_VERSION,
+        "architecture_lock_id": ARCHITECTURE_LOCK_ID,
+    }:
+        raise PCVPProducerError("PCVP activation policy identity drifted.")
+    if document.get("official_adoption_authorization") is not True:
+        raise PCVPProducerError("PCVP official adoption authorization is absent.")
+    if document.get("full_rollout_authorized") is not False:
+        raise PCVPProducerError("PCVP full rollout must remain unauthorized.")
+    if document.get("strict_activation_allowed_for_enabled_scope") is not True:
+        raise PCVPProducerError("PCVP enabled scope is not authorized for activation.")
+    scope = document.get("activation_scope")
+    if not isinstance(scope, dict) or scope.get("enabled_edges") != [ACTIVATION_EDGE]:
+        raise PCVPProducerError("PCVP enabled activation edge drifted.")
+    if scope.get("disabled_edges") != list(DISABLED_EDGES):
+        raise PCVPProducerError("PCVP downstream disabled edges drifted.")
+    runtime = document.get("runtime_authorization")
+    expected_runtime = {
+        "architect_producer_emission": True,
+        "architect_to_project_gate": True,
+        "project_gate_to_ce": True,
+        "ce_to_builder_emission": False,
+        "builder_to_responsive_emission": False,
+        "responsive_to_final_emission": False,
+    }
+    if runtime != expected_runtime:
+        raise PCVPProducerError("PCVP runtime activation boundary drifted.")
+    boundaries = document.get("authority_boundaries")
+    if boundaries != {
+        "runtime_correctness_created": False,
+        "project_gate_pass_created": False,
+        "ce_correctness_created": False,
+        "production_readiness_created": False,
+        "official_verification_replacement": False,
+    }:
+        raise PCVPProducerError("PCVP authority boundary claims drifted.")
+
+
 def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
-    """Verify the immutable Model Policy, profile, and schema byte pins."""
+    """Verify immutable bundle bytes plus the exact active Architect edge lock."""
     root = Path(repository_root)
     lock = _load_json(root / LOCK_PATH)
     expected_policy = {
         "id": POLICY_ID,
         "version": POLICY_VERSION,
         "adoption_status": "not_yet_adopted",
-        "activation": "NONE",
+        "activation": ACTIVATION_EDGE,
     }
     if (
         not isinstance(lock, dict)
@@ -91,12 +148,25 @@ def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
         raise PCVPProducerError("PCVP Architect producer lock identity drifted.")
 
     canonical = lock.get("canonical")
-    if not isinstance(canonical, dict) or (
-        canonical.get("repository") != CANONICAL_REPOSITORY
-        or canonical.get("commit_sha") != CANONICAL_COMMIT
-        or canonical.get("bundle_root") != "kernel/pcvp/v1.0.0/bundle"
-    ):
+    if not isinstance(canonical, dict) or canonical != {
+        "repository": CANONICAL_REPOSITORY,
+        "commit_sha": CANONICAL_COMMIT,
+        "bundle_root": "kernel/pcvp/v1.0.0/bundle",
+    }:
         raise PCVPProducerError("PCVP canonical owner or immutable commit drifted.")
+
+    activation = lock.get("activation_authority")
+    if not isinstance(activation, dict) or activation != {
+        "repository": CANONICAL_REPOSITORY,
+        "commit_sha": ACTIVATION_COMMIT,
+        "path": ACTIVATION_PATH,
+        "activation_id": ACTIVATION_ID,
+        "official_adoption_authorization": True,
+        "full_rollout_authorized": False,
+        "enabled_edges": [ACTIVATION_EDGE],
+        "disabled_edges": list(DISABLED_EDGES),
+    }:
+        raise PCVPProducerError("PCVP canonical activation authority drifted.")
 
     producer = lock.get("producer")
     if not isinstance(producer, dict) or producer != {
@@ -105,15 +175,15 @@ def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
         "boundary_reader_stage": BOUNDARY_READER_STAGE,
         "consumer_stage": CONSUMER_STAGE,
         "carrier_path": "continuation_assurance",
-        "emission_enabled": False,
+        "emission_enabled": True,
         "caller_override_allowed": False,
     }:
         raise PCVPProducerError(
-            "PCVP producer must remain hard-disabled without caller override."
+            "PCVP Architect producer must be enabled only for the locked edge and forbid caller override."
         )
 
     verification = lock.get("verification")
-    if not isinstance(verification, dict) or verification != {
+    if verification != {
         "byte_equality_required": True,
         "compare_against_moving_default_branch": False,
     }:
@@ -169,10 +239,14 @@ def verify_pcvp_resources(repository_root: str | Path = ROOT) -> dict[str, Any]:
     return {
         "architecture_lock_id": ARCHITECTURE_LOCK_ID,
         "canonical_commit": CANONICAL_COMMIT,
+        "activation_commit": ACTIVATION_COMMIT,
+        "activation_id": ACTIVATION_ID,
         "resource_hashes": dict(sorted(observed.items())),
-        "producer_emission": False,
-        "adoption_status": "not_yet_adopted",
-        "activation_effect": "NONE",
+        "producer_emission": True,
+        "adoption_status": "official_edge_activation",
+        "activation_effect": ACTIVATION_EDGE,
+        "disabled_edges": list(DISABLED_EDGES),
+        "full_rollout_authorized": False,
     }
 
 
@@ -437,6 +511,7 @@ def _cross_record_and_semantic_diagnostics(
     if summary["owner_projection"] == "GREEN" and (
         current_effect["continuation_state"] != "CONTINUE"
         or critical_applicable_not_verified
+        or applicable_unverified
         or any_contradicted
         or material_applicability_undetermined
     ):
@@ -541,7 +616,7 @@ def _validate_carrier(
         return
     first = result["diagnostics"][0]
     raise PCVPProducerError(
-        "PCVP candidate failed canonical validation "
+        "PCVP carrier failed canonical validation "
         f"at {result['observed_layer']}: {first['code']} "
         f"({first['subject']}: {first['detail']})"
     )
@@ -556,13 +631,7 @@ def _format_continuation_assurance_candidate(
     source_kind: str,
     unresolved_count: int,
 ) -> dict[str, Any]:
-    """Format non-authoritative candidate data from Runtime-derived values.
-
-    Calling this private pure-data helper does not create an official carrier.
-    No active export schema or Runtime path attaches this candidate. Official
-    status requires a later atomic activation change covering schema,
-    attachment, and activation tests together.
-    """
+    """Format carrier data exclusively from already-derived Runtime facts."""
     if not isinstance(run_id, str) or not run_id.strip():
         raise PCVPProducerError("Runtime-derived run_id is required.")
     if not isinstance(payload_hash, str) or not SHA256.fullmatch(payload_hash):
@@ -589,9 +658,9 @@ def _format_continuation_assurance_candidate(
     effect_id = f"EFF-ARCH-HANDOFF-{suffix}"
     authorization_id = f"AUTH-ARCH-HANDOFF-{suffix}"
     scope = (
-        "Describe one prospective PCVP carrier for lossless Project Gate "
-        "transport to CE; this candidate is not attached or emitted, and no "
-        "handoff eligibility or downstream authority may be created or upgraded."
+        "Describe one validated PCVP carrier for lossless Project Gate transport "
+        "to CE. The carrier cannot upgrade CE, Builder, Responsive, production, "
+        "or any other downstream authority claim."
     )
 
     claims = [
@@ -689,8 +758,8 @@ def _format_continuation_assurance_candidate(
         projection = "YELLOW"
         yellow_substate = "CONTINUATION_AVAILABLE"
         derivation_reason = (
-            "The existing Runtime authorized this handoff, while downstream "
-            "verification remains explicitly unresolved."
+            "The existing Runtime authorized this Architect-to-Project-Gate "
+            "handoff while downstream verification remains explicitly unresolved."
         )
 
     unresolved_items = [
@@ -766,7 +835,38 @@ def _format_continuation_assurance_candidate(
     )
 
 
+def _build_runtime_continuation_assurance(
+    *,
+    run_id: str,
+    payload_hash: str,
+    canonical_payload_valid: bool,
+    handoff_allowed: bool,
+    source_kind: str,
+    unresolved_count: int,
+) -> dict[str, Any]:
+    """Build and canonically validate the official Runtime-owned carrier.
+
+    This helper is intentionally private and has no repository-root/config/env
+    override. The active Runtime Authority Manifest records this module because
+    the terminal exporter depends on it directly.
+    """
+    verify_pcvp_resources(ROOT)
+    carrier = _format_continuation_assurance_candidate(
+        run_id=run_id,
+        payload_hash=payload_hash,
+        canonical_payload_valid=canonical_payload_valid,
+        handoff_allowed=handoff_allowed,
+        source_kind=source_kind,
+        unresolved_count=unresolved_count,
+    )
+    _validate_carrier({"continuation_assurance": carrier}, ROOT)
+    return copy.deepcopy(carrier)
+
+
 __all__ = [
+    "ACTIVATION_COMMIT",
+    "ACTIVATION_EDGE",
+    "ACTIVATION_ID",
     "ARCHITECTURE_LOCK_ID",
     "BOUNDARY_READER_STAGE",
     "CANONICAL_COMMIT",
