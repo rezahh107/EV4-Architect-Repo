@@ -1,0 +1,60 @@
+{
+  "schema_version": "ev4-pcvp-architect-producer-lock.v1",
+  "architecture_lock_id": "EV4-PCVP-ROLL-LOCK-20260727-R1",
+  "policy": {
+    "id": "EV4-PCVP",
+    "version": "1.0.0",
+    "adoption_status": "not_yet_adopted",
+    "activation": "NONE"
+  },
+  "canonical": {
+    "repository": "rezahh107/EV4-Decision-Kernel",
+    "commit_sha": "069a50fa243b01fa578a7c1bcb8864d9e796d34b",
+    "bundle_root": "kernel/pcvp/v1.0.0/bundle"
+  },
+  "producer": {
+    "repository": "rezahh107/EV4-Architect-Repo",
+    "source_stage": "ARCHITECT",
+    "boundary_reader_stage": "PROJECT_GATE",
+    "consumer_stage": "CONSTRUCTABILITY_ENGINEER",
+    "carrier_path": "continuation_assurance",
+    "emission_enabled": false,
+    "caller_override_allowed": false
+  },
+  "resources": [
+    {
+      "path": "contracts/pcvp/EV4_PCVP_MODEL_POLICY_v1.0.0.md",
+      "canonical_path": "02-MODEL_POLICY/EV4_PCVP_MODEL_POLICY_v1.0.0.md",
+      "sha256": "d67b87ba6930b1a0256e0d9d9ceac963cad367ee8d3f7a41800ae995d62f4d6a"
+    },
+    {
+      "path": "contracts/pcvp/architect.profile.yaml",
+      "canonical_path": "03-PROFILES/architect.profile.yaml",
+      "sha256": "a4fc9b2912eea0fcba06880759f246c019f3d36b181696824d8c8e54d39b5248"
+    },
+    {
+      "path": "contracts/pcvp/vendor/decision-kernel/v1.0.0/authorization.schema.json",
+      "canonical_path": "04-SCHEMAS/authorization.schema.json",
+      "sha256": "8eba853834bc3881ae836857a5bef3d8cc8e7c9edecd535ba22fb58a26fa5ff9"
+    },
+    {
+      "path": "contracts/pcvp/vendor/decision-kernel/v1.0.0/claim.schema.json",
+      "canonical_path": "04-SCHEMAS/claim.schema.json",
+      "sha256": "7d4c686b983330c454d76ebc34ef97ca4c595dd77b221de194e6a75e41859a72"
+    },
+    {
+      "path": "contracts/pcvp/vendor/decision-kernel/v1.0.0/effect.schema.json",
+      "canonical_path": "04-SCHEMAS/effect.schema.json",
+      "sha256": "59c201b7277f3bf3488eb43afbd04f686efae25b9a143c73f97aca5f65a1bbeb"
+    },
+    {
+      "path": "contracts/pcvp/vendor/decision-kernel/v1.0.0/handoff.schema.json",
+      "canonical_path": "04-SCHEMAS/handoff.schema.json",
+      "sha256": "dcc3189ef4662b27e440aee3d3c698d503e265f81fb71d5d1904972cfe8728da"
+    }
+  ],
+  "verification": {
+    "byte_equality_required": true,
+    "compare_against_moving_default_branch": false
+  }
+}

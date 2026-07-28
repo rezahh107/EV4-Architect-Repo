@@ -16,6 +16,22 @@ ARTIFACT_FILENAME = "architect-project-gate.json"
 RECEIPT_FILENAME = "architect-project-gate-receipt.json"
 RECEIPT_SCHEMA_ID = "ev4-architect-project-gate-finalization-receipt@1.0.0"
 RECEIPT_SCHEMA_PATH = "schemas/ev4-architect-project-gate-finalization-receipt.v1.schema.json"
+_EXPORT_REQUEST_FORMAT = "producer-gate-export.v1"
+_EXPORT_REQUEST_DIAGNOSTIC = "RUNTIME_PROJECT_GATE_EXPORT_REQUEST_INVALID"
+_TERMINAL_OUTPUT_FIELDS = frozenset(
+    {
+        "run_id",
+        "stage_id",
+        "stage_version",
+        "check_evidence",
+        "decision_input",
+        "export_request",
+        "presentation_note",
+        "unknown_introductions",
+        "unknown_resolutions",
+        "blockers",
+    }
+)
 
 
 class _ProjectGateExecution(dict[str, Any]):
@@ -124,6 +140,98 @@ def _diagnostic(
     }
 
 
+def _validate_terminal_export_request(output: dict[str, Any]) -> None:
+    """Validate only the model-authored, non-authorizing terminal request."""
+
+    from architect_runtime_errors import ProjectGateValidationError, RuntimeDiagnostic
+
+    diagnostics: list[RuntimeDiagnostic] = []
+
+    def reject(path: str, message: str) -> None:
+        diagnostics.append(
+            RuntimeDiagnostic(
+                _EXPORT_REQUEST_DIAGNOSTIC,
+                message,
+                path=path,
+                stage_id="/project-gate-export",
+            )
+        )
+
+    if not isinstance(output, dict):
+        reject("export_request", "Terminal Stage Output must be a JSON object.")
+    else:
+        for field in sorted(set(output) - _TERMINAL_OUTPUT_FIELDS):
+            reject(
+                field,
+                f"Unsupported terminal Stage content is forbidden: {field}",
+            )
+
+        export_valid = False
+        top_note_valid = False
+        export_present = "export_request" in output
+        note_present = "presentation_note" in output
+
+        if export_present:
+            request = output.get("export_request")
+            if not isinstance(request, dict):
+                reject("export_request", "export_request must be a JSON object.")
+            elif not request:
+                reject("export_request", "export_request must not be empty.")
+            else:
+                for field in sorted(set(request) - {"format", "presentation_note"}):
+                    reject(
+                        f"export_request.{field}",
+                        f"Unsupported export_request field: {field}",
+                    )
+                format_value = request.get("format")
+                if not isinstance(format_value, str) or not format_value.strip():
+                    reject(
+                        "export_request.format",
+                        "export_request.format is required.",
+                    )
+                elif format_value != _EXPORT_REQUEST_FORMAT:
+                    reject(
+                        "export_request.format",
+                        "export_request.format must be producer-gate-export.v1.",
+                    )
+                else:
+                    export_valid = True
+
+                if "presentation_note" in request:
+                    nested_note = request.get("presentation_note")
+                    if not isinstance(nested_note, str) or not nested_note.strip():
+                        reject(
+                            "export_request.presentation_note",
+                            "export_request.presentation_note must be a non-empty string.",
+                        )
+                        export_valid = False
+
+        if note_present:
+            top_note = output.get("presentation_note")
+            if not isinstance(top_note, str) or not top_note.strip():
+                reject(
+                    "presentation_note",
+                    "presentation_note must be a non-empty string.",
+                )
+            else:
+                top_note_valid = True
+
+        if not export_valid and not top_note_valid and not diagnostics:
+            reject(
+                "export_request",
+                "Terminal Stage Output must contain a supported export_request or presentation_note.",
+            )
+
+    if diagnostics:
+        ordered = tuple(
+            sorted(
+                diagnostics,
+                key=lambda item: (item.path or "", item.message),
+            )
+        )
+        raise ProjectGateValidationError(ordered)
+
+
 def failed_result(
     *,
     run_id: str | None,
@@ -163,6 +271,8 @@ def evaluate_project_gate_execution(
     issue_factory: Callable[..., dict[str, Any]],
 ) -> _ProjectGateExecution | None:
     """Execute the terminal Project Gate transaction and return an explicit value."""
+
+    _validate_terminal_export_request(output)
 
     import importlib
 

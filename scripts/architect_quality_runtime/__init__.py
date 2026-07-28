@@ -8,8 +8,12 @@ from __future__ import annotations
 
 import copy
 import functools
+import json
+import sys
 from pathlib import Path
 from typing import Any, Iterable
+
+from jsonschema import Draft202012Validator
 
 from . import history as _history
 
@@ -20,6 +24,20 @@ for _name in dir(_history):
     if not _name.startswith("__"):
         globals()[_name] = getattr(_history, _name)
 
+# Preserve the historical package-level monkeypatch seam used by deterministic
+# replay-count regression tests. History execution delegates through the
+# canonical package attribute without duplicating evaluator state.
+if not hasattr(_history, "_PACKAGE_CALL_INTERNAL_STAGE_TARGET"):
+    _history._PACKAGE_CALL_INTERNAL_STAGE_TARGET = _history._call_internal_stage
+
+    def _package_call_internal_stage_proxy(*args, **kwargs):
+        package = sys.modules[__name__]
+        return package._call_internal_stage(*args, **kwargs)
+
+    _package_call_internal_stage_proxy._ev4_package_proxy = True
+    _history._call_internal_stage = _package_call_internal_stage_proxy
+_call_internal_stage = _history._PACKAGE_CALL_INTERNAL_STAGE_TARGET
+
 from architect_project_gate_finalization import (
     ProjectGateFinalizationResult,
     _ProjectGateExecution,
@@ -27,6 +45,18 @@ from architect_project_gate_finalization import (
     failed_result,
     publish_project_gate_execution,
 )
+
+# Finalization receipt validation is part of the canonical Package authority
+# initialization path. Loading and validating it here makes data closure exact
+# even when a focused run does not reach successful publication.
+_RECEIPT_SCHEMA_AUTHORITY_PATH = (
+    ROOT / "schemas/ev4-architect-project-gate-finalization-receipt.v1.schema.json"
+)
+_RECEIPT_SCHEMA_AUTHORITY = json.loads(
+    _RECEIPT_SCHEMA_AUTHORITY_PATH.read_text(encoding="utf-8")
+)
+Draft202012Validator.check_schema(_RECEIPT_SCHEMA_AUTHORITY)
+ProjectGateFinalizationResult.__module__ = __name__
 
 _CALLER_AUTHORITY_FIELDS = frozenset(
     {
