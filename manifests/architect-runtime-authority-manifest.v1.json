@@ -45,6 +45,7 @@
     "scripts/architect_handoff_classification.py",
     "scripts/architect_payload_derivation_validation.py",
     "scripts/architect_payload_semantic_validator.py",
+    "scripts/architect_pcvp_producer.py",
     "scripts/architect_project_gate_exporter/__init__.py",
     "scripts/architect_project_gate_exporter/base.py",
     "scripts/architect_project_gate_exporter/contracts.py",
@@ -63,9 +64,17 @@
     "scripts/architect_runtime_project_gate/__init__.py",
     "scripts/architect_runtime_project_gate_core.py",
     "scripts/architect_stage_claim_guard.py",
+    "scripts/check-architect-stage-payload.py",
     "scripts/check_architect_stage_payload_core.py"
   ],
   "data_authority_paths": [
+    "contracts/pcvp/EV4_PCVP_MODEL_POLICY_v1.0.0.md",
+    "contracts/pcvp/architect-producer.lock.json",
+    "contracts/pcvp/architect.profile.yaml",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/authorization.schema.json",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/claim.schema.json",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/effect.schema.json",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/handoff.schema.json",
     "contracts/project-gate/producer-gate-export.v1.schema.json",
     "contracts/project-gate/stage-bundle.v1.schema.json",
     "manifests/architect-pipeline-manifest.v1.json",
@@ -84,6 +93,9 @@
     "functional_eligibility_path": "results[-1].project_gate_export.functional_eligibility",
     "handoff_allowed_path": "results[-1].project_gate_export.handoff_allowed",
     "runtime_payload_public_input": "forbidden",
-    "direct_caller_payload_export": "unsupported_removed"
+    "direct_caller_payload_export": "unsupported_removed",
+    "pcvp_carrier_path": "architect-project-gate.json#continuation_assurance",
+    "pcvp_activation_edge": "ARCHITECT_TO_PROJECT_GATE_TO_CE",
+    "pcvp_activation_authority_commit": "ad0e7235929d7f6d847724f6b4d1a6a3c57453db"
   }
 }

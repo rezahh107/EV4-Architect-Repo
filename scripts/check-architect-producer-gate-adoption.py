@@ -11,9 +11,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-EXPECTED_CONTRACT_SHA = "c556bb9deeccdcafeb885a1c8b3dbd660e4e06f452b8ac3c7040d21377465fcc"
+EXPECTED_CONTRACT_SHA = "f51de4cec802e5576d1248df6c33d9f84c0ccf8ad356783e1857a797dc0b6e90"
 EXPECTED_STAGE_BUNDLE_SHA = "fc1ec6d3f7aecbabaeb0a3455d9eb42788779d2fa1531e8c7b2cb3bde706a886"
-PROJECT_GATE_COMMIT = "ea19c22c32458068e167b267da8b819e9263cdf7"
+PROJECT_GATE_COMMIT = "a8c743a7441dc8a06c3aa23310eed99076fc97d6"
 ARCHITECT_REPOSITORY = "rezahh107/EV4-Architect-Repo"
 CLASS_RE = re.compile(r"^[a-z][a-z0-9-]*(?:__[a-z0-9-]+)?(?:--[a-z0-9-]+)?$")
 VAGUE_LABELS = {"box", "box-1", "left", "right", "wrapper", "container", "visual"}
@@ -112,8 +112,8 @@ class AdoptionValidator:
     def validate_common_contracts(self) -> list[Diagnostic]:
         d: list[Diagnostic] = []
         for path, expected, code, message in [
-            (self.root / "contracts/project-gate/producer-gate-export.v1.schema.json", EXPECTED_CONTRACT_SHA, "A_PG_CONTRACT_BYTE_MISMATCH", "Vendored Producer Gate Export bytes differ from Prompt 0."),
-            (self.root / "contracts/project-gate/stage-bundle.v1.schema.json", EXPECTED_STAGE_BUNDLE_SHA, "A_STAGE_BUNDLE_BYTE_MISMATCH", "Stage Bundle supplementary copy differs from Prompt 0."),
+            (self.root / "contracts/project-gate/producer-gate-export.v1.schema.json", EXPECTED_CONTRACT_SHA, "A_PG_CONTRACT_BYTE_MISMATCH", "Vendored Producer Gate Export bytes differ from the exact pinned Project Gate contract."),
+            (self.root / "contracts/project-gate/stage-bundle.v1.schema.json", EXPECTED_STAGE_BUNDLE_SHA, "A_STAGE_BUNDLE_BYTE_MISMATCH", "Stage Bundle supplementary copy differs from its pinned contract bytes."),
         ]:
             try:
                 observed = sha256_file(path)
@@ -146,7 +146,12 @@ class AdoptionValidator:
         if lock.get("contract_id") != "producer-gate-export.v1":
             d.append(D("A_PG_LOCK_CONTRACT_ID_MISMATCH", "error", "Lock must apply to producer-gate-export.v1.", "$.contract_id"))
         if canonical.get("commit_sha") != PROJECT_GATE_COMMIT:
-            d.append(D("A_PG_LOCK_MOVING_REF", "error", "Project Gate pin must be immutable Prompt 0 merge commit.", "$.canonical.commit_sha"))
+            d.append(D("A_PG_LOCK_MOVING_REF", "error", "Project Gate pin must equal the exact reviewed immutable commit.", "$.canonical.commit_sha"))
+        if canonical.get("file_sha256") != EXPECTED_CONTRACT_SHA:
+            d.append(D("A_PG_LOCK_FILE_SHA_MISMATCH", "error", "Project Gate contract SHA-256 must match the exact reviewed bytes.", "$.canonical.file_sha256"))
+        vendored = as_dict(lock.get("vendored"))
+        if vendored.get("file_sha256") != EXPECTED_CONTRACT_SHA:
+            d.append(D("A_PG_LOCK_VENDORED_SHA_MISMATCH", "error", "Vendored Project Gate contract SHA-256 must match canonical bytes.", "$.vendored.file_sha256"))
         if verification.get("compare_against_moving_default_branch") is not False:
             d.append(D("A_PG_LOCK_MOVING_DEFAULT_FORBIDDEN", "error", "Moving default branch comparison is forbidden.", "$.verification.compare_against_moving_default_branch"))
         return d
