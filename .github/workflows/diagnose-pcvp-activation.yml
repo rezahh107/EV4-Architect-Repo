@@ -108,4 +108,15 @@ jobs:
           EV4_PROJECT_GATE_CHECKOUT: ${{ matrix.pg && format('{0}/project-gate', runner.temp) || '' }}
           EV4_CE_CHECKOUT: ${{ matrix.ce && format('{0}/ce', runner.temp) || '' }}
           PYTHONDONTWRITEBYTECODE: "1"
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q "${{ matrix.selector }}"
+        run: |
+          set -o pipefail
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q "${{ matrix.selector }}" 2>&1 | tee "$RUNNER_TEMP/pcvp-${{ matrix.case }}.log"
+
+      - name: Upload isolated diagnostic output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pcvp-diagnostic-${{ matrix.case }}-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/pcvp-${{ matrix.case }}.log
+          if-no-files-found: error
+          retention-days: 2
