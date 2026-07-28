@@ -561,3 +561,68 @@ def test_exact_current_ce_accepts_actual_runtime_emission_without_upgrade(
     assert "Builder execution" in statement
     assert "Responsive completion" in statement
     assert "production readiness" in statement
+
+
+def _consumer_workflow_source() -> str:
+    return (ROOT / ".github/workflows/validate-pcvp-dormant-producer.yml").read_text(
+        encoding="utf-8"
+    )
+
+
+def _consumer_workflow_section() -> str:
+    source = _consumer_workflow_source()
+    marker = "\n  consumers:\n"
+    assert marker in source
+    return source.split(marker, 1)[1]
+
+
+def test_current_consumer_workflow_live_resolves_and_uses_captured_exact_heads() -> None:
+    consumers = _consumer_workflow_section()
+    assert 'PROJECT_GATE_REMOTE: https://github.com/rezahh107/EV4-Project-Gate.git' in consumers
+    assert 'CE_REMOTE: https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git' in consumers
+    assert 'git ls-remote --exit-code "$remote" refs/heads/main' in consumers
+    assert 'test "${#rows[@]}" -eq 1' in consumers
+    assert 'test "$ref" = "refs/heads/main"' in consumers
+    assert '[[ "$sha" =~ ^[0-9a-f]{40}$ ]]' in consumers
+    assert 'checkout_exact "$EV4_PROJECT_GATE_CHECKOUT" "$PROJECT_GATE_REMOTE" "$EV4_PROJECT_GATE_HEAD_SHA"' in consumers
+    assert 'checkout_exact "$EV4_CE_CHECKOUT" "$CE_REMOTE" "$EV4_CE_HEAD_SHA"' in consumers
+    assert 'if git -C "$target" symbolic-ref -q HEAD >/dev/null; then' in consumers
+    assert 'test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "$EV4_PROJECT_GATE_HEAD_SHA"' in consumers
+    assert 'test "$(git -C "$EV4_CE_CHECKOUT" rev-parse HEAD)" = "$EV4_CE_HEAD_SHA"' in consumers
+    assert 'checkout_exact "$EV4_PROJECT_GATE_CHECKOUT" "$PROJECT_GATE_REMOTE" "a8c743a7441dc8a06c3aa23310eed99076fc97d6"' not in consumers
+    assert 'checkout_exact "$EV4_CE_CHECKOUT" "$CE_REMOTE" "bc4a901d82fcdbdb131e30058b399508262706c5"' not in consumers
+
+
+def test_current_consumer_workflow_rechecks_remote_heads_before_success() -> None:
+    consumers = _consumer_workflow_section()
+    acceptance_index = consumers.index("- name: Enforce exact consumer acceptance")
+    recheck_index = consumers.index("- name: Re-resolve consumer heads and require stability")
+    assert recheck_index > acceptance_index
+    assert 'project_gate_head_final="$(resolve_head "$PROJECT_GATE_REMOTE")"' in consumers
+    assert 'ce_head_final="$(resolve_head "$CE_REMOTE")"' in consumers
+    assert 'test "$project_gate_head_final" = "$EV4_PROJECT_GATE_HEAD_SHA"' in consumers
+    assert 'test "$ce_head_final" = "$EV4_CE_HEAD_SHA"' in consumers
+    assert 'echo "project_gate_head_start=$EV4_PROJECT_GATE_HEAD_SHA"' in consumers
+    assert 'echo "project_gate_head_end=$project_gate_head_final"' in consumers
+    assert 'echo "ce_head_start=$EV4_CE_HEAD_SHA"' in consumers
+    assert 'echo "ce_head_end=$ce_head_final"' in consumers
+
+
+def test_current_consumer_contract_identity_remains_lock_derived_and_stage_qc_postmerge() -> None:
+    lock = json.loads(
+        (ROOT / "contracts/project-gate/producer-gate-export.v1.lock.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert lock["canonical"]["commit_sha"] == (
+        "a8c743a7441dc8a06c3aa23310eed99076fc97d6"
+    )
+    assert lock["verification"]["byte_equality_required"] is True
+    assert lock["verification"]["compare_against_moving_default_branch"] is False
+
+    consumers = _consumer_workflow_section()
+    assert lock["canonical"]["commit_sha"] not in consumers
+    assert "EV4_PROJECT_GATE_HEAD_SHA" in consumers
+    assert "EV4_CE_HEAD_SHA" in consumers
+    assert "EV4-Architect-Stage-QC" not in consumers
+    assert "architect-authority.lock.json" not in consumers
