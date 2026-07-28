@@ -64,9 +64,17 @@
     "scripts/architect_runtime_project_gate/__init__.py",
     "scripts/architect_runtime_project_gate_core.py",
     "scripts/architect_stage_claim_guard.py",
+    "scripts/check-architect-stage-payload.py",
     "scripts/check_architect_stage_payload_core.py"
   ],
   "data_authority_paths": [
+    "contracts/pcvp/EV4_PCVP_MODEL_POLICY_v1.0.0.md",
+    "contracts/pcvp/architect-producer.lock.json",
+    "contracts/pcvp/architect.profile.yaml",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/authorization.schema.json",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/claim.schema.json",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/effect.schema.json",
+    "contracts/pcvp/vendor/decision-kernel/v1.0.0/handoff.schema.json",
     "contracts/project-gate/producer-gate-export.v1.schema.json",
     "contracts/project-gate/stage-bundle.v1.schema.json",
     "manifests/architect-pipeline-manifest.v1.json",
