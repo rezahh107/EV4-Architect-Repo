@@ -5,12 +5,28 @@
     "id": "EV4-PCVP",
     "version": "1.0.0",
     "adoption_status": "not_yet_adopted",
-    "activation": "NONE"
+    "activation": "ARCHITECT_TO_PROJECT_GATE_TO_CE"
   },
   "canonical": {
     "repository": "rezahh107/EV4-Decision-Kernel",
     "commit_sha": "069a50fa243b01fa578a7c1bcb8864d9e796d34b",
     "bundle_root": "kernel/pcvp/v1.0.0/bundle"
+  },
+  "activation_authority": {
+    "repository": "rezahh107/EV4-Decision-Kernel",
+    "commit_sha": "ad0e7235929d7f6d847724f6b4d1a6a3c57453db",
+    "path": "kernel/pcvp/pcvp-activation.v1.json",
+    "activation_id": "EV4-PCVP-ACT-ARCH-PG-CE-20260728-R1",
+    "official_adoption_authorization": true,
+    "full_rollout_authorized": false,
+    "enabled_edges": [
+      "ARCHITECT_TO_PROJECT_GATE_TO_CE"
+    ],
+    "disabled_edges": [
+      "CE_TO_BUILDER",
+      "BUILDER_TO_RESPONSIVE",
+      "RESPONSIVE_TO_FINAL"
+    ]
   },
   "producer": {
     "repository": "rezahh107/EV4-Architect-Repo",
@@ -18,7 +34,7 @@
     "boundary_reader_stage": "PROJECT_GATE",
     "consumer_stage": "CONSTRUCTABILITY_ENGINEER",
     "carrier_path": "continuation_assurance",
-    "emission_enabled": false,
+    "emission_enabled": true,
     "caller_override_allowed": false
   },
   "resources": [
