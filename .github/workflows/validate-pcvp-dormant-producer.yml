@@ -214,12 +214,47 @@ jobs:
           git diff --cached --exit-code -- .
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
 
+      - name: Resolve exact current consumer heads
+        id: consumer_heads
+        shell: bash
+        env:
+          PROJECT_GATE_REMOTE: https://github.com/rezahh107/EV4-Project-Gate.git
+          CE_REMOTE: https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          set -euo pipefail
+          resolve_head() {
+            local remote="$1"
+            local output sha ref extra
+            local -a rows=()
+            output="$(git ls-remote --exit-code "$remote" refs/heads/main)"
+            mapfile -t rows <<<"$output"
+            test "${#rows[@]}" -eq 1
+            read -r sha ref extra <<<"${rows[0]}"
+            test -z "${extra:-}"
+            test "$ref" = "refs/heads/main"
+            [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+            printf '%s\n' "$sha"
+          }
+
+          project_gate_head="$(resolve_head "$PROJECT_GATE_REMOTE")"
+          ce_head="$(resolve_head "$CE_REMOTE")"
+
+          echo "EV4_PROJECT_GATE_HEAD_SHA=$project_gate_head" >> "$GITHUB_ENV"
+          echo "EV4_CE_HEAD_SHA=$ce_head" >> "$GITHUB_ENV"
+          echo "project_gate_sha=$project_gate_head" >> "$GITHUB_OUTPUT"
+          echo "ce_sha=$ce_head" >> "$GITHUB_OUTPUT"
+          echo "project_gate_head_start=$project_gate_head"
+          echo "ce_head_start=$ce_head"
+
       - name: Checkout exact read-only consumer and bundle heads
         shell: bash
         env:
           EV4_DECISION_KERNEL_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/decision-kernel
           EV4_PROJECT_GATE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/project-gate
           EV4_CE_CHECKOUT: ${{ runner.temp }}/ev4-pcvp-consumers/constructability-engineer
+          PROJECT_GATE_REMOTE: https://github.com/rezahh107/EV4-Project-Gate.git
+          CE_REMOTE: https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git
           GIT_TERMINAL_PROMPT: "0"
         run: |
           set -euo pipefail
@@ -231,11 +266,15 @@ jobs:
             git -C "$target" -c protocol.version=2 fetch --depth=1 --no-tags origin "$expected_sha"
             git -C "$target" checkout --quiet --detach FETCH_HEAD
             test "$(git -C "$target" rev-parse HEAD)" = "$expected_sha"
+            if git -C "$target" symbolic-ref -q HEAD >/dev/null; then
+              echo "checkout is not detached: $target" >&2
+              exit 1
+            fi
             test -z "$(git -C "$target" status --porcelain=v1 --untracked-files=all)"
           }
           checkout_exact "$EV4_DECISION_KERNEL_CHECKOUT" "https://github.com/rezahh107/EV4-Decision-Kernel.git" "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          checkout_exact "$EV4_PROJECT_GATE_CHECKOUT" "https://github.com/rezahh107/EV4-Project-Gate.git" "a8c743a7441dc8a06c3aa23310eed99076fc97d6"
-          checkout_exact "$EV4_CE_CHECKOUT" "https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git" "bc4a901d82fcdbdb131e30058b399508262706c5"
+          checkout_exact "$EV4_PROJECT_GATE_CHECKOUT" "$PROJECT_GATE_REMOTE" "$EV4_PROJECT_GATE_HEAD_SHA"
+          checkout_exact "$EV4_CE_CHECKOUT" "$CE_REMOTE" "$EV4_CE_HEAD_SHA"
 
       - name: Set up Node.js 20
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -298,8 +337,52 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" rev-parse HEAD)" = "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
-          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "a8c743a7441dc8a06c3aa23310eed99076fc97d6"
-          test "$(git -C "$EV4_CE_CHECKOUT" rev-parse HEAD)" = "bc4a901d82fcdbdb131e30058b399508262706c5"
+          test "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" rev-parse HEAD)" = "$EV4_PROJECT_GATE_HEAD_SHA"
+          test "$(git -C "$EV4_CE_CHECKOUT" rev-parse HEAD)" = "$EV4_CE_HEAD_SHA"
           test -z "$(git -C "$EV4_DECISION_KERNEL_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
           test -z "$(git -C "$EV4_PROJECT_GATE_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
           test -z "$(git -C "$EV4_CE_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
+
+      - name: Re-resolve consumer heads and require stability
+        id: consumer_heads_final
+        shell: bash
+        env:
+          PROJECT_GATE_REMOTE: https://github.com/rezahh107/EV4-Project-Gate.git
+          CE_REMOTE: https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          set -euo pipefail
+          resolve_head() {
+            local remote="$1"
+            local output sha ref extra
+            local -a rows=()
+            output="$(git ls-remote --exit-code "$remote" refs/heads/main)"
+            mapfile -t rows <<<"$output"
+            test "${#rows[@]}" -eq 1
+            read -r sha ref extra <<<"${rows[0]}"
+            test -z "${extra:-}"
+            test "$ref" = "refs/heads/main"
+            [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+            printf '%s\n' "$sha"
+          }
+
+          project_gate_head_final="$(resolve_head "$PROJECT_GATE_REMOTE")"
+          ce_head_final="$(resolve_head "$CE_REMOTE")"
+
+          echo "project_gate_head_start=$EV4_PROJECT_GATE_HEAD_SHA"
+          echo "project_gate_head_end=$project_gate_head_final"
+          echo "ce_head_start=$EV4_CE_HEAD_SHA"
+          echo "ce_head_end=$ce_head_final"
+          echo "project_gate_sha=$project_gate_head_final" >> "$GITHUB_OUTPUT"
+          echo "ce_sha=$ce_head_final" >> "$GITHUB_OUTPUT"
+
+          test "$project_gate_head_final" = "$EV4_PROJECT_GATE_HEAD_SHA"
+          test "$ce_head_final" = "$EV4_CE_HEAD_SHA"
+
+          {
+            echo "### Exact current consumer identities"
+            echo "- Project Gate start: \`$EV4_PROJECT_GATE_HEAD_SHA\`"
+            echo "- Project Gate end: \`$project_gate_head_final\`"
+            echo "- CE start: \`$EV4_CE_HEAD_SHA\`"
+            echo "- CE end: \`$ce_head_final\`"
+          } >> "$GITHUB_STEP_SUMMARY"
