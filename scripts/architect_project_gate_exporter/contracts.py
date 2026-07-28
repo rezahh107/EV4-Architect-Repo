@@ -9,6 +9,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+import architect_pcvp_producer as pcvp
 from architect_handoff_classification import partition_unresolved_evidence
 from architect_runtime_payload_authority import (
     RuntimePayloadAuthorityError,
@@ -135,6 +136,9 @@ def build_export(
     Schema-valid dictionaries, copied Runtime Payloads, and caller-provided
     provenance are insufficient. The one-shot capability is issued by the
     canonical assembler during terminal evaluator replay and consumed here.
+    The PCVP carrier is constructed only after this capability is consumed and
+    the exact Runtime-issued Payload is revalidated through the official
+    Architect validator.
     """
 
     run_id = run_id.strip()
@@ -170,6 +174,8 @@ def build_export(
             "repository_owner",
         )
 
+    repository_root = Path(__file__).resolve().parents[2]
+    validation = validate_payload(repository_root, payload)
     payload_hash = digest(payload)
     unresolved = payload.get("unresolved_evidence", [])
     classification = partition_unresolved_evidence(unresolved)
@@ -337,6 +343,23 @@ def build_export(
             "silent_fallback_allowed": False,
         },
     }
+
+    try:
+        export["continuation_assurance"] = pcvp._build_runtime_continuation_assurance(
+            run_id=run_id,
+            payload_hash=payload_hash,
+            canonical_payload_valid=validation.get("status") in {"valid", "insufficient_evidence"},
+            handoff_allowed=allowed,
+            source_kind=issuance.source_kind,
+            unresolved_count=len(unresolved),
+        )
+    except pcvp.PCVPProducerError as exc:
+        raise ExportError(
+            "ARCH_EXPORT_PCVP_CARRIER_INVALID",
+            "pcvp_activation",
+            str(exc),
+            "repository_owner",
+        ) from exc
 
     hashes = {
         "payload_hash": payload_hash,
