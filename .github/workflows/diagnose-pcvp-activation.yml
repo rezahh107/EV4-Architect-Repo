@@ -1,0 +1,111 @@
+name: Diagnose PCVP activation failures
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/diagnose-pcvp-activation.yml"
+      - "contracts/pcvp/**"
+      - "contracts/project-gate/producer-gate-export.v1.schema.json"
+      - "manifests/architect-runtime-authority-manifest.v1.json"
+      - "scripts/architect_pcvp_producer.py"
+      - "scripts/architect_project_gate_exporter/contracts.py"
+      - "tests/test_architect_pcvp_dormant_producer.py"
+      - "tests/test_pcvp_canonical_bytes.py"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: diagnose-${{ matrix.case }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {case: active-resources, selector: "tests/test_architect_pcvp_dormant_producer.py::test_resources_are_exactly_pinned_and_edge_activation_is_bounded", bundle: false, activation: false, pg: false, ce: false}
+          - {case: active-activation, selector: "tests/test_architect_pcvp_dormant_producer.py::test_exact_decision_kernel_activation_authority_is_pinned_and_bounded", bundle: false, activation: true, pg: false, ce: false}
+          - {case: active-surface, selector: "tests/test_architect_pcvp_dormant_producer.py::test_supported_surface_exposes_no_authoritative_raw_fact_minting_api", bundle: false, activation: false, pg: false, ce: false}
+          - {case: active-manifest-schema, selector: "tests/test_architect_pcvp_dormant_producer.py::test_runtime_authority_manifest_and_export_schema_include_active_pcvp_surface", bundle: false, activation: false, pg: false, ce: false}
+          - {case: active-exporter, selector: "tests/test_architect_pcvp_dormant_producer.py::test_exporter_uses_private_pcvp_builder_without_env_or_public_override", bundle: false, activation: false, pg: false, ce: false}
+          - {case: runtime-revalidate, selector: "tests/test_architect_pcvp_dormant_producer.py::test_runtime_revalidates_payload_before_active_pcvp_attachment", bundle: false, activation: false, pg: false, ce: false}
+          - {case: runtime-synthetic, selector: "tests/test_architect_pcvp_dormant_producer.py::test_synthetic_runtime_export_emits_valid_red_carrier_without_handoff_upgrade", bundle: false, activation: false, pg: false, ce: false}
+          - {case: runtime-live, selector: "tests/test_architect_pcvp_dormant_producer.py::test_live_runtime_export_emits_yellow_carrier_when_existing_handoff_allows", bundle: false, activation: false, pg: false, ce: false}
+          - {case: runtime-copy, selector: "tests/test_architect_pcvp_dormant_producer.py::test_copied_reconstructed_and_caller_augmented_payloads_remain_non_authorizing", bundle: false, activation: false, pg: false, ce: false}
+          - {case: semantic-candidate, selector: "tests/test_architect_pcvp_dormant_producer.py::test_private_carrier_is_deterministic_and_canonically_valid", bundle: false, activation: false, pg: false, ce: false}
+          - {case: semantic-mutations, selector: "tests/test_architect_pcvp_dormant_producer.py::test_complete_cross_record_and_semantic_mutation_matrix", bundle: false, activation: false, pg: false, ce: false}
+          - {case: semantic-multi, selector: "tests/test_architect_pcvp_dormant_producer.py::test_valid_multi_claim_dependency_chain_is_accepted", bundle: false, activation: false, pg: false, ce: false}
+          - {case: semantic-fixtures, selector: "tests/test_architect_pcvp_dormant_producer.py::test_all_canonical_fixtures_match_pinned_declared_layers", bundle: true, activation: false, pg: false, ce: false}
+          - {case: canonical-bytes, selector: "tests/test_pcvp_canonical_bytes.py", bundle: true, activation: false, pg: false, ce: false}
+          - {case: project-gate, selector: "tests/test_architect_pcvp_dormant_producer.py::test_exact_current_project_gate_accepts_actual_runtime_emission_losslessly", bundle: true, activation: false, pg: true, ce: false}
+          - {case: ce, selector: "tests/test_architect_pcvp_dormant_producer.py::test_exact_current_ce_accepts_actual_runtime_emission_without_upgrade", bundle: false, activation: false, pg: false, ce: true}
+
+    steps:
+      - name: Checkout exact Architect pull request head
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert exact Architect pull request head
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Checkout exact external dependencies
+        env:
+          BUNDLE: ${{ matrix.bundle }}
+          ACTIVATION: ${{ matrix.activation }}
+          PG: ${{ matrix.pg }}
+          CE: ${{ matrix.ce }}
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          set -euo pipefail
+          checkout_exact() {
+            local target="$1" repository="$2" expected_sha="$3"
+            mkdir -p "$(dirname "$target")"
+            git init -q "$target"
+            git -C "$target" remote add origin "$repository"
+            git -C "$target" -c protocol.version=2 fetch --depth=1 --no-tags origin "$expected_sha"
+            git -C "$target" checkout --quiet --detach FETCH_HEAD
+            test "$(git -C "$target" rev-parse HEAD)" = "$expected_sha"
+            git -C "$target" remote remove origin
+          }
+          if [ "$BUNDLE" = true ]; then
+            checkout_exact "$RUNNER_TEMP/dk-bundle" "https://github.com/rezahh107/EV4-Decision-Kernel.git" "069a50fa243b01fa578a7c1bcb8864d9e796d34b"
+          fi
+          if [ "$ACTIVATION" = true ]; then
+            checkout_exact "$RUNNER_TEMP/dk-activation" "https://github.com/rezahh107/EV4-Decision-Kernel.git" "ad0e7235929d7f6d847724f6b4d1a6a3c57453db"
+          fi
+          if [ "$PG" = true ]; then
+            checkout_exact "$RUNNER_TEMP/project-gate" "https://github.com/rezahh107/EV4-Project-Gate.git" "a8c743a7441dc8a06c3aa23310eed99076fc97d6"
+          fi
+          if [ "$CE" = true ]; then
+            checkout_exact "$RUNNER_TEMP/ce" "https://github.com/rezahh107/EV4-Constructability-Engineer-Repo.git" "bc4a901d82fcdbdb131e30058b399508262706c5"
+          fi
+
+      - name: Set up Node.js 20 for Project Gate case
+        if: matrix.pg
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "20"
+
+      - name: Install Decision Kernel execution dependencies for Project Gate case
+        if: matrix.pg
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix "$RUNNER_TEMP/dk-bundle"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install Python validation dependencies
+        run: python -m pip install "jsonschema>=4.22.0" "pytest>=8.0.0" "PyYAML>=6.0.0"
+
+      - name: Run isolated diagnostic case
+        env:
+          EV4_DECISION_KERNEL_CHECKOUT: ${{ matrix.bundle && format('{0}/dk-bundle', runner.temp) || '' }}
+          EV4_DECISION_KERNEL_ACTIVATION_CHECKOUT: ${{ matrix.activation && format('{0}/dk-activation', runner.temp) || '' }}
+          EV4_PROJECT_GATE_CHECKOUT: ${{ matrix.pg && format('{0}/project-gate', runner.temp) || '' }}
+          EV4_CE_CHECKOUT: ${{ matrix.ce && format('{0}/ce', runner.temp) || '' }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p no:cacheprovider -q "${{ matrix.selector }}"
