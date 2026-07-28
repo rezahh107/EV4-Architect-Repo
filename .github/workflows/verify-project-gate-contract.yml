@@ -1,6 +1,6 @@
 name: verify-project-gate-contract
 
-# Project Gate common-contract caller.
+# Active PCVP-compatible Project Gate common-contract caller.
 on:
   pull_request:
     paths:
